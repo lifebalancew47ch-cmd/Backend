@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.UnitTests</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.UnitTests.Common.TestBase">
+            <summary>
+            Base class for all unit tests. Provides common test infrastructure.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.UnitTests.Domain.ValueObjectTests">
+            <summary>
+            Example unit test to verify the ValueObject equality contract.
+            Replace or extend with real domain ValueObject tests.
+            </summary>
+        </member>
+    </members>
+</doc>

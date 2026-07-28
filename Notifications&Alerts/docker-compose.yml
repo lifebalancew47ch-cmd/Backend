@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: lifebalance-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - lifebalance-network
+
+  notifications-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lifebalance-notifications-api
+    ports:
+      - "5000:80"
+    environment:
+      - ConnectionStrings__MongoDb=mongodb://mongodb:27017
+      - DatabaseName=LifeBalanceNotificationsDb
+    depends_on:
+      - mongodb
+    networks:
+      - lifebalance-network
+
+volumes:
+  mongo-data:
+
+networks:
+  lifebalance-network:
+    driver: bridge

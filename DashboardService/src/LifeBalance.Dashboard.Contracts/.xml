@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.Contracts</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.Contracts.Common.ErrorResponse">
+            <summary>
+            Standard API error response body.
+            Conforms to RFC 7807 Problem Details.
+            </summary>
+            <param name="Type">A URI reference that identifies the problem type.</param>
+            <param name="Title">A short, human-readable summary.</param>
+            <param name="Status">The HTTP status code.</param>
+            <param name="Detail">A human-readable explanation specific to this occurrence.</param>
+            <param name="Instance">A URI reference that identifies the specific occurrence.</param>
+            <param name="TraceId">The distributed trace identifier for correlation.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.#ctor(System.String,System.String,System.Int32,System.String,System.String,System.String)">
+            <summary>
+            Standard API error response body.
+            Conforms to RFC 7807 Problem Details.
+            </summary>
+            <param name="Type">A URI reference that identifies the problem type.</param>
+            <param name="Title">A short, human-readable summary.</param>
+            <param name="Status">The HTTP status code.</param>
+            <param name="Detail">A human-readable explanation specific to this occurrence.</param>
+            <param name="Instance">A URI reference that identifies the specific occurrence.</param>
+            <param name="TraceId">The distributed trace identifier for correlation.</param>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.Type">
+            <summary>A URI reference that identifies the problem type.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.Title">
+            <summary>A short, human-readable summary.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.Status">
+            <summary>The HTTP status code.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.Detail">
+            <summary>A human-readable explanation specific to this occurrence.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.Instance">
+            <summary>A URI reference that identifies the specific occurrence.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.ErrorResponse.TraceId">
+            <summary>The distributed trace identifier for correlation.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest">
+            <summary>
+            Standard paginated query parameters for list-based API requests.
+            </summary>
+            <param name="Page">The 1-based page number. Defaults to 1.</param>
+            <param name="PageSize">The number of items per page. Defaults to 20, max 100.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Standard paginated query parameters for list-based API requests.
+            </summary>
+            <param name="Page">The 1-based page number. Defaults to 1.</param>
+            <param name="PageSize">The number of items per page. Defaults to 20, max 100.</param>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.Page">
+            <summary>The 1-based page number. Defaults to 1.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.PageSize">
+            <summary>The number of items per page. Defaults to 20, max 100.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1">
+            <summary>
+            Standard paginated API response envelope.
+            </summary>
+            <typeparam name="T">The type of items in the page.</typeparam>
+            <param name="Items">The collection of items on the current page.</param>
+            <param name="Page">The current 1-based page number.</param>
+            <param name="PageSize">The number of items per page.</param>
+            <param name="TotalCount">The total number of items across all pages.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.#ctor(System.Collections.Generic.IReadOnlyList{`0},System.Int32,System.Int32,System.Int64)">
+            <summary>
+            Standard paginated API response envelope.
+            </summary>
+            <typeparam name="T">The type of items in the page.</typeparam>
+            <param name="Items">The collection of items on the current page.</param>
+            <param name="Page">The current 1-based page number.</param>
+            <param name="PageSize">The number of items per page.</param>
+            <param name="TotalCount">The total number of items across all pages.</param>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.Items">
+            <summary>The collection of items on the current page.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.Page">
+            <summary>The current 1-based page number.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.PageSize">
+            <summary>The number of items per page.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.TotalCount">
+            <summary>The total number of items across all pages.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.TotalPages">
+            <summary>Gets the total number of pages.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.HasNextPage">
+            <summary>Gets a value indicating whether there is a next page.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1.HasPreviousPage">
+            <summary>Gets a value indicating whether there is a previous page.</summary>
+        </member>
+    </members>
+</doc>

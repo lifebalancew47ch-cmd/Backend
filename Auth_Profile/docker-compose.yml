@@ -1,0 +1,41 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: auth_profile_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth_profile_api
+    ports:
+      - "10000:10000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MongoDb__ConnectionString=mongodb://mongodb:27017
+      - MongoDb__DatabaseName=LifeBalance_Auth
+      - Jwt__SecretKey=SUPER_SECRET_KEY_FOR_LOCAL_DEVELOPMENT_THAT_IS_LONG_ENOUGH_32_CHARS
+      - Jwt__Issuer=LifeBalance
+      - Jwt__Audience=LifeBalance
+      - Jwt__AccessTokenExpirationMinutes=30
+      - Jwt__RefreshTokenExpirationDays=7
+      - Security__MaxFailedLoginAttempts=5
+      - Security__LockoutDurationMinutes=15
+      - Security__PasswordResetTokenExpirationMinutes=60
+      - Security__EmailConfirmationTokenExpirationHours=24
+      - Smtp__Host=smtp.gmail.com
+      - Smtp__Port=587
+      - Smtp__Username=
+      - Smtp__Password=
+      - Smtp__FromEmail=
+      - Smtp__FromName=LifeBalance
+      - Smtp__UseSsl=false
+    depends_on:
+      - mongodb
+
+volumes:
+  mongo_data:

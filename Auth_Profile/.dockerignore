@@ -1,0 +1,9 @@
+.git/
+.vs/
+**/bin/
+**/obj/
+out/
+publish/
+*.user
+*.suo
+*.sln.docstates

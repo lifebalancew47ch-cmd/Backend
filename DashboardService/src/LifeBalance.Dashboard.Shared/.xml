@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.Shared</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.Shared.Constants.SharedConstants">
+            <summary>
+            Shared constants used across multiple layers and services.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.CorrelationIdHeader">
+            <summary>HTTP header name for the Correlation ID.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.RequestIdHeader">
+            <summary>HTTP header name for the Request ID.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.UserIdClaim">
+            <summary>Claim type for the user identifier.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.EmailClaim">
+            <summary>Claim type for the user email.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.RolesClaim">
+            <summary>Claim type for user roles.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.DefaultPageSize">
+            <summary>Default page size for paginated queries.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Shared.Constants.SharedConstants.MaxPageSize">
+            <summary>Maximum allowed page size for paginated queries.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Shared.Exceptions.AppException">
+            <summary>
+            Base exception for all LifeBalance application exceptions.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Exceptions.AppException.StatusCode">
+            <summary>Gets the HTTP status code associated with this exception.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Exceptions.AppException.#ctor(System.String,System.Int32)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Shared.Exceptions.AppException"/>.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Shared.Helpers.StringHelper">
+            <summary>
+            Utility helpers for working with strings.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Helpers.StringHelper.ToSnakeCase(System.String)">
+            <summary>
+            Converts a string to snake_case. For example, "DashboardWidget" → "dashboard_widget".
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Helpers.StringHelper.Truncate(System.String,System.Int32)">
+            <summary>
+            Truncates a string to the given maximum length, appending "…" if truncated.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Shared.Results.ApiResponse`1">
+            <summary>
+            Uniform response wrapper for all Dashboard Service API responses.
+            </summary>
+            <typeparam name="T">The type of the response payload.</typeparam>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.Success">
+            <summary>
+            Indicates if the request was processed successfully.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.Message">
+            <summary>
+            User-friendly message regarding the operation.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.Data">
+            <summary>
+            The response payload.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.Errors">
+            <summary>
+            List of validation or processing error messages if any.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.StatusCode">
+            <summary>
+            HTTP status code.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.TraceId">
+            <summary>
+            Unique Correlation ID associated with this request execution trace.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.ApiResponse`1.Timestamp">
+            <summary>
+            UTC timestamp of response creation.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Shared.Results.Result">
+            <summary>
+            Represents the outcome of an operation that may succeed or fail,
+            without returning a value.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result.IsSuccess">
+            <summary>Gets a value indicating whether the operation succeeded.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result.IsFailure">
+            <summary>Gets a value indicating whether the operation failed.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result.Error">
+            <summary>Gets the error message when the operation fails. Null on success.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Results.Result.Success">
+            <summary>Creates a successful result.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Results.Result.Failure(System.String)">
+            <summary>Creates a failed result with the specified error message.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Results.Result.Success``1(``0)">
+            <summary>Creates a successful result carrying a value.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Shared.Results.Result.Failure``1(System.String)">
+            <summary>Creates a failed result carrying no value.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Shared.Results.Result`1">
+            <summary>
+            Represents the outcome of an operation that may succeed with a value or fail with an error.
+            </summary>
+            <typeparam name="TValue">The type of the returned value on success.</typeparam>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result`1.IsSuccess">
+            <summary>Gets a value indicating whether the operation succeeded.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result`1.IsFailure">
+            <summary>Gets a value indicating whether the operation failed.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result`1.Value">
+            <summary>
+            Gets the value. Only valid when <see cref="P:LifeBalance.Dashboard.Shared.Results.Result`1.IsSuccess"/> is <c>true</c>.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">Thrown when accessing value on a failed result.</exception>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Shared.Results.Result`1.Error">
+            <summary>Gets the error message when the operation fails. Null on success.</summary>
+        </member>
+    </members>
+</doc>

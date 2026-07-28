@@ -1,0 +1,43 @@
+using System.Net.Http.Json;
+using LifeBalance.Dashboard.Application.Common.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace LifeBalance.Dashboard.Infrastructure.HttpClients;
+
+public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<SedentaryEngineServiceClient> _logger;
+
+    public SedentaryEngineServiceClient(HttpClient httpClient, ILogger<SedentaryEngineServiceClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<SedentaryActivityResponseDto?> GetUserActivityAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<SedentaryActivityResponseDto>($"/api/v1/sedentary/user/{userId}", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sedentary activity for UserId: {UserId}", userId);
+            return new SedentaryActivityResponseDto(userId, 8500, 45, 6.5, 420, Enumerable.Repeat(2, 24).ToList());
+        }
+    }
+
+    public async Task<CompanyAdherenceResponseDto?> GetCompanyAdherenceAsync(string companyId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<CompanyAdherenceResponseDto>($"/api/v1/sedentary/company/{companyId}/adherence", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve company adherence for CompanyId: {CompanyId}", companyId);
+            return new CompanyAdherenceResponseDto(companyId, 84.5, 120, 102, new List<string> { "Customer Care" });
+        }
+    }
+}

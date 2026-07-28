@@ -1,0 +1,6 @@
+@LifeBalance.Dashboard.API_HostAddress = http://localhost:5122
+
+GET {{LifeBalance.Dashboard.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.Application</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.Application.Behaviors.LoggingBehavior`2">
+            <summary>
+            MediatR pipeline behavior that logs request start, completion, and duration.
+            Helps with observability and diagnostics without polluting handler code.
+            </summary>
+            <typeparam name="TRequest">The request type.</typeparam>
+            <typeparam name="TResponse">The response type.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.LoggingBehavior`2.#ctor(Microsoft.Extensions.Logging.ILogger{LifeBalance.Dashboard.Application.Behaviors.LoggingBehavior{`0,`1}})">
+            <summary>
+            MediatR pipeline behavior that logs request start, completion, and duration.
+            Helps with observability and diagnostics without polluting handler code.
+            </summary>
+            <typeparam name="TRequest">The request type.</typeparam>
+            <typeparam name="TResponse">The response type.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.LoggingBehavior`2.Handle(`0,MediatR.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Behaviors.PerformanceBehavior`2">
+            <summary>
+            MediatR pipeline behavior that logs a warning when a request takes longer than
+            a configured threshold (default: 500ms). Useful for identifying performance bottlenecks.
+            </summary>
+            <typeparam name="TRequest">The request type.</typeparam>
+            <typeparam name="TResponse">The response type.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.PerformanceBehavior`2.#ctor(Microsoft.Extensions.Logging.ILogger{LifeBalance.Dashboard.Application.Behaviors.PerformanceBehavior{`0,`1}})">
+            <summary>
+            MediatR pipeline behavior that logs a warning when a request takes longer than
+            a configured threshold (default: 500ms). Useful for identifying performance bottlenecks.
+            </summary>
+            <typeparam name="TRequest">The request type.</typeparam>
+            <typeparam name="TResponse">The response type.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.PerformanceBehavior`2.Handle(`0,MediatR.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Behaviors.ValidationBehavior`2">
+            <summary>
+            MediatR pipeline behavior that automatically validates requests using FluentValidation
+            before they reach the handler.
+            </summary>
+            <typeparam name="TRequest">The request type (command or query).</typeparam>
+            <typeparam name="TResponse">The response type returned by the handler.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.ValidationBehavior`2.#ctor(System.Collections.Generic.IEnumerable{FluentValidation.IValidator{`0}})">
+            <summary>
+            MediatR pipeline behavior that automatically validates requests using FluentValidation
+            before they reach the handler.
+            </summary>
+            <typeparam name="TRequest">The request type (command or query).</typeparam>
+            <typeparam name="TResponse">The response type returned by the handler.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Behaviors.ValidationBehavior`2.Handle(`0,MediatR.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService">
+            <summary>
+            Provides access to the current authenticated user's context.
+            Implemented in the API layer using IHttpContextAccessor.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService.UserId">
+            <summary>Gets the authenticated user's unique identifier. Null if anonymous.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService.Email">
+            <summary>Gets the authenticated user's email address. Null if anonymous.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService.IsAuthenticated">
+            <summary>Gets whether the current request is authenticated.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService.Roles">
+            <summary>Gets the roles assigned to the current user.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Common.Interfaces.IDateTimeProvider">
+            <summary>
+            Abstraction for date and time retrieval.
+            Inject this instead of <c>DateTime.UtcNow</c> to enable deterministic unit testing.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Common.Interfaces.IDateTimeProvider.UtcNow">
+            <summary>Gets the current UTC date and time.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Common.Interfaces.IUnitOfWork">
+            <summary>
+            Defines the unit-of-work contract for the Application layer.
+            Abstracts the persistence mechanism to keep Application decoupled from Infrastructure.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Common.Interfaces.IUnitOfWork.SaveChangesAsync(System.Threading.CancellationToken)">
+            <summary>
+            Commits all pending changes to the underlying store.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.DependencyInjection">
+            <summary>
+            Extension methods for registering Application layer services into the DI container.
+            Call from <c>Program.cs</c> or the API's <c>DependencyInjection</c> class.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.DependencyInjection.AddApplicationServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Adds Application layer services: MediatR, AutoMapper, FluentValidation, and pipeline behaviors.
+            </summary>
+            <param name="services">The service collection.</param>
+            <returns>The same service collection for chaining.</returns>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Application.Exceptions.ValidationException">
+            <summary>
+            Exception raised when one or more FluentValidation validators fail in the pipeline.
+            Converted to a 422 Unprocessable Entity response by the global exception middleware.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Application.Exceptions.ValidationException.Errors">
+            <summary>Gets the validation errors grouped by property name.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Exceptions.ValidationException.#ctor(System.Collections.Generic.IEnumerable{FluentValidation.Results.ValidationFailure})">
+            <summary>
+            Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Application.Exceptions.ValidationException"/> from a list of
+            FluentValidation <see cref="T:FluentValidation.Results.ValidationFailure"/> instances.
+            </summary>
+        </member>
+    </members>
+</doc>

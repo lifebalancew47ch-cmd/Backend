@@ -1,0 +1,94 @@
+version: "3.9"
+
+# ============================================================
+# LifeBalance · Dashboard Service — Docker Compose
+# ============================================================
+
+networks:
+  lifebalance-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+
+services:
+
+  # ----------------------------------------------------------
+  # MongoDB
+  # ----------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: lifebalance-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin}
+      MONGO_INITDB_DATABASE: lifebalance_dashboard
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - lifebalance-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Dashboard API
+  # ----------------------------------------------------------
+  dashboard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    container_name: lifebalance-dashboard-api
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MongoDB: "mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-admin}@mongodb:27017"
+      MongoDb__DatabaseName: lifebalance_dashboard
+      Jwt__Issuer: "https://auth.lifebalance.io"
+      Jwt__Audience: "dashboard-service"
+      Jwt__SecretKey: "${JWT_SECRET_KEY:-change-me-in-production-min-32-chars}"
+      Serilog__MinimumLevel__Default: "Information"
+      OpenTelemetry__ServiceName: "dashboard-service"
+      OpenTelemetry__Endpoint: "http://otel-collector:4317"
+      CORS__AllowedOrigins: "http://localhost:3000"
+    networks:
+      - lifebalance-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+  # ----------------------------------------------------------
+  # Mongo Express (Dev UI)
+  # ----------------------------------------------------------
+  mongo-express:
+    image: mongo-express:1.0
+    container_name: lifebalance-mongo-express
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-admin}
+      ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-admin}@mongodb:27017/"
+      ME_CONFIG_BASICAUTH: "false"
+    networks:
+      - lifebalance-net
+    profiles:
+      - dev-tools

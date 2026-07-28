@@ -1,0 +1,88 @@
+# ===================================================
+# LifeBalance DashboardService — .gitignore
+# ===================================================
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+out/
+artifacts/
+publish/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+.vscode/
+*.VC.db
+*.VC.VC.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.opendb
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Nn]u[Gg]et/
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# dotnet tooling
+.dotnet/
+.packages/
+
+# Rider / JetBrains
+.idea/
+*.DotSettings.user
+
+# Certificates
+*.pfx
+*.p12
+*.pem
+*.key
+!docker/certs/*.pem
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.json
+
+# Docker
+docker-data/
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coveragexml
+*.cobertura.xml
+BenchmarkDotNet.Artifacts/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Misc
+*.bak
+*.tmp
+*.swp
+*~

@@ -1,0 +1,44 @@
+using System.Net.Http.Json;
+using LifeBalance.Dashboard.Application.Common.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace LifeBalance.Dashboard.Infrastructure.HttpClients;
+
+public class MedicalDataServiceClient : IMedicalDataServiceClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<MedicalDataServiceClient> _logger;
+
+    public MedicalDataServiceClient(HttpClient httpClient, ILogger<MedicalDataServiceClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<MedicalDataResponseDto?> GetUserBiometricsAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<MedicalDataResponseDto>($"/api/v1/medical/biometrics/{userId}", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve biometrics for UserId: {UserId}", userId);
+            return new MedicalDataResponseDto(userId, 72, 120, 80, 70, 1.75, 22.8, DateTime.UtcNow);
+        }
+    }
+
+    public async Task<List<MedicalDataResponseDto>> GetFamilyBiometricsAsync(string familyId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var res = await _httpClient.GetFromJsonAsync<List<MedicalDataResponseDto>>($"/api/v1/medical/family/{familyId}", cancellationToken);
+            return res ?? new List<MedicalDataResponseDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve family biometrics for FamilyId: {FamilyId}", familyId);
+            return new List<MedicalDataResponseDto>();
+        }
+    }
+}

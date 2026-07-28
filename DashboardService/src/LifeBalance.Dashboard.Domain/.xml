@@ -1,0 +1,219 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.Domain</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.Domain.Common.AggregateRoot`1">
+            <summary>
+            Base class for Aggregate Roots.
+            An aggregate root is the entry point to an aggregate cluster of entities.
+            Only aggregate roots may be loaded from the repository.
+            </summary>
+            <typeparam name="TId">The type of the aggregate root identifier.</typeparam>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.AggregateRoot`1.Version">
+            <summary>Gets the concurrency version for optimistic locking.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.AggregateRoot`1.IncrementVersion">
+            <summary>
+            Increments the aggregate version. Called after persisting a new event.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Common.DomainEvent">
+            <summary>
+            Base record for Domain Events.
+            Provides default implementations of <see cref="T:LifeBalance.Dashboard.Domain.Common.IDomainEvent"/>.
+            </summary>
+            <param name="EventId">Unique event identifier (auto-generated).</param>
+            <param name="OccurredAt">UTC timestamp when the event occurred (auto-generated).</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.DomainEvent.#ctor(System.Guid,System.DateTime)">
+            <summary>
+            Base record for Domain Events.
+            Provides default implementations of <see cref="T:LifeBalance.Dashboard.Domain.Common.IDomainEvent"/>.
+            </summary>
+            <param name="EventId">Unique event identifier (auto-generated).</param>
+            <param name="OccurredAt">UTC timestamp when the event occurred (auto-generated).</param>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.DomainEvent.EventId">
+            <summary>Unique event identifier (auto-generated).</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.DomainEvent.OccurredAt">
+            <summary>UTC timestamp when the event occurred (auto-generated).</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.DomainEvent.#ctor">
+            <summary>
+            Initializes a new domain event with auto-generated Id and timestamp.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Common.Entity`1">
+            <summary>
+            Base class for all Domain Entities.
+            Enforces identity equality based on the entity's Id.
+            </summary>
+            <typeparam name="TId">The type of the entity identifier.</typeparam>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.Entity`1.Id">
+            <summary>Gets the entity identifier.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.Entity`1.CreatedAt">
+            <summary>Gets the UTC date and time when the entity was created.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.Entity`1.UpdatedAt">
+            <summary>Gets or sets the UTC date and time of the last update.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.Entity`1.DomainEvents">
+            <summary>Gets the read-only list of pending domain events.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.RaiseDomainEvent(LifeBalance.Dashboard.Domain.Common.IDomainEvent)">
+            <summary>Raises a domain event by adding it to the pending list.</summary>
+            <param name="domainEvent">The domain event to raise.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.ClearDomainEvents">
+            <summary>Clears all pending domain events after they have been dispatched.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.Equals(System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.GetHashCode">
+            <inheritdoc/>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.op_Equality(LifeBalance.Dashboard.Domain.Common.Entity{`0},LifeBalance.Dashboard.Domain.Common.Entity{`0})">
+            <summary>Equality operator.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.Entity`1.op_Inequality(LifeBalance.Dashboard.Domain.Common.Entity{`0},LifeBalance.Dashboard.Domain.Common.Entity{`0})">
+            <summary>Inequality operator.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Common.IDomainEvent">
+            <summary>
+            Marker interface for all Domain Events in the LifeBalance Dashboard bounded context.
+            All domain events must implement this interface and <see cref="T:MediatR.INotification"/>
+            to participate in the MediatR in-process event pipeline.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.IDomainEvent.EventId">
+            <summary>Gets the unique event identifier.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Domain.Common.IDomainEvent.OccurredAt">
+            <summary>Gets the UTC date and time when the event occurred.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Common.ValueObject">
+            <summary>
+            Base class for Value Objects.
+            Value objects have no identity — equality is based on structural value comparison.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.ValueObject.GetEqualityComponents">
+            <summary>
+            Returns the atomic components that contribute to value equality.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.ValueObject.Equals(System.Object)">
+            <inheritdoc/>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.ValueObject.GetHashCode">
+            <inheritdoc/>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.ValueObject.op_Equality(LifeBalance.Dashboard.Domain.Common.ValueObject,LifeBalance.Dashboard.Domain.Common.ValueObject)">
+            <summary>Equality operator.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Common.ValueObject.op_Inequality(LifeBalance.Dashboard.Domain.Common.ValueObject,LifeBalance.Dashboard.Domain.Common.ValueObject)">
+            <summary>Inequality operator.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Constants.DomainConstants">
+            <summary>
+            Application-wide constants for the Dashboard Domain.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Domain.Constants.DomainConstants.ServiceName">
+            <summary>The bounded context name.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Domain.Constants.DomainConstants.DatabaseName">
+            <summary>The default MongoDB database name.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Domain.Constants.DomainConstants.MinNameLength">
+            <summary>Minimum allowed string length for names and identifiers.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Domain.Constants.DomainConstants.MaxNameLength">
+            <summary>Maximum allowed string length for names.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.DomainServices.IDomainService">
+            <summary>
+            Placeholder interface for Domain Services.
+            Domain services encapsulate domain logic that does not naturally belong to a single Entity or Value Object.
+            Implement this interface in concrete domain service classes.
+            </summary>
+            <remarks>
+            Future domain services should be registered in the Infrastructure DependencyInjection
+            and injected via interfaces in the Application layer.
+            </remarks>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Exceptions.DomainException">
+            <summary>
+            Represents a domain rule violation that prevents a business operation from completing.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Exceptions.DomainException.#ctor(System.String)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Domain.Exceptions.DomainException"/>.</summary>
+            <param name="message">The message that describes the domain rule violation.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Exceptions.DomainException.#ctor(System.String,System.Exception)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Domain.Exceptions.DomainException"/> with an inner exception.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Exceptions.NotFoundException">
+            <summary>
+            Raised when a required entity cannot be found by its identifier.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Exceptions.NotFoundException.#ctor(System.String,System.Object)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Domain.Exceptions.NotFoundException"/>.</summary>
+            <param name="entityName">The name of the entity type.</param>
+            <param name="id">The identifier that was searched.</param>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Repositories.IRepository`2">
+            <summary>
+            Generic repository interface for Aggregate Roots.
+            Implementations belong to the Infrastructure layer.
+            </summary>
+            <typeparam name="TAggregate">The aggregate root type.</typeparam>
+            <typeparam name="TId">The type of the aggregate identifier.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Repositories.IRepository`2.FindByIdAsync(`1,System.Threading.CancellationToken)">
+            <summary>Finds an aggregate by its identifier.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Repositories.IRepository`2.AddAsync(`0,System.Threading.CancellationToken)">
+            <summary>Persists a new aggregate.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Repositories.IRepository`2.UpdateAsync(`0,System.Threading.CancellationToken)">
+            <summary>Updates an existing aggregate.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Repositories.IRepository`2.DeleteAsync(`1,System.Threading.CancellationToken)">
+            <summary>Deletes an aggregate by its identifier.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Repositories.IRepository`2.ExistsAsync(`1,System.Threading.CancellationToken)">
+            <summary>Returns whether an aggregate with the given Id exists.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Specifications.Specification`1">
+            <summary>
+            Abstract base class for the Specification pattern.
+            Encapsulates a business rule as a reusable predicate.
+            </summary>
+            <typeparam name="T">The type of the object being evaluated.</typeparam>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Specifications.Specification`1.IsSatisfiedBy(`0)">
+            <summary>Evaluates whether the specification is satisfied by <paramref name="candidate"/>.</summary>
+            <param name="candidate">The object to evaluate.</param>
+            <returns><c>true</c> if satisfied; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Specifications.Specification`1.And(LifeBalance.Dashboard.Domain.Specifications.Specification{`0})">
+            <summary>Combines two specifications with a logical AND.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Specifications.Specification`1.Or(LifeBalance.Dashboard.Domain.Specifications.Specification{`0})">
+            <summary>Combines two specifications with a logical OR.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Domain.Specifications.Specification`1.Not">
+            <summary>Negates this specification.</summary>
+        </member>
+    </members>
+</doc>
