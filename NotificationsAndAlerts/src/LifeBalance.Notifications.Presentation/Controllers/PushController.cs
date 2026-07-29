@@ -1,11 +1,13 @@
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LifeBalance.Notifications.Presentation.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/push")]
 public class PushController : ControllerBase
 {

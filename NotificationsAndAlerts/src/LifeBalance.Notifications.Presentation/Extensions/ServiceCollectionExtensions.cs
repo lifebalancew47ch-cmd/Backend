@@ -1,4 +1,5 @@
 using LifeBalance.Notifications.Application.Interfaces;
+using LifeBalance.Notifications.Infrastructure.Configuration;
 using LifeBalance.Notifications.Infrastructure.Data;
 using LifeBalance.Notifications.Infrastructure.Services;
 using LifeBalance.Notifications.Presentation.Middlewares;
@@ -10,6 +11,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<MongoDbContext>();
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
 
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IPushService, PushService>();
