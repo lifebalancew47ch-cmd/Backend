@@ -99,7 +99,7 @@ services:
     env: docker
     region: oregon
     plan: starter
-    rootDir: Notifications&Alerts
+    rootDir: NotificationsAndAlerts
     dockerfilePath: ./Dockerfile
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
