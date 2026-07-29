@@ -19,8 +19,8 @@ services:
       - MongoDb__ConnectionString=mongodb://mongodb:27017
       - MongoDb__DatabaseName=LifeBalance_Auth
       - Jwt__SecretKey=SUPER_SECRET_KEY_FOR_LOCAL_DEVELOPMENT_THAT_IS_LONG_ENOUGH_32_CHARS
-      - Jwt__Issuer=LifeBalance.AuthService
-      - Jwt__Audience=LifeBalance.Services
+      - Jwt__Issuer=LifeBalance
+      - Jwt__Audience=LifeBalance
       - Jwt__AccessTokenExpirationMinutes=30
       - Jwt__RefreshTokenExpirationDays=7
       - Security__MaxFailedLoginAttempts=5

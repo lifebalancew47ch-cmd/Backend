@@ -43,7 +43,7 @@ public static class HealthCheckExtensions
         var result = System.Text.Json.JsonSerializer.Serialize(new
         {
             status  = report.Status.ToString(),
-            checked = DateTime.UtcNow,
+            @checked = DateTime.UtcNow,
             entries = report.Entries.Select(e => new
             {
                 name        = e.Key,

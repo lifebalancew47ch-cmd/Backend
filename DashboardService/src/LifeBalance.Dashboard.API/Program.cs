@@ -7,6 +7,7 @@ using LifeBalance.Dashboard.Application;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using LifeBalance.Dashboard.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Text.Json.Serialization;
 
@@ -109,9 +110,7 @@ try
     builder.Services
         .AddHealthChecks()
         .AddMongoDb(
-            mongodbConnectionString: builder.Configuration.GetConnectionString("MongoDB")
-                ?? builder.Configuration["MongoDb:ConnectionString"]
-                ?? "mongodb://localhost:27017",
+            sp => sp.GetRequiredService<MongoDB.Driver.IMongoClient>(),
             name:  "mongodb",
             tags:  new[] { "ready", "db" });
 
@@ -236,3 +235,6 @@ finally
 {
     await Log.CloseAndFlushAsync();
 }
+
+public partial class Program { }
+
