@@ -11,11 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <PackageReference Include="MongoDB.Driver" Version="3.1.0" />
   </ItemGroup>
 

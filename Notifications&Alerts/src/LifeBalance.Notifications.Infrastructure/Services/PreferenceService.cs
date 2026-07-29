@@ -36,49 +36,31 @@ public class PreferenceService : IPreferenceService
 
         if (pref is null)
         {
-            pref = new NotificationPreference { UserId = userId };
+            pref = new NotificationPreference
+            {
+                UserId = userId,
+                ReceivePush = dto.ReceivePush ?? true,
+                ReceiveWearOS = dto.ReceiveWearOS ?? true,
+                ReceiveEmail = dto.ReceiveEmail ?? true,
+                ReceiveSedentaryAlerts = dto.ReceiveSedentaryAlerts ?? true,
+                ReceiveMarketing = dto.ReceiveMarketing ?? true,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _db.NotificationPreferences.InsertOneAsync(pref);
+        }
+        else
+        {
+            if (dto.ReceivePush.HasValue) pref.ReceivePush = dto.ReceivePush.Value;
+            if (dto.ReceiveWearOS.HasValue) pref.ReceiveWearOS = dto.ReceiveWearOS.Value;
+            if (dto.ReceiveEmail.HasValue) pref.ReceiveEmail = dto.ReceiveEmail.Value;
+            if (dto.ReceiveSedentaryAlerts.HasValue) pref.ReceiveSedentaryAlerts = dto.ReceiveSedentaryAlerts.Value;
+            if (dto.ReceiveMarketing.HasValue) pref.ReceiveMarketing = dto.ReceiveMarketing.Value;
+            pref.UpdatedAt = DateTime.UtcNow;
+
+            await _db.NotificationPreferences.ReplaceOneAsync(filter, pref);
         }
 
-        if (dto.ReceivePush.HasValue) pref.ReceivePush = dto.ReceivePush.Value;
-        if (dto.ReceiveEmail.HasValue) pref.ReceiveEmail = dto.ReceiveEmail.Value;
-        if (dto.ReceiveSms.HasValue) pref.ReceiveSms = dto.ReceiveSms.Value;
-        if (dto.ReceiveWearOS.HasValue) pref.ReceiveWearOS = dto.ReceiveWearOS.Value;
-        if (dto.ReceiveCriticalAlerts.HasValue) pref.ReceiveCriticalAlerts = dto.ReceiveCriticalAlerts.Value;
-        if (dto.ReceiveReminders.HasValue) pref.ReceiveReminders = dto.ReceiveReminders.Value;
-        if (dto.ReceiveGoals.HasValue) pref.ReceiveGoals = dto.ReceiveGoals.Value;
-        if (dto.ReceiveGamification.HasValue) pref.ReceiveGamification = dto.ReceiveGamification.Value;
-        if (dto.ReceiveOrganizational.HasValue) pref.ReceiveOrganizational = dto.ReceiveOrganizational.Value;
-        if (dto.AllowedStartTime is not null) pref.AllowedStartTime = TimeSpan.Parse(dto.AllowedStartTime);
-        if (dto.AllowedEndTime is not null) pref.AllowedEndTime = TimeSpan.Parse(dto.AllowedEndTime);
-        if (dto.QuietModeEnabled.HasValue) pref.QuietModeEnabled = dto.QuietModeEnabled.Value;
-        if (dto.QuietModeStart is not null) pref.QuietModeStart = TimeSpan.Parse(dto.QuietModeStart);
-        if (dto.QuietModeEnd is not null) pref.QuietModeEnd = TimeSpan.Parse(dto.QuietModeEnd);
-        if (dto.Frequency is not null) pref.Frequency = dto.Frequency;
-        if (dto.Language is not null) pref.Language = dto.Language;
-        if (dto.Timezone is not null) pref.Timezone = dto.Timezone;
-        pref.UpdatedAt = DateTime.UtcNow;
-
-        if (string.IsNullOrEmpty(pref.Id))
-            await _db.NotificationPreferences.InsertOneAsync(pref);
-        else
-            await _db.NotificationPreferences.ReplaceOneAsync(filter, pref);
-
         return MapToDto(pref);
-    }
-
-    public async Task<NotificationPreferenceDto> UpdatePushAsync(string userId, bool enabled)
-    {
-        return await UpdateAsync(userId, new UpdatePreferenceDto { ReceivePush = enabled });
-    }
-
-    public async Task<NotificationPreferenceDto> UpdateEmailAsync(string userId, bool enabled)
-    {
-        return await UpdateAsync(userId, new UpdatePreferenceDto { ReceiveEmail = enabled });
-    }
-
-    public async Task<NotificationPreferenceDto> UpdateWearOSAsync(string userId, bool enabled)
-    {
-        return await UpdateAsync(userId, new UpdatePreferenceDto { ReceiveWearOS = enabled });
     }
 
     private static NotificationPreferenceDto MapToDto(NotificationPreference p) => new()
@@ -86,22 +68,10 @@ public class PreferenceService : IPreferenceService
         Id = p.Id,
         UserId = p.UserId,
         ReceivePush = p.ReceivePush,
-        ReceiveEmail = p.ReceiveEmail,
-        ReceiveSms = p.ReceiveSms,
         ReceiveWearOS = p.ReceiveWearOS,
-        ReceiveCriticalAlerts = p.ReceiveCriticalAlerts,
-        ReceiveReminders = p.ReceiveReminders,
-        ReceiveGoals = p.ReceiveGoals,
-        ReceiveGamification = p.ReceiveGamification,
-        ReceiveOrganizational = p.ReceiveOrganizational,
-        AllowedStartTime = p.AllowedStartTime?.ToString(),
-        AllowedEndTime = p.AllowedEndTime?.ToString(),
-        QuietModeEnabled = p.QuietModeEnabled,
-        QuietModeStart = p.QuietModeStart?.ToString(),
-        QuietModeEnd = p.QuietModeEnd?.ToString(),
-        Frequency = p.Frequency,
-        Language = p.Language,
-        Timezone = p.Timezone,
+        ReceiveEmail = p.ReceiveEmail,
+        ReceiveSedentaryAlerts = p.ReceiveSedentaryAlerts,
+        ReceiveMarketing = p.ReceiveMarketing,
         UpdatedAt = p.UpdatedAt
     };
 }

@@ -10,18 +10,5 @@ public enum NotificationType
     SubscriptionNotification,
     Reminder,
     Warning,
-    Information,
-    Welcome,
-    PasswordReset,
-    PasswordChanged,
-    EmailConfirmation,
-    Newsletter,
-    MedicalAlert,
-    Confirmation,
-    Compliance,
-    Inactivity,
-    SedentaryRisk,
-    Organizational,
-    Objectives,
-    Goals
+    Information
 }

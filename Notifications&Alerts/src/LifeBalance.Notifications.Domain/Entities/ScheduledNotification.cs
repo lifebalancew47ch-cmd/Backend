@@ -13,15 +13,6 @@ public class ScheduledNotification
     [BsonElement("userId")]
     public string UserId { get; set; } = string.Empty;
 
-    [BsonElement("organizationId")]
-    public string? OrganizationId { get; set; }
-
-    [BsonElement("familyId")]
-    public string? FamilyId { get; set; }
-
-    [BsonElement("departmentId")]
-    public string? DepartmentId { get; set; }
-
     [BsonElement("title")]
     public string Title { get; set; } = string.Empty;
 
@@ -39,12 +30,6 @@ public class ScheduledNotification
 
     [BsonElement("scheduledFor")]
     public DateTime ScheduledFor { get; set; }
-
-    [BsonElement("recurrence")]
-    public RecurrencePattern Recurrence { get; set; }
-
-    [BsonElement("repeatInterval")]
-    public int? RepeatInterval { get; set; }
 
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;

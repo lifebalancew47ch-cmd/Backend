@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace LifeBalance.Notifications.Presentation.Controllers;
 
 [ApiController]
-[Route("api/v1/notifications")]
+[Route("notifications")]
 public class NotificationsController : ControllerBase
 {
     private readonly INotificationService _notificationService;
@@ -29,98 +29,113 @@ public class NotificationsController : ControllerBase
         _templateService = templateService;
     }
 
-    [HttpPost]
+    [HttpPost("send")]
     public async Task<IActionResult> Send([FromBody] SendNotificationDto dto)
     {
         var result = await _notificationService.SendAsync(dto);
         return Ok(new Response<NotificationResponseDto>(result));
     }
 
-    [HttpPost("bulk")]
-    public async Task<IActionResult> SendBulk([FromBody] List<SendNotificationDto> dtos)
+    [HttpPost("broadcast")]
+    public async Task<IActionResult> Broadcast([FromBody] BroadcastNotificationDto dto)
     {
-        var results = await _notificationService.SendBulkAsync(dtos);
-        return Ok(new Response<List<NotificationResponseDto>>(results));
+        var result = await _notificationService.BroadcastAsync(dto);
+        return Ok(new Response<List<NotificationResponseDto>>(result));
     }
 
-    [HttpPost("schedule")]
-    public async Task<IActionResult> Schedule([FromBody] ScheduleNotificationDto dto)
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory([FromQuery] string userId)
     {
-        var result = await _notificationService.ScheduleAsync(dto);
-        return Ok(new Response<NotificationResponseDto>(result));
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? userId, [FromQuery] string? organizationId, [FromQuery] string? familyId, [FromQuery] string? departmentId)
-    {
-        var results = await _notificationService.GetAllAsync(userId, organizationId, familyId, departmentId);
-        return Ok(new Response<List<NotificationResponseDto>>(results));
+        var result = await _historyService.GetAllAsync(userId);
+        return Ok(new Response<List<NotificationHistoryDto>>(result));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
-        var result = await _notificationService.GetByIdAsync(id);
+        var result = await _historyService.GetByIdAsync(id);
         if (result is null)
             return NotFound(new Response<string>("Notification not found"));
 
+        var dto = new NotificationResponseDto
+        {
+            Id = result.Id,
+            UserId = result.UserId,
+            Title = result.Title,
+            Body = result.Body,
+            Payload = result.Payload,
+            Type = result.Type,
+            Channel = result.Channel,
+            Status = result.Status,
+            CreatedAt = result.CreatedAt,
+            SentAt = result.SentAt
+        };
+
+        return Ok(new Response<NotificationResponseDto>(dto));
+    }
+
+    [HttpGet("preferences")]
+    public async Task<IActionResult> GetPreferences([FromQuery] string userId)
+    {
+        var result = await _preferenceService.GetAsync(userId);
+        return Ok(new Response<NotificationPreferenceDto>(result));
+    }
+
+    [HttpPut("preferences")]
+    public async Task<IActionResult> UpdatePreferences([FromQuery] string userId, [FromBody] UpdatePreferenceDto dto)
+    {
+        var result = await _preferenceService.UpdateAsync(userId, dto);
+        return Ok(new Response<NotificationPreferenceDto>(result));
+    }
+
+    [HttpPost("schedule")]
+    public async Task<IActionResult> Schedule([FromBody] ScheduleNotificationDto dto)
+    {
+        var result = await _scheduleService.ScheduleAsync(dto);
         return Ok(new Response<NotificationResponseDto>(result));
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
+    [HttpDelete("schedule/{id}")]
+    public async Task<IActionResult> CancelSchedule(string id)
     {
-        var result = await _notificationService.DeleteAsync(id);
+        var result = await _scheduleService.CancelAsync(id);
         if (!result)
-            return NotFound(new Response<string>("Notification not found"));
+            return NotFound(new Response<string>("Scheduled notification not found or already cancelled"));
 
-        return Ok(new Response<string>("Notification deleted"));
+        return Ok(new Response<string>("Scheduled notification cancelled"));
     }
 
-    [HttpPatch("{id}/cancel")]
-    public async Task<IActionResult> Cancel(string id)
+    [HttpGet("templates")]
+    public async Task<IActionResult> GetTemplates()
     {
-        var result = await _notificationService.CancelAsync(id);
-        if (!result)
-            return NotFound(new Response<string>("Notification not found or already sent"));
-
-        return Ok(new Response<string>("Notification cancelled"));
+        var result = await _templateService.GetAllAsync();
+        return Ok(new Response<List<TemplateDto>>(result));
     }
 
-    [HttpPatch("{id}/read")]
-    public async Task<IActionResult> MarkAsRead(string id)
+    [HttpPost("templates")]
+    public async Task<IActionResult> CreateTemplate([FromBody] CreateTemplateDto dto)
     {
-        var result = await _notificationService.MarkAsReadAsync(id);
-        if (!result)
-            return NotFound(new Response<string>("Notification not found"));
-
-        return Ok(new Response<string>("Notification marked as read"));
+        var result = await _templateService.CreateAsync(dto);
+        return Ok(new Response<TemplateDto>(result));
     }
 
-    [HttpPatch("read-all")]
-    public async Task<IActionResult> MarkAllAsRead([FromQuery] string userId)
+    [HttpPut("templates/{id}")]
+    public async Task<IActionResult> UpdateTemplate(string id, [FromBody] CreateTemplateDto dto)
     {
-        var result = await _notificationService.MarkAllAsReadAsync(userId);
-        return Ok(new Response<string>($"{result} notifications marked as read"));
+        var result = await _templateService.UpdateAsync(id, dto);
+        if (result is null)
+            return NotFound(new Response<string>("Template not found"));
+
+        return Ok(new Response<TemplateDto>(result));
     }
 
-    [HttpPatch("{id}/archive")]
-    public async Task<IActionResult> Archive(string id)
+    [HttpDelete("templates/{id}")]
+    public async Task<IActionResult> DeleteTemplate(string id)
     {
-        var result = await _notificationService.ArchiveAsync(id);
+        var result = await _templateService.DeleteAsync(id);
         if (!result)
-            return NotFound(new Response<string>("Notification not found"));
+            return NotFound(new Response<string>("Template not found"));
 
-        return Ok(new Response<string>("Notification archived"));
-    }
-
-    [HttpPatch("{id}/favorite")]
-    public async Task<IActionResult> Favorite(string id)
-    {
-        var result = await _notificationService.FavoriteAsync(id);
-        if (!result)
-            return NotFound(new Response<string>("Notification not found"));
-
-        return Ok(new Response<string>("Notification favorite toggled"));
+        return Ok(new Response<string>("Template deleted"));
     }
 }

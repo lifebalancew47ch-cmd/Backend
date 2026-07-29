@@ -25,18 +25,6 @@ public class DeliveryLog
     [BsonElement("attempts")]
     public int Attempts { get; set; } = 1;
 
-    [BsonElement("deliveryTimeMs")]
-    public long? DeliveryTimeMs { get; set; }
-
-    [BsonElement("openedAt")]
-    public DateTime? OpenedAt { get; set; }
-
-    [BsonElement("readAt")]
-    public DateTime? ReadAt { get; set; }
-
-    [BsonElement("provider")]
-    public string? Provider { get; set; }
-
     [BsonElement("errorMessage")]
     public string? ErrorMessage { get; set; }
 
