@@ -1,0 +1,175 @@
+name: CI — LifeBalance Backend
+
+on:
+  push:
+    branches: ["main", "develop", "feature/**", "fix/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────
+  # JOB 1: Auth & Profile Service
+  # ─────────────────────────────────────────
+  auth-profile:
+    name: Auth & Profile — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Auth_Profile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: >
+          dotnet test tests/UnitTests/UnitTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-unit-test-results
+          path: Auth_Profile/TestResults/
+
+      - name: Build Docker image (dry run)
+        run: docker build -t lifebalance-auth:ci .
+
+  # ─────────────────────────────────────────
+  # JOB 2: Dashboard Service
+  # ─────────────────────────────────────────
+  dashboard:
+    name: Dashboard Service — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: DashboardService
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+          
+      # Relax global.json SDK constraint for CI runners
+      - name: Patch global.json for CI compatibility
+        run: |
+          cat > global.json << 'EOF'
+          {
+            "sdk": {
+              "version": "9.0.100",
+              "rollForward": "latestMajor"
+            }
+          }
+          EOF
+
+      - name: Restore solution
+        run: dotnet restore LifeBalance.DashboardService.sln
+
+      - name: Build solution
+        run: dotnet build LifeBalance.DashboardService.sln --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: >
+          dotnet test tests/LifeBalance.Dashboard.UnitTests/LifeBalance.Dashboard.UnitTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-unit-test-results
+          path: DashboardService/TestResults/
+
+      - name: Build Docker image (dry run)
+        run: docker build -t lifebalance-dashboard:ci .
+
+  # ─────────────────────────────────────────
+  # JOB 3: Notifications & Alerts Service
+  # ─────────────────────────────────────────
+  notifications:
+    name: Notifications & Alerts — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "NotificationsAndAlerts"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore LifeBalance.Notifications.sln
+
+      - name: Build
+        run: dotnet build LifeBalance.Notifications.sln --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: >
+          dotnet test tests/LifeBalance.Notifications.UnitTests/LifeBalance.Notifications.UnitTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifications-unit-test-results
+          path: "NotificationsAndAlerts/TestResults/"
+
+      - name: Build Docker image (dry run)
+        run: docker build -t lifebalance-notifications:ci .
+
+  # ─────────────────────────────────────────
+  # JOB 4: All-green gate (required for merge)
+  # ─────────────────────────────────────────
+  ci-success:
+    name: CI — All services passed
+    runs-on: ubuntu-latest
+    needs: [auth-profile, dashboard, notifications]
+    if: always()
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          if [[ "${{ needs.auth-profile.result }}" != "success" || \
+                "${{ needs.dashboard.result }}" != "success" || \
+                "${{ needs.notifications.result }}" != "success" ]]; then
+            echo "One or more service jobs failed."
+            exit 1
+          fi
+          echo "All services built and tested successfully."

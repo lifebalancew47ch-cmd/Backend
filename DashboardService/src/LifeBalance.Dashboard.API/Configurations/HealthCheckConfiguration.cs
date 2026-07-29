@@ -9,9 +9,7 @@ public static class HealthCheckConfiguration
     {
         services.AddHealthChecks()
             .AddMongoDb(
-                mongodbConnectionString: configuration.GetConnectionString("MongoDB")
-                    ?? configuration["MongoDb:ConnectionString"]
-                    ?? "mongodb://localhost:27017",
+                sp => sp.GetRequiredService<MongoDB.Driver.IMongoClient>(),
                 name: "mongodb",
                 tags: new[] { "ready", "db" });
 

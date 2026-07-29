@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.Infrastructure</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions">
+            <summary>
+            Configuration options for external HTTP service clients.
+            Bound from <c>appsettings.json → HttpClients</c>.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.SectionName">
+            <summary>The configuration section key.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.HabitsServiceBaseUrl">
+            <summary>Gets or sets the base URL for the Habits microservice.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.NutritionServiceBaseUrl">
+            <summary>Gets or sets the base URL for the Nutrition microservice.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.FitnessServiceBaseUrl">
+            <summary>Gets or sets the base URL for the Fitness microservice.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.SleepServiceBaseUrl">
+            <summary>Gets or sets the base URL for the Sleep microservice.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.TimeoutSeconds">
+            <summary>Gets or sets the request timeout in seconds. Defaults to 30.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.HttpClientOptions.RetryCount">
+            <summary>Gets or sets the number of retry attempts. Defaults to 3.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions">
+            <summary>
+            Configuration options for JWT Authentication.
+            Bound from <c>appsettings.json → Jwt</c>.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions.SectionName">
+            <summary>The configuration section key.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions.Issuer">
+            <summary>Gets or sets the token issuer (iss claim).</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions.Audience">
+            <summary>Gets or sets the token audience (aud claim).</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions.SecretKey">
+            <summary>Gets or sets the HMAC-SHA256 secret key (minimum 32 characters).</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Options.JwtOptions.ExpiryMinutes">
+            <summary>Gets or sets the token expiry in minutes. Defaults to 60.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext">
+            <summary>
+            Provides access to the MongoDB database instance.
+            Registered as a singleton so the <see cref="T:MongoDB.Driver.MongoClient"/> connection pool is reused.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext.#ctor(Microsoft.Extensions.Options.IOptions{LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbOptions})">
+            <summary>
+            Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext"/>.
+            </summary>
+            <param name="options">The MongoDB configuration options.</param>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext.GetCollection``1(System.String)">
+            <summary>
+            Gets a strongly-typed collection from the database.
+            </summary>
+            <typeparam name="TDocument">The BSON document type.</typeparam>
+            <param name="collectionName">The name of the collection.</param>
+            <returns>An <see cref="T:MongoDB.Driver.IMongoCollection`1"/> instance.</returns>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext.Database">
+            <summary>Gets the underlying <see cref="T:MongoDB.Driver.IMongoDatabase"/> for advanced operations.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbOptions">
+            <summary>
+            Strongly-typed configuration options for MongoDB.
+            Bound from <c>appsettings.json → MongoDb</c> section.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbOptions.SectionName">
+            <summary>The configuration section key.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbOptions.ConnectionString">
+            <summary>Gets or sets the MongoDB connection string.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbOptions.DatabaseName">
+            <summary>Gets or sets the target database name.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Infrastructure.Services.DateTimeProvider">
+            <summary>
+            Infrastructure implementation of <see cref="T:LifeBalance.Dashboard.Application.Common.Interfaces.IDateTimeProvider"/>.
+            Returns <c>DateTime.UtcNow</c> in production; can be replaced with a fixed clock in tests.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Services.DateTimeProvider.UtcNow">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>

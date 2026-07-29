@@ -15,7 +15,7 @@ public record IndividualSummaryResponse(string UserId, string FullName, int Dail
 public record IndividualKpisResponse(string UserId, double Bmi, double HeartRate, int DailySteps, double CaloriesBurned);
 public record IndividualStatisticsResponse(string UserId, double ActiveHoursThisWeek, double SedentaryHoursThisWeek, double AverageHeartRate);
 public record IndividualHeatmapResponse(string UserId, List<int> HourlyHeatmap);
-public record IndividualGoalsResponse(string UserId, List<GoalProgressDto> Goals);
+public record IndividualGoalsResponse(string UserId, List<ChallengeProgressDto> Goals);
 public record IndividualProgressResponse(string UserId, double WeeklyGoalCompletionPercentage, int DaysActive);
 public record IndividualActivityResponse(string UserId, SedentaryActivityResponseDto Activity);
 public record IndividualRecommendationsResponse(string UserId, List<RecommendationDto> Recommendations);
