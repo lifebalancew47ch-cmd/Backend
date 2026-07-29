@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.API</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.API.Authorization.Policies">
+            <summary>
+            Centralized definition of all Authorization Policy names used in the Dashboard API.
+            Use these constants with <c>[Authorize(Policy = Policies.XXX)]</c>.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Policies.AuthenticatedUser">
+            <summary>Policy requiring any authenticated user.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Policies.Admin">
+            <summary>Policy allowing only users with the Admin role.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Policies.DashboardRead">
+            <summary>Policy allowing users with the Dashboard:Read permission.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Policies.DashboardWrite">
+            <summary>Policy allowing users with the Dashboard:Write permission.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.API.Authorization.Roles">
+            <summary>
+            Centralized definition of all Role names used in the Dashboard API.
+            </summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.Admin">
+            <summary>Administrator role with full access.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.User">
+            <summary>Standard authenticated user.</summary>
+        </member>
+        <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.Viewer">
+            <summary>Read-only access to dashboard data.</summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.API.HealthChecks.HealthCheckExtensions">
+            <summary>
+            Extension methods for configuring Health Check endpoints in the ASP.NET Core pipeline.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.HealthChecks.HealthCheckExtensions.MapDashboardHealthChecks(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+            <summary>
+            Maps liveness, readiness, and UI health check endpoints.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.API.Middlewares.CorrelationIdMiddleware">
+            <summary>
+            Middleware that ensures every request has a Correlation ID.
+            Reads from the incoming <c>X-Correlation-ID</c> header or generates a new <see cref="T:System.Guid"/>.
+            Propagates the value in both the response header and the logging scope.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.Middlewares.CorrelationIdMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.API.Middlewares.CorrelationIdMiddleware"/>.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.Middlewares.CorrelationIdMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <inheritdoc cref="T:Microsoft.AspNetCore.Http.RequestDelegate"/>
+        </member>
+        <member name="T:LifeBalance.Dashboard.API.Middlewares.GlobalExceptionMiddleware">
+            <summary>
+            Global exception handling middleware.
+            Catches all unhandled exceptions and converts them to RFC 7807 Problem Details responses.
+            Registered in <c>Program.cs</c> before all other middleware.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.Middlewares.GlobalExceptionMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate,Microsoft.Extensions.Logging.ILogger{LifeBalance.Dashboard.API.Middlewares.GlobalExceptionMiddleware})">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.API.Middlewares.GlobalExceptionMiddleware"/>.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.Middlewares.GlobalExceptionMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <inheritdoc cref="T:Microsoft.AspNetCore.Http.RequestDelegate"/>
+        </member>
+        <member name="T:LifeBalance.Dashboard.API.Services.CurrentUserService">
+            <summary>
+            Reads the current user's identity from the HTTP context's JWT claims.
+            Implements <see cref="T:LifeBalance.Dashboard.Application.Common.Interfaces.ICurrentUserService"/> for the Application layer.
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.API.Services.CurrentUserService.#ctor(Microsoft.AspNetCore.Http.IHttpContextAccessor)">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.API.Services.CurrentUserService"/>.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.API.Services.CurrentUserService.UserId">
+            <inheritdoc/>
+        </member>
+        <member name="P:LifeBalance.Dashboard.API.Services.CurrentUserService.Email">
+            <inheritdoc/>
+        </member>
+        <member name="P:LifeBalance.Dashboard.API.Services.CurrentUserService.IsAuthenticated">
+            <inheritdoc/>
+        </member>
+        <member name="P:LifeBalance.Dashboard.API.Services.CurrentUserService.Roles">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>

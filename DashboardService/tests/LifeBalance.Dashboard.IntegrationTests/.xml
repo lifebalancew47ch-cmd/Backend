@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LifeBalance.Dashboard.IntegrationTests</name>
+    </assembly>
+    <members>
+        <member name="T:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase">
+            <summary>
+            Base class for integration tests using <see cref="T:Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1"/>.
+            Spins up the real ASP.NET Core pipeline in memory for testing.
+            </summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase.Client">
+            <summary>Gets the HTTP client connected to the in-memory test server.</summary>
+        </member>
+        <member name="P:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase.Scope">
+            <summary>Gets the service scope for resolving services.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase.#ctor(Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory{Program})">
+            <summary>Initializes a new instance of <see cref="T:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase"/>.</summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="M:LifeBalance.Dashboard.IntegrationTests.Common.IntegrationTestBase.Dispose(System.Boolean)">
+            <summary>Releases managed resources.</summary>
+        </member>
+    </members>
+</doc>

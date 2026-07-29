@@ -149,6 +149,31 @@
             and injected via interfaces in the Application layer.
             </remarks>
         </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Entities.AggregationLog">
+            <summary>
+            Domain entity logging API aggregation metrics and external microservice latencies.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Entities.DashboardCacheEntry">
+            <summary>
+            Represents a cached aggregate view stored in MongoDB for high performance retrieval.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Enums.DashboardType">
+            <summary>
+            Dashboard categorization type.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Enums.AggregationStatus">
+            <summary>
+            Status of an aggregation execution.
+            </summary>
+        </member>
+        <member name="T:LifeBalance.Dashboard.Domain.Enums.TimeRange">
+            <summary>
+            Time filter range for metrics.
+            </summary>
+        </member>
         <member name="T:LifeBalance.Dashboard.Domain.Exceptions.DomainException">
             <summary>
             Represents a domain rule violation that prevents a business operation from completing.
