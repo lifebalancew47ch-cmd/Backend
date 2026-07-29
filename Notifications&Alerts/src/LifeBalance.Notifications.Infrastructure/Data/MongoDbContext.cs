@@ -20,4 +20,6 @@ public class MongoDbContext
     public IMongoCollection<NotificationTemplate> NotificationTemplates => _database.GetCollection<NotificationTemplate>("notification_templates");
     public IMongoCollection<ScheduledNotification> ScheduledNotifications => _database.GetCollection<ScheduledNotification>("scheduled_notifications");
     public IMongoCollection<DeliveryLog> DeliveryLogs => _database.GetCollection<DeliveryLog>("delivery_logs");
+    public IMongoCollection<Alert> Alerts => _database.GetCollection<Alert>("alerts");
+    public IMongoCollection<MetricsRecord> MetricsRecords => _database.GetCollection<MetricsRecord>("metrics_records");
 }

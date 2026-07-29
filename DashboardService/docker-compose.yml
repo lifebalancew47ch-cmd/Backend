@@ -56,8 +56,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__MongoDB: "mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-admin}@mongodb:27017"
       MongoDb__DatabaseName: lifebalance_dashboard
-      Jwt__Issuer: "https://auth.lifebalance.io"
-      Jwt__Audience: "dashboard-service"
+      Jwt__Issuer: "LifeBalance.AuthService"
+      Jwt__Audience: "LifeBalance.Services"
       Jwt__SecretKey: "${JWT_SECRET_KEY:-change-me-in-production-min-32-chars}"
       Serilog__MinimumLevel__Default: "Information"
       OpenTelemetry__ServiceName: "dashboard-service"

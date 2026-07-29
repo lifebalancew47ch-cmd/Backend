@@ -14,6 +14,14 @@ public class CreateTemplateDto
     [Required]
     public string BodyContent { get; set; } = string.Empty;
 
+    public string? HtmlContent { get; set; }
+
     [Required]
     public NotificationType Type { get; set; }
+
+    public NotificationChannel Channel { get; set; }
+
+    public List<string> Variables { get; set; } = new();
+
+    public bool IsGlobal { get; set; }
 }

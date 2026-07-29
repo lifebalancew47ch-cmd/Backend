@@ -18,7 +18,7 @@ services:
       - key: Jwt__Issuer
         value: LifeBalance.AuthService
       - key: Jwt__Audience
-        value: LifeBalance.Clients
+        value: LifeBalance.Services
       - key: Jwt__SecretKey
         sync: false
       - key: ServiceUrls__AuthServiceUrl

@@ -4,5 +4,6 @@ public enum NotificationChannel
 {
     Push,
     WearOS,
-    Email
+    Email,
+    Sms
 }
