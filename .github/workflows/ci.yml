@@ -73,11 +73,23 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
+          
+      # Relax global.json SDK constraint for CI runners
+      - name: Patch global.json for CI compatibility
+        run: |
+          cat > global.json << 'EOF'
+          {
+            "sdk": {
+              "version": "9.0.100",
+              "rollForward": "latestMajor"
+            }
+          }
+          EOF
 
-      - name: Restore dependencies
+      - name: Restore solution
         run: dotnet restore LifeBalance.DashboardService.sln
 
-      - name: Build
+      - name: Build solution
         run: dotnet build LifeBalance.DashboardService.sln --no-restore --configuration Release
 
       - name: Run Unit Tests
@@ -107,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Notifications&Alerts
+        working-directory: "Notifications&Alerts"
 
     steps:
       - name: Checkout code
@@ -138,7 +150,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: notifications-unit-test-results
-          path: Notifications&Alerts/TestResults/
+          path: "Notifications&Alerts/TestResults/"
 
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-notifications:ci .
