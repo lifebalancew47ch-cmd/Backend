@@ -18,8 +18,11 @@ public class NotificationPreferenceTests
         Assert.True(pref.ReceivePush);
         Assert.True(pref.ReceiveWearOS);
         Assert.True(pref.ReceiveEmail);
-        Assert.True(pref.ReceiveSedentaryAlerts);
-        Assert.True(pref.ReceiveMarketing);
+        Assert.True(pref.ReceiveCriticalAlerts);
+        Assert.True(pref.ReceiveReminders);
+        Assert.True(pref.ReceiveGoals);
+        Assert.True(pref.ReceiveGamification);
+        Assert.True(pref.ReceiveOrganizational);
     }
 
     [Fact]
@@ -46,15 +49,21 @@ public class NotificationPreferenceTests
         pref.ReceivePush = false;
         pref.ReceiveWearOS = false;
         pref.ReceiveEmail = false;
-        pref.ReceiveSedentaryAlerts = false;
-        pref.ReceiveMarketing = false;
+        pref.ReceiveCriticalAlerts = false;
+        pref.ReceiveReminders = false;
+        pref.ReceiveGoals = false;
+        pref.ReceiveGamification = false;
+        pref.ReceiveOrganizational = false;
 
         // Assert
         Assert.False(pref.ReceivePush);
         Assert.False(pref.ReceiveWearOS);
         Assert.False(pref.ReceiveEmail);
-        Assert.False(pref.ReceiveSedentaryAlerts);
-        Assert.False(pref.ReceiveMarketing);
+        Assert.False(pref.ReceiveCriticalAlerts);
+        Assert.False(pref.ReceiveReminders);
+        Assert.False(pref.ReceiveGoals);
+        Assert.False(pref.ReceiveGamification);
+        Assert.False(pref.ReceiveOrganizational);
     }
 
     [Fact]
