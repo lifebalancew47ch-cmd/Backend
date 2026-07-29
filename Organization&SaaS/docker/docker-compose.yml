@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  organization-saas-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lifebalance-organization-saas-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__MongoDB=mongodb://mongo-db:27017
+      - DatabaseSettings__DatabaseName=LifeBalance_OrganizationSaaS
+      - JwtSettings__Secret=SuperSecretKeyForLifeBalanceSaaSMicroservice2026!
+      - Microservices__AuthProfileUrl=http://auth-profile-service:5001
+      - Microservices__DashboardUrl=http://dashboard-service:5002
+      - Microservices__ReportingUrl=http://reporting-service:5003
+      - Microservices__NotificationUrl=http://notification-service:5004
+      - Microservices__GamificationUrl=http://gamification-service:5005
+      - Microservices__MlPredictionUrl=http://ml-prediction-service:5006
+      - Microservices__AdministrationUrl=http://administration-service:5007
+    depends_on:
+      - mongo-db
+      - redis-cache
+    restart: always
+
+  mongo-db:
+    image: mongo:7.0
+    container_name: lifebalance-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: lifebalance-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+volumes:
+  mongo_data:

@@ -1,0 +1,6 @@
+@LifeBalance.OrganizationSaaS.Api_HostAddress = http://localhost:5072
+
+GET {{LifeBalance.OrganizationSaaS.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,6 @@
+{
+  "LifeBalance.OrganizationSaaS.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Api\\LifeBalance.OrganizationSaaS.Api",
+  "LifeBalance.OrganizationSaaS.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Application",
+  "LifeBalance.OrganizationSaaS.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain",
+  "LifeBalance.OrganizationSaaS.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Infrastructure\\LifeBalance.OrganizationSaaS.Infrastructure"
+}

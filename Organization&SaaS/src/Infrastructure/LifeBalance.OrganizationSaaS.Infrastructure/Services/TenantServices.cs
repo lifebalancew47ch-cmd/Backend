@@ -1,0 +1,82 @@
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Distributed;
+using LifeBalance.OrganizationSaaS.Application.Interfaces;
+
+namespace LifeBalance.OrganizationSaaS.Infrastructure.Services;
+
+public class TenantContextAccessor : ITenantContext
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public TenantContextAccessor(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public string TenantId
+    {
+        get
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return string.Empty;
+
+            // 1. Try header X-Tenant-Id
+            if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader) && !string.IsNullOrWhiteSpace(tenantHeader))
+            {
+                return tenantHeader.ToString();
+            }
+
+            // 2. Try JWT claim 'tenant_id'
+            var tenantClaim = context.User?.FindFirst("tenant_id")?.Value;
+            if (!string.IsNullOrWhiteSpace(tenantClaim))
+            {
+                return tenantClaim;
+            }
+
+            return string.Empty;
+        }
+    }
+
+    public string? OrganizationId => _httpContextAccessor.HttpContext?.User?.FindFirst("organization_id")?.Value;
+
+    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
+
+    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+}
+
+public class DistributedCacheService : ICacheService
+{
+    private readonly IDistributedCache _cache;
+
+    public DistributedCacheService(IDistributedCache cache)
+    {
+        _cache = cache;
+    }
+
+    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var data = await _cache.GetStringAsync(key, cancellationToken);
+        if (string.IsNullOrEmpty(data)) return default;
+
+        return JsonSerializer.Deserialize<T>(data);
+    }
+
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+    {
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(30)
+        };
+
+        var json = JsonSerializer.Serialize(value);
+        await _cache.SetStringAsync(key, json, options, cancellationToken);
+    }
+
+    public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+    {
+        await _cache.RemoveAsync(key, cancellationToken);
+    }
+}
