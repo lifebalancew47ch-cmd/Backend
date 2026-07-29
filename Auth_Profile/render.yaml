@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: lifebalance-auth-service
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:10000
+      - key: MongoDb__ConnectionString
+        sync: false
+      - key: MongoDb__DatabaseName
+        value: LifeBalance_Auth
+      - key: Jwt__SecretKey
+        sync: false
+      - key: Jwt__Issuer
+        value: LifeBalance
+      - key: Jwt__Audience
+        value: LifeBalance
+      - key: Jwt__AccessTokenExpirationMinutes
+        value: "30"
+      - key: Jwt__RefreshTokenExpirationDays
+        value: "7"
+      - key: Security__MaxFailedLoginAttempts
+        value: "5"
+      - key: Security__LockoutDurationMinutes
+        value: "15"
+      - key: Smtp__Host
+        value: smtp.gmail.com
+      - key: Smtp__Port
+        value: "587"
+      - key: Smtp__Username
+        sync: false
+      - key: Smtp__Password
+        sync: false
+      - key: Smtp__FromEmail
+        sync: false
+      - key: Smtp__FromName
+        value: LifeBalance
+      - key: Smtp__UseSsl
+        value: "false"
