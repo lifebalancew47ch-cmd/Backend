@@ -6,7 +6,7 @@ services:
     name: lifebalance-auth-service
     env: docker
     region: oregon
-    plan: starter
+    plan: free
     rootDir: Auth_Profile
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
@@ -55,7 +55,7 @@ services:
     name: lifebalance-dashboard-service
     env: docker
     region: oregon
-    plan: starter
+    plan: free
     rootDir: DashboardService
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/dashboard/health
@@ -98,7 +98,7 @@ services:
     name: lifebalance-notifications-api
     env: docker
     region: oregon
-    plan: starter
+    plan: free
     rootDir: NotificationsAndAlerts
     dockerfilePath: ./Dockerfile
     envVars:
