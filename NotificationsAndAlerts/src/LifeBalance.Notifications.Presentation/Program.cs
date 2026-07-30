@@ -1,4 +1,5 @@
 using System.Text;
+using LifeBalance.Notifications.Presentation.Configurations;
 using LifeBalance.Notifications.Presentation.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -9,7 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddNotificationsSwagger();
 
 var jwtKey = builder.Configuration["Jwt:Key"] 
     ?? builder.Configuration["Jwt:SecretKey"] 
@@ -33,10 +34,7 @@ var app = builder.Build();
 
 FirebaseInit(app.Configuration);
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.UseNotificationsSwagger();
 
 app.UseExceptionHandling();
 
