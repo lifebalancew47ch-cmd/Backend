@@ -110,3 +110,11 @@ services:
         value: LifeBalanceNotificationsDb
       - key: ConnectionStrings__MongoDb
         sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__SecretKey
+        sync: false
+      - key: Jwt__Issuer
+        value: LifeBalance
+      - key: Jwt__Audience
+        value: LifeBalance

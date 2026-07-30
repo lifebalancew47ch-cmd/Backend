@@ -11,7 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured");
+var jwtKey = builder.Configuration["Jwt:Key"] 
+    ?? builder.Configuration["Jwt:SecretKey"] 
+    ?? "SUPER_SECRET_KEY_FOR_LOCAL_DEVELOPMENT_THAT_IS_LONG_ENOUGH_32_CHARS";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -52,7 +54,11 @@ static void FirebaseInit(IConfiguration configuration)
     var options = new FirebaseAdmin.AppOptions();
     var credentialsPath = configuration["Firebase:CredentialsPath"];
     if (!string.IsNullOrEmpty(credentialsPath) && File.Exists(credentialsPath))
+    {
+#pragma warning disable CS0618
         options.Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromFile(credentialsPath);
+#pragma warning restore CS0618
+    }
     else
     {
         var projectId = configuration["Firebase:ProjectId"];
