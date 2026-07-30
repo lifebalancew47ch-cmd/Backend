@@ -33,7 +33,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "LifeBalance - Organization & SaaS Service API",
         Version = "v1",
-        Description = "Production-Ready Multi-Tenant Enterprise Microservice for LifeBalance Platform",
+        Description = "Microservicio Multi-Tenant Empresarial de LifeBalance. Administra entidades jerárquicas (Empresas, Familias, Departamentos, Equipos), suscripciones, límites de planes SaaS (Free/Pro/Business/Enterprise) e invitaciones.",
         Contact = new OpenApiContact { Name = "LifeBalance Architecture Team", Email = "architecture@lifebalance.app" }
     });
 

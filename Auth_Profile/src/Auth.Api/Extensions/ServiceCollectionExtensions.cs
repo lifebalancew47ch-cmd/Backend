@@ -100,7 +100,7 @@ public static class ServiceCollectionExtensions
             {
                 Title = "LifeBalance - Auth & Profile Service",
                 Version = "v1",
-                Description = "Authentication, Authorization, and Profile management microservice for the LifeBalance platform.",
+                Description = "Microservicio de Autenticación, Autorización (JWT/RBAC) y Gestión de Perfiles para la plataforma LifeBalance. Provee endpoints para login, registro, rotación de tokens, reseteo de contraseñas y administración de preferencias del usuario.",
                 Contact = new OpenApiContact
                 {
                     Name = "LifeBalance Team",

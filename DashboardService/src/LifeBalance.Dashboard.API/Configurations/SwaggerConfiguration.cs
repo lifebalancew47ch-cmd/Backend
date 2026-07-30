@@ -15,7 +15,7 @@ public static class SwaggerConfiguration
             {
                 Title = "LifeBalance Dashboard Service API",
                 Version = "v1",
-                Description = "Microservicio API Aggregator para Dashboard Individual, Familiar, Empresarial y General de LifeBalance.",
+                Description = "Microservicio API Aggregator para la plataforma LifeBalance. Se encarga de orquestar y recopilar métricas, KPIs de salud y datos de gamificación provenientes de otros microservicios para presentarlos en los Dashboards (Individual, Familiar y Empresarial).",
                 Contact = new OpenApiContact
                 {
                     Name = "Equipo LifeBalance",

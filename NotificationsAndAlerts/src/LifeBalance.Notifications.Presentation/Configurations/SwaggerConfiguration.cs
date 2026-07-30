@@ -15,7 +15,7 @@ public static class SwaggerConfiguration
             {
                 Title = "LifeBalance Notifications & Alerts Service API",
                 Version = "v1",
-                Description = "Microservicio de Notificaciones, Alertas, Push, Email y Programación de la plataforma LifeBalance.",
+                Description = "Microservicio de Notificaciones de LifeBalance. Gestiona el despacho centralizado de correos electrónicos, notificaciones push y alertas del sistema, incluyendo expiración de licencias y recordatorios personalizados.",
                 Contact = new OpenApiContact
                 {
                     Name = "Equipo LifeBalance",
