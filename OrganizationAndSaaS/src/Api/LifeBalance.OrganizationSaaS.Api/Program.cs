@@ -56,6 +56,8 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    c.EnableAnnotations();
 });
 
 // 4. Authentication & JWT Validation
@@ -117,14 +119,12 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
 
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Organization & SaaS API v1");
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Organization & SaaS API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseResponseCompression();
 app.UseRouting();
