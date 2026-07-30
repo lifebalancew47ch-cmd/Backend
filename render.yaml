@@ -118,3 +118,36 @@ services:
         value: LifeBalance
       - key: Jwt__Audience
         value: LifeBalance
+
+  # ───────────────────────────────────────────────────
+  # 4. Organization & SaaS Service
+  # ───────────────────────────────────────────────────
+  - type: web
+    name: lifebalance-organization-saas
+    env: docker
+    region: oregon
+    plan: free
+    rootDir: Organization&SaaS
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:10000
+      - key: ConnectionStrings__MongoDB
+        sync: false
+      - key: DatabaseSettings__DatabaseName
+        value: LifeBalance_OrganizationSaaS
+      - key: JwtSettings__Secret
+        sync: false
+      - key: JwtSettings__Issuer
+        value: LifeBalance.AuthService
+      - key: JwtSettings__Audience
+        value: LifeBalance.Clients
+      - key: Microservices__AuthProfileUrl
+        value: https://lifebalance-auth-service.onrender.com
+      - key: Microservices__DashboardUrl
+        value: https://lifebalance-dashboard-service.onrender.com
+      - key: Microservices__NotificationUrl
+        value: https://lifebalance-notifications-api.onrender.com
