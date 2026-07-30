@@ -127,7 +127,7 @@ services:
     env: docker
     region: oregon
     plan: free
-    rootDir: Organization&SaaS
+    rootDir: OrganizationAndSaaS
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
