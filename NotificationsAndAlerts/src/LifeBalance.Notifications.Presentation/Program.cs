@@ -68,5 +68,9 @@ static void FirebaseInit(IConfiguration configuration)
             options.ProjectId = projectId;
         }
     }
+
+    if (options.Credential is null)
+        return;
+
     try { FirebaseAdmin.FirebaseApp.Create(options); } catch (InvalidOperationException) { }
 }
