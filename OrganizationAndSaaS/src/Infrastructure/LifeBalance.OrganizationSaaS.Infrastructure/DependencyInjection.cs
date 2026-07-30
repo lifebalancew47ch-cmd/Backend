@@ -19,7 +19,7 @@ public static class DependencyInjection
         // 1. Mongo DB Setup
         var mongoConn = configuration.GetConnectionString("MongoDB") ?? "mongodb://localhost:27017";
         var mongoDbName = configuration["DatabaseSettings:DatabaseName"] ?? "LifeBalance_OrganizationSaaS";
-        services.AddSingleton(new MongoDbContext(mongoConn, mongoDbName));
+        services.AddSingleton(sp => new MongoDbContext(mongoConn, mongoDbName));
         services.AddScoped(typeof(IRepository<>), typeof(MongoRepository<>));
 
         // 2. Tenant Context & HTTP Context Accessor
