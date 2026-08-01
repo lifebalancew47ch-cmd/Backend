@@ -91,14 +91,17 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, ApiResponse<Regi
 
         await _emailConfirmationTokenRepository.AddAsync(confirmationToken, cancellationToken);
 
-        try
+        _ = Task.Run(async () =>
         {
-            await _emailService.SendEmailConfirmationEmailAsync(user.Email, token, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send confirmation email to {Email}. User was registered; they can request a new confirmation.", user.Email);
-        }
+            try
+            {
+                await _emailService.SendEmailConfirmationEmailAsync(user.Email, token, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send confirmation email to {Email}. User was registered; they can request a new confirmation.", user.Email);
+            }
+        }, CancellationToken.None);
 
         _logger.LogInformation("User registered successfully: {Email}", user.Email);
 

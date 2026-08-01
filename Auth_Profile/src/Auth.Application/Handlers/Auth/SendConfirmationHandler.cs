@@ -56,14 +56,17 @@ public class SendConfirmationHandler : IRequestHandler<SendConfirmationCommand, 
 
         await _tokenRepository.AddAsync(confirmationToken, cancellationToken);
 
-        try
+        _ = Task.Run(async () =>
         {
-            await _emailService.SendEmailConfirmationEmailAsync(user.Email, token, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send confirmation email to {Email}. Token was saved; user can retry.", user.Email);
-        }
+            try
+            {
+                await _emailService.SendEmailConfirmationEmailAsync(user.Email, token, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send confirmation email to {Email}. Token was saved; user can retry.", user.Email);
+            }
+        }, CancellationToken.None);
 
         _logger.LogInformation("Email confirmation token generated for {Email}", user.Email);
 

@@ -54,14 +54,17 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, ApiR
 
             await _tokenRepository.AddAsync(resetToken, cancellationToken);
 
-            try
+            _ = Task.Run(async () =>
             {
-                await _emailService.SendPasswordResetEmailAsync(user.Email, token, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send password reset email to {Email}. Token was saved; user can retry.", user.Email);
-            }
+                try
+                {
+                    await _emailService.SendPasswordResetEmailAsync(user.Email, token, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send password reset email to {Email}. Token was saved; user can retry.", user.Email);
+                }
+            }, CancellationToken.None);
 
             await _auditService.LogEventAsync(user.Id, Domain.Enums.AuthEventType.PasswordReset,
                 "Password reset requested", cancellationToken: cancellationToken);
