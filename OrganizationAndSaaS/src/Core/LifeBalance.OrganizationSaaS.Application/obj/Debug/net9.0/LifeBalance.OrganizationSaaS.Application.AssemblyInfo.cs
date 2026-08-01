@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LifeBalance.OrganizationSaaS.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+785d317d9eb1fc7a26afd2f28b9185b318a84de3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8c4415dc284bae9f3e1c65776a3a40e0ed83f705")]
 [assembly: System.Reflection.AssemblyProductAttribute("LifeBalance.OrganizationSaaS.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LifeBalance.OrganizationSaaS.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

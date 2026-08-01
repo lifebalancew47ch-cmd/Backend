@@ -125,23 +125,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ximeg\\.nuget\\packages\\": {},
+    "C:\\Users\\Rodrigo\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
+      "projectUniqueName": "C:\\Users\\Rodrigo\\source\\repos\\Backend\\OrganizationAndSaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
       "projectName": "LifeBalance.OrganizationSaaS.Domain",
-      "projectPath": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
-      "packagesPath": "C:\\Users\\ximeg\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\obj\\",
+      "projectPath": "C:\\Users\\Rodrigo\\source\\repos\\Backend\\OrganizationAndSaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
+      "packagesPath": "C:\\Users\\Rodrigo\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Rodrigo\\source\\repos\\Backend\\OrganizationAndSaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\ximeg\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Rodrigo\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -196,7 +196,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

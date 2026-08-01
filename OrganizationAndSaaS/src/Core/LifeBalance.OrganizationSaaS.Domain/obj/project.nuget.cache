@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "OaV7O6qISxk=",
+  "dgSpecHash": "2OLvgM5l+kg=",
   "success": true,
-  "projectFilePath": "C:\\Users\\ximeg\\source\\LifeBalance\\Organization&SaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
+  "projectFilePath": "C:\\Users\\Rodrigo\\source\\repos\\Backend\\OrganizationAndSaaS\\src\\Core\\LifeBalance.OrganizationSaaS.Domain\\LifeBalance.OrganizationSaaS.Domain.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\ximeg\\.nuget\\packages\\mongodb.bson\\3.2.1\\mongodb.bson.3.2.1.nupkg.sha512",
-    "C:\\Users\\ximeg\\.nuget\\packages\\system.memory\\4.5.5\\system.memory.4.5.5.nupkg.sha512",
-    "C:\\Users\\ximeg\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\5.0.0\\system.runtime.compilerservices.unsafe.5.0.0.nupkg.sha512"
+    "C:\\Users\\Rodrigo\\.nuget\\packages\\mongodb.bson\\3.2.1\\mongodb.bson.3.2.1.nupkg.sha512",
+    "C:\\Users\\Rodrigo\\.nuget\\packages\\system.memory\\4.5.5\\system.memory.4.5.5.nupkg.sha512",
+    "C:\\Users\\Rodrigo\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\5.0.0\\system.runtime.compilerservices.unsafe.5.0.0.nupkg.sha512"
   ],
   "logs": []
 }
