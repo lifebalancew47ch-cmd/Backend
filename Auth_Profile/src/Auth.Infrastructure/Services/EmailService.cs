@@ -29,7 +29,7 @@ public class EmailService : IEmailService
         }
         else if (environment.IsProduction())
         {
-            _frontendBaseUrl = "https://lifebalance-auth-service.onrender.com";
+            _frontendBaseUrl = "https://lifebalance-adv3.onrender.com";
         }
         else
         {
