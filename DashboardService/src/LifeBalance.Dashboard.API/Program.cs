@@ -121,15 +121,9 @@ try
     {
         options.AddPolicy("DashboardCorsPolicy", policy =>
         {
-            var allowedOrigins = builder.Configuration
-                .GetSection("CORS:AllowedOrigins")
-                .Get<string[]>() ?? Array.Empty<string>();
-
-            policy
-                .WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
         });
     });
 

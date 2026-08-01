@@ -66,26 +66,13 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
-        var corsSettings = new List<string>();
-        configuration.GetSection("Cors:AllowedOrigins").Bind(corsSettings);
-
         services.AddCors(options =>
         {
             options.AddPolicy("AllowConfiguredOrigins", policy =>
             {
-                if (corsSettings.Any())
-                {
-                    policy.WithOrigins(corsSettings.ToArray())
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials();
-                }
-                else
-                {
-                    policy.AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader();
-                }
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
             });
         });
 

@@ -30,6 +30,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// CORS — allow any origin
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 FirebaseInit(app.Configuration);
@@ -37,6 +48,8 @@ FirebaseInit(app.Configuration);
 app.UseNotificationsSwagger();
 
 app.UseExceptionHandling();
+
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 

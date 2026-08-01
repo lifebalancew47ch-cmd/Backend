@@ -113,6 +113,17 @@ builder.Services.AddResponseCompression(options =>
 // 7. Health Checks
 builder.Services.AddHealthChecks();
 
+// 8. CORS — allow any origin
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 // Configure Middleware Pipeline
@@ -128,6 +139,8 @@ app.UseSwaggerUI(c =>
 
 app.UseResponseCompression();
 app.UseRouting();
+
+app.UseCors("AllowAll");
 
 app.UseRateLimiter();
 
