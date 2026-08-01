@@ -38,8 +38,16 @@ public class RoleRepository : IRoleRepository
 
     public async Task<IEnumerable<Role>> GetByIdsAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
+        var idList = ids?.ToList() ?? [];
+        if (idList.Count == 0)
+            return [];
+
+        var filter = Builders<Role>.Filter.And(
+            Builders<Role>.Filter.In(r => r.Id, idList),
+            Builders<Role>.Filter.Eq(r => r.IsDeleted, false));
+
         return await _context.GetCollection<Role>("roles")
-            .Find(r => ids.Contains(r.Id) && !r.IsDeleted)
+            .Find(filter)
             .ToListAsync(cancellationToken);
     }
 
