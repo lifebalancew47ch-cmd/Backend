@@ -1,11 +1,8 @@
 using Auth.Application.Interfaces.Services;
 using Auth.Shared.Configurations;
-using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MimeKit;
 
 namespace Auth.Infrastructure.Services;
 
@@ -71,35 +68,35 @@ public class EmailService : IEmailService
     {
         try
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_smtpSettings.FromName, _smtpSettings.FromEmail));
-            message.To.Add(new MailboxAddress(string.Empty, toEmail));
-            message.Subject = subject;
+            var apiKey = _smtpSettings.Password; // Reutilizamos el campo Password para la API Key de SendGrid
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                _logger.LogWarning("SendGrid API Key is missing. Email to {Email} was not sent.", toEmail);
+                return;
+            }
 
-            var bodyBuilder = new BodyBuilder { HtmlBody = body };
-            message.Body = bodyBuilder.ToMessageBody();
+            var client = new SendGrid.SendGridClient(apiKey);
+            var from = new SendGrid.Helpers.Mail.EmailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName);
+            var to = new SendGrid.Helpers.Mail.EmailAddress(toEmail);
+            var msg = SendGrid.Helpers.Mail.MailHelper.CreateSingleEmail(from, to, subject, body, body);
+            
+            var response = await client.SendEmailAsync(msg, cancellationToken);
 
-            using var client = new SmtpClient();
-            client.Timeout = 10000; // 10 segundos timeout (evita colgar la API 2 minutos si el puerto/SMTP está bloqueado)
-
-            // Puerto 465 exige SSL directo (SslOnConnect); para otros puertos se usa Auto o SslOnConnect según UseSsl
-            var socketOptions = (_smtpSettings.Port == 465 || _smtpSettings.UseSsl)
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.Auto;
-
-            await client.ConnectAsync(_smtpSettings.Host, _smtpSettings.Port, socketOptions, cancellationToken);
-
-            if (!string.IsNullOrEmpty(_smtpSettings.Username))
-                await client.AuthenticateAsync(_smtpSettings.Username, _smtpSettings.Password, cancellationToken);
-
-            await client.SendAsync(message, cancellationToken);
-            await client.DisconnectAsync(true, cancellationToken);
-
-            _logger.LogInformation("Email sent successfully to {Email} with subject {Subject}", toEmail, subject);
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Email sent successfully to {Email} with subject {Subject}", toEmail, subject);
+            }
+            else
+            {
+                var errorBody = await response.Body.ReadAsStringAsync();
+                _logger.LogError("SendGrid failed to send email to {Email}. Status: {StatusCode}. Details: {Details}", 
+                    toEmail, response.StatusCode, errorBody);
+                throw new Exception($"Failed to send email via SendGrid. Status: {response.StatusCode}");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {Email} with subject {Subject}", toEmail, subject);
+            _logger.LogError(ex, "Exception while sending email to {Email} with subject {Subject}", toEmail, subject);
             throw;
         }
     }
