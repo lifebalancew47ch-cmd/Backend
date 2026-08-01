@@ -200,12 +200,41 @@ jobs:
         run: docker build -t lifebalance-organization-saas:ci .
 
   # ─────────────────────────────────────────
-  # JOB 5: All-green gate (required for merge)
+  # JOB 5: Contract & Inter-Service Tests
+  # ─────────────────────────────────────────
+  contract-tests:
+    name: Contract & Inter-Service — Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore tests/ContractTests/ContractTests.csproj
+
+      - name: Build Contract Tests
+        run: dotnet build tests/ContractTests/ContractTests.csproj --no-restore --configuration Release
+
+      - name: Run Contract Tests
+        run: >
+          dotnet test tests/ContractTests/ContractTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=contract-test-results.trx"
+
+  # ─────────────────────────────────────────
+  # JOB 6: All-green gate (required for merge)
   # ─────────────────────────────────────────
   ci-success:
     name: CI — All services passed
     runs-on: ubuntu-latest
-    needs: [auth-profile, dashboard, notifications, organization-saas]
+    needs: [auth-profile, dashboard, notifications, organization-saas, contract-tests]
     if: always()
     steps:
       - name: Check all jobs succeeded
@@ -213,8 +242,10 @@ jobs:
           if [[ "${{ needs.auth-profile.result }}" != "success" || \
                 "${{ needs.dashboard.result }}" != "success" || \
                 "${{ needs.notifications.result }}" != "success" || \
-                "${{ needs.organization-saas.result }}" != "success" ]]; then
+                "${{ needs.organization-saas.result }}" != "success" || \
+                "${{ needs.contract-tests.result }}" != "success" ]]; then
             echo "One or more service jobs failed."
             exit 1
           fi
           echo "All services built and tested successfully."
+
