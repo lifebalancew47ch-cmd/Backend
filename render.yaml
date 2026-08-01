@@ -36,7 +36,7 @@ services:
       - key: Smtp__Host
         value: smtp.gmail.com
       - key: Smtp__Port
-        value: "587"
+        value: "465"
       - key: Smtp__Username
         sync: false
       - key: Smtp__Password
@@ -46,7 +46,7 @@ services:
       - key: Smtp__FromName
         value: LifeBalance
       - key: Smtp__UseSsl
-        value: "false"
+        value: "true"
       - key: App__FrontendBaseUrl
         sync: false
 
