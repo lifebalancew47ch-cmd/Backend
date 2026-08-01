@@ -5,10 +5,12 @@ using Auth.Application.Interfaces.Repositories;
 using Auth.Application.Interfaces.Services;
 using Auth.Domain.Entities;
 using Auth.Shared.Common;
+using Auth.Shared.Configurations;
 using Auth.Shared.Enums;
 using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace Auth.Application.Handlers.Auth;
@@ -24,6 +26,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
     private readonly ILoginHistoryRepository _loginHistoryRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<LoginHandler> _logger;
+    private readonly SecuritySettings _securitySettings;
+    private readonly JwtSettings _jwtSettings;
 
     public LoginHandler(
         IUserRepository userRepository,
@@ -34,7 +38,9 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         IAuditService auditService,
         ILoginHistoryRepository loginHistoryRepository,
         IMapper mapper,
-        ILogger<LoginHandler> logger)
+        ILogger<LoginHandler> logger,
+        IOptions<SecuritySettings> securitySettings,
+        IOptions<JwtSettings> jwtSettings)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -45,6 +51,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         _loginHistoryRepository = loginHistoryRepository;
         _mapper = mapper;
         _logger = logger;
+        _securitySettings = securitySettings.Value;
+        _jwtSettings = jwtSettings.Value;
     }
 
     public async Task<ApiResponse<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -55,38 +63,38 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
 
         if (user is null)
         {
-            await LogFailedLogin(req.Email, "User not found", req.IpAddress, cancellationToken);
-            return ApiResponse<LoginResponse>.FailResponse("Invalid email or password.");
+            await LogFailedLogin(null, req.Email, "User not found", req.IpAddress, cancellationToken);
+            return ApiResponse<LoginResponse>.FailResponse("Invalid email or password.", statusCode: 401);
         }
 
         if (user.IsLockedOut)
         {
-            await LogFailedLogin(req.Email, "Account locked", req.IpAddress, cancellationToken);
-            return ApiResponse<LoginResponse>.FailResponse("Account is locked. Please try again later.");
+            await LogFailedLogin(user, req.Email, "Account locked", req.IpAddress, cancellationToken);
+            return ApiResponse<LoginResponse>.FailResponse("Account is locked. Please try again later.", statusCode: 401);
         }
 
         if (!user.IsActive)
         {
-            await LogFailedLogin(req.Email, "Account inactive", req.IpAddress, cancellationToken);
-            return ApiResponse<LoginResponse>.FailResponse("Account is inactive.");
+            await LogFailedLogin(user, req.Email, "Account inactive", req.IpAddress, cancellationToken);
+            return ApiResponse<LoginResponse>.FailResponse("Account is inactive.", statusCode: 401);
         }
 
         if (!_passwordService.VerifyPassword(req.Password, user.PasswordHash))
         {
             user.IncrementFailedLoginAttempts();
 
-            if (user.FailedLoginAttempts >= 5)
+            if (user.FailedLoginAttempts >= _securitySettings.MaxFailedLoginAttempts)
             {
-                user.LockOut(TimeSpan.FromMinutes(15));
+                user.LockOut(TimeSpan.FromMinutes(_securitySettings.LockoutDurationMinutes));
                 await _auditService.LogEventAsync(user.Id, Domain.Enums.AuthEventType.AccountLockout,
                     "Account locked due to too many failed attempts", req.IpAddress,
                     cancellationToken: cancellationToken);
             }
 
             await _userRepository.UpdateAsync(user, cancellationToken);
-            await LogFailedLogin(req.Email, "Invalid password", req.IpAddress, cancellationToken);
+            await LogFailedLogin(user, req.Email, "Invalid password", req.IpAddress, cancellationToken);
 
-            return ApiResponse<LoginResponse>.FailResponse("Invalid email or password.");
+            return ApiResponse<LoginResponse>.FailResponse("Invalid email or password.", statusCode: 401);
         }
 
         user.ResetFailedLoginAttempts();
@@ -119,7 +127,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
             Token = refreshTokenValue,
             JwtId = _jwtService.GetJwtId(accessToken),
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
             CreatedByIp = req.IpAddress ?? "unknown"
         };
 
@@ -146,10 +154,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         return ApiResponse<LoginResponse>.SuccessResponse(response, "Login successful.");
     }
 
-    private async Task LogFailedLogin(string email, string reason, string? ipAddress, CancellationToken cancellationToken)
+    private async Task LogFailedLogin(User? user, string email, string reason, string? ipAddress, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
-
         await _loginHistoryRepository.AddAsync(new LoginHistory
         {
             UserId = user?.Id ?? string.Empty,
@@ -169,3 +175,4 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         _logger.LogWarning("Failed login attempt for {Email}: {Reason}", email, reason);
     }
 }
+

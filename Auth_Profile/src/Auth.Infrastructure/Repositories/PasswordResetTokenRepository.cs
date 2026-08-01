@@ -40,4 +40,16 @@ public class PasswordResetTokenRepository : IPasswordResetTokenRepository
         await _context.GetCollection<PasswordResetToken>("password_reset_tokens")
             .ReplaceOneAsync(t => t.Id == passwordResetToken.Id, passwordResetToken, cancellationToken: cancellationToken);
     }
+
+    public async Task InvalidateExistingForUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<PasswordResetToken>.Filter.And(
+            Builders<PasswordResetToken>.Filter.Eq(t => t.UserId, userId),
+            Builders<PasswordResetToken>.Filter.Eq(t => t.IsUsed, false));
+
+        var update = Builders<PasswordResetToken>.Update.Set(t => t.IsUsed, true);
+
+        await _context.GetCollection<PasswordResetToken>("password_reset_tokens")
+            .UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+    }
 }

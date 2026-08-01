@@ -4,4 +4,4 @@ using MediatR;
 
 namespace Auth.Application.Commands.Auth;
 
-public record LogoutCommand(LogoutRequest Request) : IRequest<ApiResponse<bool>>;
+public record LogoutCommand(LogoutRequest Request, string? UserId = null) : IRequest<ApiResponse<bool>>;

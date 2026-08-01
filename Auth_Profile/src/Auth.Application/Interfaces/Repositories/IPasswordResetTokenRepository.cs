@@ -8,4 +8,5 @@ public interface IPasswordResetTokenRepository
     Task<IEnumerable<PasswordResetToken>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task AddAsync(PasswordResetToken passwordResetToken, CancellationToken cancellationToken = default);
     Task UpdateAsync(PasswordResetToken passwordResetToken, CancellationToken cancellationToken = default);
+    Task InvalidateExistingForUserAsync(string userId, CancellationToken cancellationToken = default);
 }

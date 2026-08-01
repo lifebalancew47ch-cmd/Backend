@@ -30,7 +30,7 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, ApiResponse<bool>>
         {
             var existingToken = await _refreshTokenRepository.GetByTokenAsync(request.Request.RefreshToken, cancellationToken);
 
-            if (existingToken is not null)
+            if (existingToken is not null && existingToken.IsActive)
             {
                 existingToken.IsActive = false;
                 existingToken.RevokedAt = DateTime.UtcNow;
@@ -40,8 +40,14 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, ApiResponse<bool>>
                     "Refresh token revoked on logout", cancellationToken: cancellationToken);
             }
         }
+        else if (!string.IsNullOrEmpty(request.UserId))
+        {
+            await _refreshTokenRepository.RevokeAllByUserIdAsync(request.UserId, cancellationToken: cancellationToken);
+            await _auditService.LogEventAsync(request.UserId, Domain.Enums.AuthEventType.Logout,
+                "All refresh tokens revoked on logout", cancellationToken: cancellationToken);
+        }
 
-        _logger.LogInformation("User logged out");
+        _logger.LogInformation("User logged out: {UserId}", request.UserId ?? "unknown");
         return ApiResponse<bool>.SuccessResponse(true, "Logout successful.");
     }
 }

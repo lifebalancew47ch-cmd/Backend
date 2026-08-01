@@ -3,9 +3,11 @@ using Auth.Application.Interfaces.Repositories;
 using Auth.Application.Interfaces.Services;
 using Auth.Domain.Entities;
 using Auth.Shared.Common;
+using Auth.Shared.Configurations;
 using Auth.Shared.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Auth.Application.Handlers.Auth;
 
@@ -16,19 +18,22 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, ApiR
     private readonly IAuditService _auditService;
     private readonly IEmailService _emailService;
     private readonly ILogger<ForgotPasswordHandler> _logger;
+    private readonly SecuritySettings _securitySettings;
 
     public ForgotPasswordHandler(
         IUserRepository userRepository,
         IPasswordResetTokenRepository tokenRepository,
         IAuditService auditService,
         IEmailService emailService,
-        ILogger<ForgotPasswordHandler> logger)
+        ILogger<ForgotPasswordHandler> logger,
+        IOptions<SecuritySettings> securitySettings)
     {
         _userRepository = userRepository;
         _tokenRepository = tokenRepository;
         _auditService = auditService;
         _emailService = emailService;
         _logger = logger;
+        _securitySettings = securitySettings.Value;
     }
 
     public async Task<ApiResponse<bool>> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
@@ -37,12 +42,14 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, ApiR
 
         if (user is not null)
         {
+            await _tokenRepository.InvalidateExistingForUserAsync(user.Id, cancellationToken);
+
             var token = Guid.NewGuid().ToString("N");
             var resetToken = new PasswordResetToken
             {
                 UserId = user.Id,
                 Token = token,
-                ExpiresAt = DateTime.UtcNow.AddHours(1)
+                ExpiresAt = DateTime.UtcNow.AddMinutes(_securitySettings.PasswordResetTokenExpirationMinutes)
             };
 
             await _tokenRepository.AddAsync(resetToken, cancellationToken);

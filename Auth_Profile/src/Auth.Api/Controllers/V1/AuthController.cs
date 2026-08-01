@@ -40,7 +40,8 @@ public class AuthController : BaseController
     [SwaggerOperation(Summary = "User logout", Description = "Revokes the refresh token and logs out the user.")]
     public async Task<IActionResult> Logout([FromBody] Auth.Application.DTOs.Auth.LogoutRequest? request, CancellationToken ct)
     {
-        var result = await Mediator.Send(new LogoutCommand(request ?? new Auth.Application.DTOs.Auth.LogoutRequest()), ct);
+        var userId = User.GetUserId();
+        var result = await Mediator.Send(new LogoutCommand(request ?? new Auth.Application.DTOs.Auth.LogoutRequest(), userId), ct);
         return HandleResponse(result);
     }
 

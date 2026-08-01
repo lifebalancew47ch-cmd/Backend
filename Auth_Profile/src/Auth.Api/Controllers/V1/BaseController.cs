@@ -14,9 +14,6 @@ public abstract class BaseController : ControllerBase
 
     protected IActionResult HandleResponse<T>(ApiResponse<T> response)
     {
-        if (response.Success)
-            return Ok(response);
-
-        return BadRequest(response);
+        return StatusCode(response.StatusCode, response);
     }
 }

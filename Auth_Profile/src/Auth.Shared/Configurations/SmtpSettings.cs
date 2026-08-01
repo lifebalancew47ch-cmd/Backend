@@ -1,4 +1,4 @@
-namespace Auth.Infrastructure.Configurations;
+namespace Auth.Shared.Configurations;
 
 public class SmtpSettings
 {

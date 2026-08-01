@@ -4,9 +4,11 @@ using Auth.Application.Interfaces.Repositories;
 using Auth.Application.Interfaces.Services;
 using Auth.Domain.Entities;
 using Auth.Shared.Common;
+using Auth.Shared.Configurations;
 using Auth.Shared.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace Auth.Application.Handlers.Auth;
@@ -19,6 +21,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
     private readonly IJwtService _jwtService;
     private readonly IAuditService _auditService;
     private readonly ILogger<RefreshTokenHandler> _logger;
+    private readonly JwtSettings _jwtSettings;
 
     public RefreshTokenHandler(
         IRefreshTokenRepository refreshTokenRepository,
@@ -26,7 +29,8 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         IRoleRepository roleRepository,
         IJwtService jwtService,
         IAuditService auditService,
-        ILogger<RefreshTokenHandler> logger)
+        ILogger<RefreshTokenHandler> logger,
+        IOptions<JwtSettings> jwtSettings)
     {
         _refreshTokenRepository = refreshTokenRepository;
         _userRepository = userRepository;
@@ -34,6 +38,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         _jwtService = jwtService;
         _auditService = auditService;
         _logger = logger;
+        _jwtSettings = jwtSettings.Value;
     }
 
     public async Task<ApiResponse<RefreshTokenResponse>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
@@ -95,7 +100,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
             Token = newRefreshTokenValue,
             JwtId = _jwtService.GetJwtId(newAccessToken),
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
             CreatedByIp = refreshToken.CreatedByIp
         };
 

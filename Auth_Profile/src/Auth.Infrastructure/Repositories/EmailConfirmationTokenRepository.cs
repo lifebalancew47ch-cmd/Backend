@@ -40,4 +40,16 @@ public class EmailConfirmationTokenRepository : IEmailConfirmationTokenRepositor
         await _context.GetCollection<EmailConfirmationToken>("email_confirmation_tokens")
             .ReplaceOneAsync(t => t.Id == token.Id, token, cancellationToken: cancellationToken);
     }
+
+    public async Task InvalidateExistingForUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<EmailConfirmationToken>.Filter.And(
+            Builders<EmailConfirmationToken>.Filter.Eq(t => t.UserId, userId),
+            Builders<EmailConfirmationToken>.Filter.Eq(t => t.IsConfirmed, false));
+
+        var update = Builders<EmailConfirmationToken>.Update.Set(t => t.IsConfirmed, true);
+
+        await _context.GetCollection<EmailConfirmationToken>("email_confirmation_tokens")
+            .UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+    }
 }

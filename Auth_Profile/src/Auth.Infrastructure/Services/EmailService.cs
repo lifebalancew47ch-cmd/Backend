@@ -1,5 +1,5 @@
 using Auth.Application.Interfaces.Services;
-using Auth.Infrastructure.Configurations;
+using Auth.Shared.Configurations;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Configuration;

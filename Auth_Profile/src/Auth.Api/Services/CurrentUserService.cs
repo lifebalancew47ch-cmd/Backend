@@ -23,9 +23,13 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var claims = _httpContextAccessor.HttpContext?.User?.Claims?
-                .ToDictionary(c => c.Type, c => c.Value) ?? new Dictionary<string, string>();
-            return claims;
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user?.Claims == null)
+                return new Dictionary<string, string>();
+
+            return user.Claims
+                .GroupBy(c => c.Type)
+                .ToDictionary(g => g.Key, g => string.Join(",", g.Select(c => c.Value)));
         }
     }
 }

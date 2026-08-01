@@ -1,6 +1,6 @@
 using Auth.Application.Interfaces.Repositories;
 using Auth.Application.Interfaces.Services;
-using Auth.Infrastructure.Configurations;
+using Auth.Shared.Configurations;
 using Auth.Infrastructure.Persistence;
 using Auth.Infrastructure.Repositories;
 using Auth.Infrastructure.Services;
@@ -94,15 +94,9 @@ public static class DependencyInjection
     public static async Task InitializeDatabaseAsync(this IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-        var database = scope.ServiceProvider.GetRequiredService<IMongoClient>()
-            .GetDatabase(configuration_getDatabaseName(serviceProvider));
+        var settings = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
+        var client = scope.ServiceProvider.GetRequiredService<IMongoClient>();
+        var database = client.GetDatabase(settings.DatabaseName);
         await MongoDbInitializer.InitializeAsync(database);
-    }
-
-    private static string configuration_getDatabaseName(IServiceProvider serviceProvider)
-    {
-        var settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
-        return settings.DatabaseName;
     }
 }
