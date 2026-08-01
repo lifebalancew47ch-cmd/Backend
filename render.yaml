@@ -47,6 +47,8 @@ services:
         value: LifeBalance
       - key: Smtp__UseSsl
         value: "false"
+      - key: App__FrontendBaseUrl
+        sync: false
 
   # ───────────────────────────────────────────────────
   # 2. Dashboard Service
