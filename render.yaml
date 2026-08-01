@@ -48,7 +48,7 @@ services:
       - key: Smtp__UseSsl
         value: "true"
       - key: App__FrontendBaseUrl
-        sync: false
+        value: https://lifebalance-auth-service.onrender.com
 
   # ───────────────────────────────────────────────────
   # 2. Dashboard Service
