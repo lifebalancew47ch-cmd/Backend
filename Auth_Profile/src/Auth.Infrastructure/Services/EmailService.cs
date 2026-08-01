@@ -1,6 +1,8 @@
 using Auth.Application.Interfaces.Services;
 using Auth.Infrastructure.Configurations;
 using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -11,16 +13,21 @@ public class EmailService : IEmailService
 {
     private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<EmailService> _logger;
+    private readonly string _frontendBaseUrl;
 
-    public EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailService> logger)
+    public EmailService(
+        IOptions<SmtpSettings> smtpSettings,
+        ILogger<EmailService> logger,
+        IConfiguration configuration)
     {
         _smtpSettings = smtpSettings.Value;
         _logger = logger;
+        _frontendBaseUrl = configuration["App:FrontendBaseUrl"] ?? "http://localhost:3000";
     }
 
     public async Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken cancellationToken = default)
     {
-        var resetLink = $"http://localhost:3000/auth/reset-password?token={token}&email={Uri.EscapeDataString(toEmail)}";
+        var resetLink = $"{_frontendBaseUrl}/auth/reset-password?token={token}&email={Uri.EscapeDataString(toEmail)}";
 
         var body = $"""
             <html>
@@ -41,7 +48,7 @@ public class EmailService : IEmailService
 
     public async Task SendEmailConfirmationEmailAsync(string toEmail, string token, CancellationToken cancellationToken = default)
     {
-        var confirmLink = $"http://localhost:3000/auth/confirm-email?token={token}&email={Uri.EscapeDataString(toEmail)}";
+        var confirmLink = $"{_frontendBaseUrl}/auth/confirm-email?token={token}&email={Uri.EscapeDataString(toEmail)}";
 
         var body = $"""
             <html>
@@ -74,13 +81,15 @@ public class EmailService : IEmailService
 
             using var client = new SmtpClient();
 
-            if (!_smtpSettings.UseSsl)
-                client.Connect(_smtpSettings.Host, _smtpSettings.Port, MailKit.Security.SecureSocketOptions.StartTls);
-            else
-                client.Connect(_smtpSettings.Host, _smtpSettings.Port, _smtpSettings.UseSsl);
+            // Puerto 465 = SSL directo | Puerto 587 = StartTls (más común con Gmail)
+            var socketOptions = _smtpSettings.UseSsl
+                ? SecureSocketOptions.SslOnConnect
+                : SecureSocketOptions.StartTls;
+
+            await client.ConnectAsync(_smtpSettings.Host, _smtpSettings.Port, socketOptions, cancellationToken);
 
             if (!string.IsNullOrEmpty(_smtpSettings.Username))
-                client.Authenticate(_smtpSettings.Username, _smtpSettings.Password);
+                await client.AuthenticateAsync(_smtpSettings.Username, _smtpSettings.Password, cancellationToken);
 
             await client.SendAsync(message, cancellationToken);
             await client.DisconnectAsync(true, cancellationToken);
