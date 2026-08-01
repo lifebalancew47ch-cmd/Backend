@@ -82,10 +82,10 @@ public class EmailService : IEmailService
             using var client = new SmtpClient();
             client.Timeout = 10000; // 10 segundos timeout (evita colgar la API 2 minutos si el puerto/SMTP está bloqueado)
 
-            // Puerto 465 = SSL directo | Puerto 587 = StartTls (más común con Gmail)
-            var socketOptions = _smtpSettings.UseSsl
+            // Puerto 465 exige SSL directo (SslOnConnect); para otros puertos se usa Auto o SslOnConnect según UseSsl
+            var socketOptions = (_smtpSettings.Port == 465 || _smtpSettings.UseSsl)
                 ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
+                : SecureSocketOptions.Auto;
 
             await client.ConnectAsync(_smtpSettings.Host, _smtpSettings.Port, socketOptions, cancellationToken);
 
