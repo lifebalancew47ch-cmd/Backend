@@ -60,9 +60,10 @@ public class GlobalExceptionMiddleware
                 break;
 
             case ArgumentException argEx:
+                _logger.LogWarning(argEx, "Bad request argument exception: {Message}", argEx.Message);
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;
                 problemDetails.Title = "Bad request.";
-                problemDetails.Detail = argEx.Message;
+                problemDetails.Detail = "The request is invalid.";
                 break;
 
             default:
