@@ -56,6 +56,16 @@ public static class DependencyInjection
             .GetSection(JwtOptions.SectionName)
             .Get<JwtOptions>() ?? new JwtOptions();
 
+        // Fail-fast JWT: never start in Production with an empty, short or placeholder secret.
+        if (environment.IsProduction() &&
+            (string.IsNullOrEmpty(jwtOptions.SecretKey) ||
+             Encoding.UTF8.GetByteCount(jwtOptions.SecretKey) < 32 ||
+             jwtOptions.SecretKey == "CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!"))
+        {
+            throw new InvalidOperationException(
+                "Jwt:SecretKey must be configured with at least 32 bytes and cannot be the placeholder value in production.");
+        }
+
         services
             .AddAuthentication(options =>
             {
