@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace LifeBalance.Notifications.Presentation.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "ADMIN")]
 [EnableRateLimiting("fixed")]
 [Route("api/v1/templates")]
 public class TemplatesController : ControllerBase

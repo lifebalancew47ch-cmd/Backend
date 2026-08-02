@@ -1,91 +1,107 @@
 # LifeBalance - Backend
 
-¡Bienvenido al repositorio central del backend de **LifeBalance**! 🚀
+Central backend repository for **LifeBalance**! 🚀
 
-Este repositorio contiene la arquitectura de microservicios backend que impulsa la plataforma **LifeBalance**. La solución está construida utilizando el ecosistema **.NET** (C#), aplicando principios de **Clean Architecture**, **Domain-Driven Design (DDD)** y **CQRS** (Command Query Responsibility Segregation) para asegurar un código mantenible, escalable y robusto.
+This monorepo contains the microservices architecture powering the **LifeBalance** platform. Built with **.NET 9** (C#), applying **Clean Architecture**, **Domain-Driven Design (DDD)**, and **CQRS** principles.
 
----
-
-## 🏛️ Arquitectura Global
-
-El backend de LifeBalance está estructurado como un conjunto de microservicios independientes que se comunican entre sí. Cada microservicio cuenta con su propia base de datos (Database-per-service) garantizando un bajo acoplamiento.
-
-### Principales Tecnologías Utilizadas
-* **Framework:** .NET (ASP.NET Core)
-* **Arquitectura:** Clean Architecture, DDD, CQRS (con MediatR)
-* **Base de Datos:** MongoDB (NoSQL)
-* **Caché:** Redis (usado en microservicios clave como Organization & SaaS)
-* **Autenticación y Seguridad:** JWT (JSON Web Tokens), BCrypt, Políticas de Seguridad de OWASP
-* **Resiliencia HTTP:** Polly (Retries con Exponential Backoff, Circuit Breaker)
-* **Contenerización y Despliegue:** Docker, Docker Compose, configuración lista para **Render** (`render.yaml`)
+> **For AI Agents and Developers**: Refer to [**AGENTS.md**](./AGENTS.md) for precise details on microservices, security rules, endpoints, databases, and commands.
 
 ---
 
-## 📦 Microservicios Disponibles
+## 🏛️ Global Architecture
 
-Actualmente, el repositorio cuenta con 4 microservicios principales:
+The LifeBalance backend is structured as independent microservices. Each service uses its own database (Database-per-service) to ensure loose coupling.
+
+### Tech Stack
+* **Framework:** .NET 9.0 (ASP.NET Core)
+* **Architecture:** Clean Architecture, DDD, CQRS (MediatR, except Notifications & Alerts)
+* **Database:** MongoDB (NoSQL) — one DB per microservice
+* **Cache:** Redis (local docker-compose in Organization & SaaS)
+* **Auth & Security:** Shared JWT HS256 (Issuer/Audience `LifeBalance`), BCrypt, OWASP/DevSecOps remediations applied
+* **Observability:** Serilog (Dashboard), Health Checks, Swagger (Development only)
+* **Containerization & Deployment:** Docker, Docker Compose, **Render** (`render.yaml`)
+* **CI/CD:** GitHub Actions (build + tests per service), CodeQL, Dependabot
+
+---
+
+## 📦 Microservices
 
 ### 1. 🔐 Auth & Profile (`/Auth_Profile`)
-Microservicio robusto encargado de la **Autenticación, Autorización y Gestión de Perfiles**.
-* **Responsabilidades:** Login, registro, rotación de refresh tokens, gestión de contraseñas, auditorías de acceso, y perfiles de usuario.
-* **Seguridad:** Autenticación JWT Bearer, RBAC/PBAC, control de fuerza bruta (bloqueos temporales), y protección contra NoSQL Injection.
-* **Base de Datos:** `LifeBalance_Auth` (MongoDB).
+* **Responsibilities:** Login, registration, refresh token rotation, password management, access auditing, and user profiles.
+* **Security:** JWT Bearer, RBAC/PBAC, brute force protection (lockout), audit logs, default `USER` role fallback.
+* **Database:** `LifeBalance_Auth` (MongoDB).
+* **Tests:** ~164 unit tests.
 
 ### 2. 📊 Dashboard Service (`/DashboardService`)
-Microservicio de agregación que sirve como punto de entrada para las interfaces de usuario.
-* **Responsabilidades:** Recopilación y orquestación de datos provenientes de otros microservicios (Médico, Sedentarismo, Gamificación, Machine Learning, etc.) para renderizar el Dashboard del usuario.
-* **Integraciones:** Se comunica con el resto del ecosistema mediante clientes HTTP tipados.
-* **Base de Datos:** `LifeBalanceDashboard` (MongoDB).
+* **Responsibilities:** Data aggregation and orchestration to render individual, family, company, and general dashboards.
+* **Behavior:** Fail-closed (no mock data); upstream failures return `503` (`UpstreamServiceUnavailableException`). Family/company membership checked against Organization (`403` on failure).
+* **Security:** Enforced HTTPS for `ServiceUrls` in non-Dev; CORS allowlist (`https://lifebalance-adv3.onrender.com`).
+* **Database:** `lifebalance_dashboard` (MongoDB).
+* **Tests:** ~163 unit tests.
 
 ### 3. 🏢 Organization & SaaS (`/OrganizationAndSaaS`)
-Núcleo empresarial (B2B/B2C) de la plataforma.
-* **Responsabilidades:** Gestión multi-tenant de Empresas, Familias, Departamentos y Equipos. Administración de licencias, invitaciones y planes SaaS (Free, Personal, Family, Business, Enterprise).
-* **Aislamiento Multi-Tenant:** Aislamiento estricto de datos por `TenantId` para prevenir fugas de información.
-* **Base de Datos:** `LifeBalance_OrganizationSaaS` (MongoDB) y Redis Cache.
+* **Responsibilities:** Multi-tenant management for Companies, Families, Departments, and Teams. Licenses, invitations, and SaaS plans.
+* **Multi-Tenant Isolation:** Repositories unconditionally filter by tenant (`tenant_id` claim priority over header).
+* **Security:** Fail-fast JWT (startup crash on empty/placeholder secret); `FallbackPolicy` requiring auth everywhere except `/health` and accepting/rejecting invitations.
+* **Database:** `LifeBalance_OrganizationSaaS` (MongoDB).
+* **Tests:** ~244 unit tests.
 
 ### 4. 🔔 Notifications & Alerts (`/NotificationsAndAlerts`)
-API encargada de la gestión de alertas y notificaciones del sistema.
-* **Responsabilidades:** Despacho de notificaciones a los usuarios (alertas del sistema, expiración de licencias, invitaciones, correos de confirmación, etc.).
-* **Base de Datos:** `LifeBalanceNotificationsDb` (MongoDB).
+* **Responsibilities:** Dispatching notifications (Push, Email, in-app), templates, preferences, history, metrics, and device registration.
+* **Architecture:** Clean Architecture **without MediatR** (Controller → interface → implementation → MongoDB).
+* **Security:** Hardened JWT (HS256, 1-min ClockSkew); admin endpoints restricted to `ADMIN` role; anti-IDOR via `userId` claim.
+* **Database:** `LifeBalanceNotificationsDb` (MongoDB).
+* **Tests:** ~249 unit tests.
 
 ---
 
-## 🚀 Entorno de Desarrollo y Despliegue
+## 🚀 Development & Deployment
 
-La solución está completamente Dockerizada para un despliegue y desarrollo simplificado.
-
-### Levantar el entorno local (Docker Compose)
-Cada microservicio incluye su propio `docker-compose.yml` local. Para levantar los microservicios individualmente, navega al directorio del servicio y ejecuta:
+### Local Environment (Docker Compose)
+Run an individual microservice using its local `docker-compose.yml`:
 ```bash
 docker-compose up --build -d
 ```
 
-### Despliegue en Render
-El proyecto incluye un archivo `render.yaml` en la raíz que orquesta el despliegue automático de los 4 microservicios en la plataforma **Render.com** utilizando contenedores Docker.
-* **Environment:** Docker
-* **Región:** Oregon
-* **Plan:** Free
+| Service | Local Dev Port | Docker Compose Port |
+|---|---|---|
+| Auth & Profile | `http://localhost:5200` / `https://localhost:7200` | `10000:10000` |
+| Dashboard | `http://localhost:5000` / `https://localhost:5001` | `5000:8080`, `5001:8081` |
+| Notifications | `http://localhost:5054` / `https://localhost:7269` | `5000:10000` |
+| Organization & SaaS | `http://localhost:5072` / `https://localhost:7207` | `8080:8080` |
 
-Para desplegar, simplemente conecta el repositorio en el Dashboard de Render usando la opción **Blueprint** y Render configurará todos los web services con las variables de entorno base. **Asegúrate de inyectar las variables sensibles manualmente** (como Connection Strings de MongoDB Atlas, `Jwt__SecretKey` y credenciales SMTP).
+### Render Deployment
+Root `render.yaml` orchestrates automatic deployment for all 4 services (Free tier Docker web services).
 
----
-
-## 🛡️ Seguridad
-
-Todo el proyecto sigue prácticas seguras recomendadas por OWASP:
-1. **Validaciones estrictas:** Implementadas en la capa de Aplicación utilizando *FluentValidation*.
-2. **Cabeceras de Seguridad HTTP:** `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, etc.
-3. **Manejo global de excepciones:** Respuestas estandarizadas usando el estándar RFC 7807 (`ProblemDetails`).
-4. **Rate Limiting:** Límites configurados a nivel global e individual por IP/Tenant para proteger los endpoints públicos.
+> **⚠️ IMPORTANT:** All services share the **same JWT secret**. Ensure matching values across all deployment variables on Render.
 
 ---
 
-## 📝 Documentación Adicional
-Para ver detalles profundos sobre endpoints, configuración y diagramas específicos de cada microservicio, dirígete al archivo `README.md` localizado en cada una de sus carpetas:
-* [`/Auth_Profile/README.md`](./Auth_Profile/README.md)
-* [`/DashboardService/README.md`](./DashboardService/README.md)
-* [`/OrganizationAndSaaS/README.md`](./OrganizationAndSaaS/README.md)
-* `/NotificationsAndAlerts` (Consultar la estructura interna)
+## 🛡️ Security Rules
+
+1. **Fail-fast JWT:** Startup validation for production secret lengths and non-placeholder values.
+2. **Mandatory HTTPS:** Dashboard validates HTTPS outbound URLs outside Development.
+3. **Fail-closed:** Upstream HTTP errors return `503`.
+4. **Anti-IDOR:** `userId` always retrieved from JWT `ClaimTypes.NameIdentifier`.
+5. **Multi-tenant isolation:** Repository-level tenant filtering.
+6. **Rate limiting (429), pagination clamping (1–100), CORS allowlist, Dev-only Swagger, generic client error messages.**
+7. **Non-root Docker containers (`appuser`).**
 
 ---
-*Propietario — © LifeBalance 2026. Todos los derechos reservados.*
+
+## 🧪 Testing & CI/CD
+
+* **~820 passing unit tests** across services + **4 contract tests** (`tests/ContractTests/`).
+* **GitHub Actions (`ci.yml`):** Per-service build/test matrix + contract verification + `ci-success` gate.
+
+```bash
+# Run unit tests for a specific service
+dotnet test tests/<Project>.UnitTests/<Project>.UnitTests.csproj --configuration Release
+
+# Run contract tests
+dotnet test tests/ContractTests/ContractTests.csproj --configuration Release
+```
+
+---
+
+*Owner — © LifeBalance 2026. All rights reserved.*

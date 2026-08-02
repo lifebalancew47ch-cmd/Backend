@@ -1,0 +1,2 @@
+# Local dev secrets (MongoDB Atlas URI, JWT signing key) must NOT be committed.
+**/appsettings.Development.json
