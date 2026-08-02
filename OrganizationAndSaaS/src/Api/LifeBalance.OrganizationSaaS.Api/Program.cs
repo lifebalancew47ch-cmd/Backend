@@ -23,7 +23,7 @@ builder.Host.UseSerilog();
 
 // 2. Add Layered Services
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 
 // 3. Controllers & OpenAPI / Swagger (Development only)
 builder.Services.AddControllers();

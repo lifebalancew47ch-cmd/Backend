@@ -62,7 +62,8 @@ public class AuthController : BaseController
     [SwaggerOperation(Summary = "Revoke a refresh token", Description = "Revokes a specific refresh token.")]
     public async Task<IActionResult> RevokeToken([FromBody] Auth.Application.DTOs.Auth.TokenRevocationRequest request, CancellationToken ct)
     {
-        var result = await Mediator.Send(new RevokeTokenCommand(request), ct);
+        var userId = User.GetUserId() ?? string.Empty;
+        var result = await Mediator.Send(new RevokeTokenCommand(request, userId), ct);
         return HandleResponse(result);
     }
 
