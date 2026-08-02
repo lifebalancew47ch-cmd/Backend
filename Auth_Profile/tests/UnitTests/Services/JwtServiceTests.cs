@@ -49,8 +49,10 @@ public class JwtServiceTests
 
         jwtToken.Issuer.Should().Be(_jwtSettings.Issuer);
         jwtToken.Audiences.Should().Contain(_jwtSettings.Audience);
-        jwtToken.Claims.Should().Contain(c => c.Type == ClaimTypes.NameIdentifier && c.Value == "user-999");
-        jwtToken.Claims.Should().Contain(c => c.Type == ClaimTypes.Email && c.Value == "jwt@example.com");
+        // Auth emite claims con nombres cortos estándar de JWT (sub/email/role).
+        jwtToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == "user-999");
+        jwtToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Email && c.Value == "jwt@example.com");
+        jwtToken.Claims.Should().Contain(c => c.Type == "role" && c.Value == "Admin");
         jwtToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Jti);
     }
 

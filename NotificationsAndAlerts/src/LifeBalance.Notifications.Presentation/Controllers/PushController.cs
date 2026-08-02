@@ -26,7 +26,7 @@ public class PushController : ControllerBase
     }
 
     [HttpPost("broadcast")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Broadcast([FromBody] BroadcastPushDto dto)
     {
         var result = await _pushService.BroadcastAsync(dto);
@@ -42,14 +42,14 @@ public class PushController : ControllerBase
     }
 
     [HttpPost("company")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> SendToCompany([FromBody] BroadcastPushDto dto) { return await Broadcast(dto); }
 
     [HttpPost("family")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> SendToFamily([FromBody] BroadcastPushDto dto) { return await Broadcast(dto); }
 
     [HttpPost("department")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> SendToDepartment([FromBody] BroadcastPushDto dto) { return await Broadcast(dto); }
 }

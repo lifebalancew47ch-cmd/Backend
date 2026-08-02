@@ -77,7 +77,8 @@ try
         });
 
     // --------------------------------------------------------
-    // Swagger / OpenAPI (Development only)
+    // --------------------------------------------------------
+    // Swagger / OpenAPI (Development only — Rule 7)
     // --------------------------------------------------------
     if (builder.Environment.IsDevelopment())
     {
@@ -221,7 +222,7 @@ try
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
 
-    // 5. Swagger (Development only)
+    // 5. Swagger (Development only — Rule 7)
     if (app.Environment.IsDevelopment())
     {
         app.UseDashboardSwagger();

@@ -102,13 +102,16 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         var roles = await _roleRepository.GetByIdsAsync(user.RoleIds, cancellationToken);
-        var roleNames = roles.Select(r => r.NormalizedName).ToList();
+        var roleNames = roles
+            .Select(r => r.NormalizedName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToList();
 
         if (roleNames.Count == 0)
         {
             var defaultRole = await _roleRepository.GetByNameAsync("User", cancellationToken)
                 ?? await _roleRepository.GetByNameAsync("USER", cancellationToken);
-            if (defaultRole is not null)
+            if (defaultRole is not null && !string.IsNullOrWhiteSpace(defaultRole.NormalizedName))
             {
                 roleNames.Add(defaultRole.NormalizedName);
             }
@@ -119,8 +122,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.Username),
-            new("firstName", user.FirstName),
-            new("lastName", user.LastName),
+            new("firstName", user.FirstName ?? string.Empty),
+            new("lastName", user.LastName ?? string.Empty),
             new("isEmailConfirmed", user.IsEmailConfirmed.ToString())
         };
 

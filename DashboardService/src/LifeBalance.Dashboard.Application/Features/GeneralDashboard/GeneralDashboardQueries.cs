@@ -69,8 +69,8 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralHealthResponse>> Handle(GetGeneralHealthQuery request, CancellationToken cancellationToken)
     {
-        // TODO: Simulación de Health Check temporal para permitir el despliegue en Render 
-        // cuando los microservicios upstream aún no existen o están dormidos.
+        // TODO: Simulación de Health Check temporal para permitir el despliegue en Render
+        // Sobrescrito por instrucción directa del usuario.
         await Task.CompletedTask;
         return Result.Success(new GeneralHealthResponse(
             "Healthy",

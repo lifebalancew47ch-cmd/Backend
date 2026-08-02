@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: lifebalance-admin-mongo
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - lifebalance-network
+
+  administration-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lifebalance-administration-api
+    ports:
+      - "5007:10000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MongoDB=mongodb://mongodb:27017
+      - DatabaseSettings__DatabaseName=LifeBalance_Administration
+      - JwtSettings__Secret=DevOnly_Administration_Secret_Key_2026_32plus_bytes!!
+      - JwtSettings__Issuer=LifeBalance
+      - JwtSettings__Audience=LifeBalance
+    depends_on:
+      - mongodb
+    networks:
+      - lifebalance-network
+
+volumes:
+  mongo-data:
+
+networks:
+  lifebalance-network:
+    driver: bridge

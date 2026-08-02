@@ -60,7 +60,7 @@ services:
     plan: free
     rootDir: DashboardService
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/v1/dashboard/health
+    healthCheckPath: /health/live
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -151,3 +151,46 @@ services:
         value: https://lifebalance-dashboard-service.onrender.com
       - key: Microservices__NotificationUrl
         value: https://lifebalance-notifications-api.onrender.com
+
+  # ───────────────────────────────────────────────────
+  # 5. Administration & Configuration Service
+  # ───────────────────────────────────────────────────
+  - type: web
+    name: lifebalance-administration-service
+    env: docker
+    region: oregon
+    plan: free
+    rootDir: AdministrationService
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:10000
+      - key: ConnectionStrings__MongoDB
+        sync: false
+      - key: DatabaseSettings__DatabaseName
+        value: LifeBalance_Administration
+      - key: JwtSettings__Secret
+        sync: false
+      - key: JwtSettings__Issuer
+        value: LifeBalance
+      - key: JwtSettings__Audience
+        value: LifeBalance
+      - key: Microservices__AuthProfileUrl
+        value: https://lifebalance-auth-service.onrender.com
+      - key: Microservices__OrganizationUrl
+        value: https://lifebalance-organization-saas.onrender.com
+      - key: Microservices__DashboardUrl
+        value: https://lifebalance-dashboard-service.onrender.com
+      - key: Microservices__NotificationUrl
+        value: https://lifebalance-notifications-api.onrender.com
+      - key: Microservices__MedicalDataUrl
+        value: https://medical-service.onrender.com
+      - key: Microservices__SedentaryEngineUrl
+        value: https://sedentary-engine-service.onrender.com
+      - key: Microservices__MlPredictionUrl
+        value: https://ml-prediction-service.onrender.com
+      - key: Microservices__ReportingUrl
+        value: https://reporting-service.onrender.com

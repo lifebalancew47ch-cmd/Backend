@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: auth-unit-test-results
           path: Auth_Profile/TestResults/
@@ -67,10 +67,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
           
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dashboard-unit-test-results
           path: DashboardService/TestResults/
@@ -123,10 +123,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
@@ -147,7 +147,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: notifications-unit-test-results
           path: "NotificationsAndAlerts/TestResults/"
@@ -167,10 +167,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: organization-saas-unit-test-results
           path: OrganizationAndSaaS/TestResults/
@@ -200,7 +200,51 @@ jobs:
         run: docker build -t lifebalance-organization-saas:ci .
 
   # ─────────────────────────────────────────
-  # JOB 5: Contract & Inter-Service Tests
+  # JOB 5: Administration & Configuration Service
+  # ─────────────────────────────────────────
+  administration:
+    name: Administration Service — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AdministrationService
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore solution
+        run: dotnet restore LifeBalance.Administration.sln
+
+      - name: Build solution
+        run: dotnet build LifeBalance.Administration.sln --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: >
+          dotnet test tests/LifeBalance.Administration.UnitTests/LifeBalance.Administration.UnitTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: administration-unit-test-results
+          path: AdministrationService/TestResults/
+
+      - name: Build Docker image (dry run)
+        run: docker build -t lifebalance-administration:ci .
+
+  # ─────────────────────────────────────────
+  # JOB 6: Contract & Inter-Service Tests
   # ─────────────────────────────────────────
   contract-tests:
     name: Contract & Inter-Service — Test
@@ -208,10 +252,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
@@ -229,12 +273,12 @@ jobs:
           --logger "trx;LogFileName=contract-test-results.trx"
 
   # ─────────────────────────────────────────
-  # JOB 6: All-green gate (required for merge)
+  # JOB 7: All-green gate (required for merge)
   # ─────────────────────────────────────────
   ci-success:
     name: CI — All services passed
     runs-on: ubuntu-latest
-    needs: [auth-profile, dashboard, notifications, organization-saas, contract-tests]
+    needs: [auth-profile, dashboard, notifications, organization-saas, administration, contract-tests]
     if: always()
     steps:
       - name: Check all jobs succeeded
@@ -243,6 +287,7 @@ jobs:
                 "${{ needs.dashboard.result }}" != "success" || \
                 "${{ needs.notifications.result }}" != "success" || \
                 "${{ needs.organization-saas.result }}" != "success" || \
+                "${{ needs.administration.result }}" != "success" || \
                 "${{ needs.contract-tests.result }}" != "success" ]]; then
             echo "One or more service jobs failed."
             exit 1

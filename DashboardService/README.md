@@ -1,27 +1,12 @@
 # LifeBalance · Dashboard Service 🚀
 
-> **Microservicio de Agregación del Dashboard** — parte del ecosistema *LifeBalance*.
->
-> Construido sobre **.NET 9.0**, **Clean Architecture**, **DDD** y **CQRS**.
+> **Dashboard Aggregation Microservice** — part of the *LifeBalance* ecosystem.
+> Built on **.NET 9.0**, **Clean Architecture**, **DDD**, and **CQRS** (MediatR).
+> See [AGENTS.md](../AGENTS.md) for detailed rules and guidelines.
 
 ---
 
-## Tabla de Contenidos
-
-- [Arquitectura](#arquitectura)
-- [Proyectos de la Solución](#proyectos-de-la-solución)
-- [Prerrequisitos](#prerrequisitos)
-- [Configuración Local](#configuración-local)
-- [Ejecutar con Docker](#ejecutar-con-docker)
-- [Variables de Entorno](#variables-de-entorno)
-- [Documentación API](#documentación-api)
-- [Health Checks](#health-checks)
-- [Testing](#testing)
-- [Contribuir](#contribuir)
-
----
-
-## Arquitectura
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -41,153 +26,77 @@
                            ▲
 ┌──────────────────────────┴──────────────────────────────┐
 │            LifeBalance.Dashboard.Infrastructure         │
-│         (MongoDB · HttpClients · Caching · Polly)       │
+│        (MongoDB · HttpClients · Serilog · Polly)        │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Contratos compartidos** → `LifeBalance.Dashboard.Contracts`
-**Utilidades transversales** → `LifeBalance.Dashboard.Shared`
-
 ---
 
-## Proyectos de la Solución
+## Solution Projects
 
-| Proyecto | Responsabilidad |
+| Project | Responsibility |
 |---|---|
-| `Dashboard.API` | Entry point HTTP — controllers, middlewares, DI, OpenAPI |
-| `Dashboard.Application` | Casos de uso — commands, queries, handlers, validators |
-| `Dashboard.Domain` | Núcleo del dominio — entidades, agregados, eventos |
-| `Dashboard.Infrastructure` | Implementaciones técnicas — MongoDB, HTTP clients, caché |
-| `Dashboard.Contracts` | DTOs de request/response compartidos entre servicios |
-| `Dashboard.Shared` | Helpers, extensiones y tipos cross-cutting |
-| `Dashboard.UnitTests` | Pruebas unitarias de dominio y aplicación |
-| `Dashboard.IntegrationTests` | Pruebas de integración con WebApplicationFactory |
+| `Dashboard.API` | HTTP Entry Point — controllers, middlewares, DI, OpenAPI |
+| `Dashboard.Application` | Use Cases — commands, queries, handlers, validators |
+| `Dashboard.Domain` | Domain Core — entities, aggregates, domain events |
+| `Dashboard.Infrastructure` | Technical Implementations — MongoDB, HTTP clients, cache |
+| `Dashboard.Contracts` | Request/Response DTOs shared across services |
+| `Dashboard.Shared` | Helpers, extensions, cross-cutting types |
+| `Dashboard.UnitTests` | Unit tests (~163 green) |
+| `Dashboard.IntegrationTests` | Integration tests |
+
+> `DashboardService/DashboardService/` contains a legacy project that is not maintained.
 
 ---
 
-## Prerrequisitos
+## Fail-Closed Behavior
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) 4.x+
-- [MongoDB](https://www.mongodb.com/try/download/community) 7+ (o usar el compose)
-- Visual Studio 2022 17.x+ / Rider 2024+
-
----
-
-## Configuración Local
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/LifeBalance/dashboard-service.git
-cd dashboard-service
-
-# 2. Restaurar dependencias
-dotnet restore
-
-# 3. Compilar la solución
-dotnet build
-
-# 4. Ejecutar la API
-dotnet run --project src/LifeBalance.Dashboard.API
-```
+- **No mock data:** If an upstream HTTP client fails or returns `null`, handler throws `UpstreamServiceUnavailableException` → **HTTP 503**.
+- **Membership validation:** Family/Company dashboards validate membership against Organization; non-members → **HTTP 403**.
+- **HTTPS Enforced:** Outside Development, non-HTTPS `ServiceUrls__*` abort startup.
+- Legacy services (medical, sedentary, gamification, ml-prediction, reporting) are not deployed: endpoints return 503.
 
 ---
 
-## Ejecutar con Docker
+## Environment Variables
 
-```bash
-# Levantar todos los servicios (API + MongoDB)
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f dashboard-api
-
-# Detener
-docker-compose down
-```
-
----
-
-## Despliegue en Render (Render.com)
-
-El microservicio está **100% optimizado para Render** mediante el archivo `render.yaml` e imagen `Dockerfile`.
-
-### Pasos para Desplegar en Render:
-
-1. **Vincular el Repositorio en Render**:
-   - Ingresa a [Render Dashboard](https://dashboard.render.com/).
-   - Selecciona **New +** → **Blueprint**.
-   - Conecta el repositorio de GitHub de `DashboardService`.
-   - Render detectará automáticamente el archivo `render.yaml`.
-
-2. **Variables de Entorno Secretas en Render**:
-   Configure las siguientes variables secretas en la consola de Render:
-   - `MongoDb__ConnectionString`: Connection String de MongoDB Atlas (ej. `mongodb+srv://<user>:<pass>@cluster0.mongodb.net/LifeBalanceDashboard`).
-   - `Jwt__SecretKey`: Clave secreta para validación de tokens JWT.
-
-3. **Verificación de Health Check**:
-   - Render monitoreará el servicio mediante la ruta de Health Check configurada:
-     `GET /api/v1/dashboard/health`
-
----
-
-## Variables de Entorno
-
-| Variable | Descripción | Ejemplo |
+| Variable | Description | Example |
 |---|---|---|
-| `ConnectionStrings__MongoDB` | Connection string de MongoDB | `mongodb://localhost:27017` |
-| `Jwt__Issuer` | Emisor del token JWT | `https://auth.lifebalance.io` |
-| `Jwt__Audience` | Audiencia del token JWT | `dashboard-service` |
-| `Jwt__SecretKey` | Clave secreta del JWT | `<secret>` |
-| `Serilog__MinimumLevel__Default` | Nivel mínimo de log | `Information` |
-| `OpenTelemetry__Endpoint` | Endpoint OTLP | `http://localhost:4317` |
+| `ConnectionStrings__MongoDB` | MongoDB Connection String | `mongodb://localhost:27017` |
+| `MongoDb__DatabaseName` | Database Name | `lifebalance_dashboard` |
+| `Jwt__Issuer` / `Jwt__Audience` | JWT Issuer/Audience | `LifeBalance` |
+| `Jwt__SecretKey` | Shared JWT Secret Key | `<secret>` |
+| `ServiceUrls__AuthServiceUrl` | Auth Service URL (HTTPS in Prod) | `https://...onrender.com` |
+| `ServiceUrls__OrganizationServiceUrl` | Organization & SaaS URL | `https://...onrender.com` |
+| `ServiceUrls__NotificationServiceUrl` | Notifications URL | `https://...onrender.com` |
+| `CORS__AllowedOrigins` | CORS Allowlist | `https://lifebalance-adv3.onrender.com` |
+| `Serilog__MinimumLevel__Default` | Serilog level | `Information` |
+
+MongoDB Collections: `DashboardCache`, `AggregationLogs`.
 
 ---
 
-## Documentación API
-
-Una vez ejecutado el proyecto, acceder a:
-
-- **Swagger UI**: `https://localhost:5001/swagger`
-- **OpenAPI JSON**: `https://localhost:5001/swagger/v1/swagger.json`
+## API Endpoints (All GET, require JWT)
+- `/api/v1/dashboard` — General summary, KPIs, system indicators
+- `/api/v1/dashboard/individual` — Individual metrics (summary, activity, biometrics, etc.)
+- `/api/v1/dashboard/family` — Family dashboard (requires `familyId` & membership)
+- `/api/v1/dashboard/company` — Company dashboard (requires `companyId`/`organizationId` & membership)
 
 ---
 
 ## Health Checks
 
-| Endpoint | Descripción |
+| Endpoint | Description |
 |---|---|
-| `GET /health` | Estado general del servicio |
-| `GET /health/live` | Liveness probe (Kubernetes) |
-| `GET /health/ready` | Readiness probe (Kubernetes) |
-| `GET /health/ui` | UI de Health Checks |
+| `GET /health/live` | Liveness probe — Render health check |
+| `GET /health/ready` | Readiness probe |
+| `GET /health` | Overall status |
+| `GET /api/v1/dashboard/health` | **(SIMULATED)** Simulated 200 OK health check for ecosystem deployment |
 
 ---
 
 ## Testing
 
 ```bash
-# Ejecutar tests unitarios
-dotnet test tests/LifeBalance.Dashboard.UnitTests
-
-# Ejecutar tests de integración
-dotnet test tests/LifeBalance.Dashboard.IntegrationTests
-
-# Con cobertura de código
-dotnet test --collect:"XPlat Code Coverage" --results-directory ./coverage
+dotnet test tests/LifeBalance.Dashboard.UnitTests/LifeBalance.Dashboard.UnitTests.csproj
 ```
-
----
-
-## Contribuir
-
-1. Crear una rama desde `develop`: `git checkout -b feature/nombre-feature`
-2. Realizar los cambios siguiendo las convenciones del proyecto
-3. Ejecutar los tests: `dotnet test`
-4. Crear un Pull Request hacia `develop`
-
----
-
-## Licencia
-
-Propietario — © LifeBalance. Todos los derechos reservados.
