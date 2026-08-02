@@ -1,113 +1,113 @@
 # AGENTS.md — LifeBalance Backend
 
-Monorepo con **4 microservicios independientes en .NET 9** (Clean Architecture + CQRS), MongoDB, JWT compartido y despliegue en Render (plan free). **No existe un `.sln` raíz**: cada microservicio es una solución separada, cada uno con su propio Dockerfile, appsettings, docker-compose y tests.
+Monorepo with **4 independent microservices in .NET 9** (Clean Architecture + CQRS), MongoDB, shared JWT, deployed on Render (free tier). **No root `.sln` exists**: each microservice is a separate solution with its own Dockerfile, appsettings, docker-compose, and tests.
 
-## Estructura del repo
+## Repository Structure
 
 ```
-Auth_Profile/            → Servicio Auth & Profile (lifebalance-auth-service)
-DashboardService/        → Servicio Dashboard (lifebalance-dashboard-service)
-NotificationsAndAlerts/  → Servicio Notifications & Alerts (lifebalance-notifications-api)
-OrganizationAndSaaS/     → Servicio Organization & SaaS (lifebalance-organization-saas)
-tests/ContractTests/     → Tests de contrato entre servicios (raíz, sin .sln)
+Auth_Profile/            → Auth & Profile Service (lifebalance-auth-service)
+DashboardService/        → Dashboard Service (lifebalance-dashboard-service)
+NotificationsAndAlerts/  → Notifications & Alerts Service (lifebalance-notifications-api)
+OrganizationAndSaaS/     → Organization & SaaS Service (lifebalance-organization-saas)
+tests/ContractTests/     → Inter-service contract tests (root, no .sln)
 .github/                 → CI, CodeQL, Dependabot
-render.yaml              → Defines los 4 servicios de Render
-.gitignore               → bin/obj ignorados (no subir nunca)
+render.yaml              → Defines 4 Render services
+.gitignore               → bin/obj ignored (never commit)
 ```
 
-- Carpetas legado que NO se tocan: `DashboardService/DashboardService/`, `OrganizationAndSaaS/Organization&SaaS/` y su solución `Organization&SaaS.sln` (referencian proyectos que sí existen; CodeQL solo compila las 4 soluciones oficiales en modo manual). `NotificationsAndAlerts/Notifications&Alerts.sln` fue **eliminada** porque referenciaba un proyecto inexistente y rompía el autobuild de CodeQL.
-- Soluciones oficiales: `Auth_Profile/Auth_Profile.sln`, `DashboardService/LifeBalance.DashboardService.sln`, `NotificationsAndAlerts/LifeBalance.Notifications.sln`, `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`.
+- Legacy directories NOT touched: `DashboardService/DashboardService/`, `OrganizationAndSaaS/Organization&SaaS/` and solution `Organization&SaaS.sln` (reference existing projects; CodeQL manually builds only 4 official solutions). `NotificationsAndAlerts/Notifications&Alerts.sln` was **removed** (referenced nonexistent project breaking CodeQL autobuild).
+- Official solutions: `Auth_Profile/Auth_Profile.sln`, `DashboardService/LifeBalance.DashboardService.sln`, `NotificationsAndAlerts/LifeBalance.Notifications.sln`, `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`.
 
-## Reglas globales (NO romper — son remediaciones de seguridad aplicadas)
+## Global Security Rules (DO NOT BREAK — Applied Security Remediation)
 
-1. **userId SIEMPRE viene del claim `ClaimTypes.NameIdentifier` del token JWT**, nunca de query/body/route (anti-IDOR). Si falta el claim → 401.
-2. **Rol**: el token JWT viaja con nombres cortos estándar (`sub`, `email`, `name`, `role`); al validar se mapean a `ClaimTypes.NameIdentifier`/`Email`/`Name`/`Role`. El valor del rol = `NormalizedName` (MAYÚSCULAS, ej. `USER`, `ADMIN`). Auth hace fallback a `USER` en login/refresh si la cuenta no tiene `RoleIds` (fix del 403 de Dashboard). Los handlers de Auth filtran `NormalizedName` nulos/vacíos y los repositorios descartan ids no-ObjectId (evita 500 por `FormatException` del driver Mongo).
-3. **JWT**: `Issuer`/`Audience` = `"LifeBalance"` en los 4 servicios, algoritmo HS256, `ClockSkew` 1 minuto, mismo secreto compartido entre servicios.
-4. **Fail-fast JWT**: Organization y Notifications (en Production) lanzan `InvalidOperationException` al arrancar si el secreto está vacío, es placeholder o <32 bytes UTF-8. Auth NO tiene este check (hardening pendiente).
-5. **Fail-closed**: NO fabricar datos de ejemplo. Si un cliente HTTP upstream falla o devuelve null → `UpstreamServiceUnavailableException` → 503. Dashboard valida membresía familia/empresa contra Organization: no miembro → 403.
-6. **Servicios de salida con HTTPS obligatorio** (Dashboard): fuera de Development, cualquier `ServiceUrls` con `http://` aborta el arranque (`InvalidOperationException`).
-7. **CORS solo allowlist**, **Swagger solo en Development**, **rate limiter por IP** (`RemoteIpAddress`), **paginación clamp 1–100**, **mensajes de error genéricos** al cliente (detalle solo en logs).
-8. **Nunca commitear secretos reales** (el secreto JWT de Organization se filtró una vez en el historial de git; usar placeholders como `CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!`). Los `appsettings.Development.json` pueden tener secretos dev propios.
-9. **Contrato de respuesta común**: `Response<T> { bool Success; string Message; T Data; }`.
-10. **Multi-tenant (Organization)**: el tenant se obtiene del claim `tenant_id` (prioridad) o header `X-Tenant-Id`; filtro de tenant incondicional en repositorios vía `IGlobalTenantEntity` (exime a `SaaSPlan`).
+1. **userId MUST ALWAYS come from claim `ClaimTypes.NameIdentifier` in JWT token**, never from query/body/route (anti-IDOR). Missing claim → 401.
+2. **Role**: JWT token uses standard short names (`sub`, `email`, `name`, `role`), mapped on validation to `ClaimTypes.NameIdentifier`/`Email`/`Name`/`Role`. Role value = `NormalizedName` (UPPERCASE, e.g., `USER`, `ADMIN`). Auth falls back to `USER` in login/refresh if account lacks `RoleIds` (fixes Dashboard 403). Auth handlers filter null/empty `NormalizedName`; repos discard non-ObjectId strings (prevents 500 from Mongo driver `FormatException`).
+3. **JWT**: `Issuer`/`Audience` = `"LifeBalance"` across all 4 services, HS256 algorithm, `ClockSkew` 1 minute, identical shared secret.
+4. **Fail-fast JWT**: Organization and Notifications (in Production) throw `InvalidOperationException` on startup if secret is empty, placeholder, or <32 UTF-8 bytes. Auth does not have this check yet.
+5. **Fail-closed**: DO NOT mock/stub upstream data. If upstream HTTP client fails or returns null → `UpstreamServiceUnavailableException` → 503. Dashboard validates family/company membership against Organization: non-member → 403.
+6. **HTTPS Required for Outbound Services** (Dashboard): Outside Development, any `ServiceUrls` using `http://` aborts startup (`InvalidOperationException`).
+7. **CORS allowlist only**, **Swagger in Development only**, **IP rate limiter** (`RemoteIpAddress`), **pagination clamped 1–100**, **generic error messages** to client (details in logs only).
+8. **Never commit real secrets** (Organization JWT secret was previously leaked in git history; use placeholders like `CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!`). `appsettings.Development.json` can have local dev secrets.
+9. **Common Response Contract**: `Response<T> { bool Success; string Message; T Data; }`.
+10. **Multi-tenant (Organization)**: Tenant resolved from `tenant_id` claim (priority) or `X-Tenant-Id` header; unconditional tenant filter in repos via `IGlobalTenantEntity` (exempts `SaaSPlan`).
 
-## Comandos
+## Commands
 
 ```powershell
-# Por servicio (working directory del servicio):
-dotnet build <solucion.sln> --configuration Release
-dotnet test tests/<Proyecto>.UnitTests/<Proyecto>.UnitTests.csproj --no-build --configuration Release
-# Contrato (raíz):
+# Per service (working directory of service):
+dotnet build <solution.sln> --configuration Release
+dotnet test tests/<Project>.UnitTests/<Project>.UnitTests.csproj --no-build --configuration Release
+# Contract tests (root):
 dotnet test tests/ContractTests/ContractTests.csproj --configuration Release
 ```
 
-Suites verificadas verdes (total ~824): Auth 164, Dashboard 163, Organization 244, Notifications 249, Contract 4.
+Verified passing test suites (~824 total): Auth 164, Dashboard 163, Organization 244, Notifications 249, Contract 4.
 
 ---
 
 ## 1. Auth_Profile (Auth & Profile)
 
-- **Solución**: `Auth_Profile/Auth_Profile.sln`. **Proyectos**: `src/Auth.Api` (web), `src/Auth.Application` (MediatR handlers), `src/Auth.Domain`, `src/Auth.Infrastructure` (repos MongoDB), `src/Auth.Shared`.
-- **BD**: MongoDB `LifeBalance_Auth` — colecciones: `users`, `user_preferences`, `roles`, `permissions`, `refresh_tokens`, `password_reset_tokens`, `email_confirmation_tokens`, `login_history`, `audit_logs` (índices en `Persistence/MongoDbInitializer.cs`).
-- **JWT** (`appsettings.json` → `Jwt`): `SecretKey` placeholder, issuer/audience `LifeBalance`, access 30 min, refresh 7 días. Seguridad: 5 intentos fallidos → lockout 15 min.
-- **Endpoints** (`api/v{version:apiVersion}/[controller]`, versión 1):
+- **Solution**: `Auth_Profile/Auth_Profile.sln`. **Projects**: `src/Auth.Api` (web), `src/Auth.Application` (MediatR handlers), `src/Auth.Domain`, `src/Auth.Infrastructure` (MongoDB repos), `src/Auth.Shared`.
+- **DB**: MongoDB `LifeBalance_Auth` — collections: `users`, `user_preferences`, `roles`, `permissions`, `refresh_tokens`, `password_reset_tokens`, `email_confirmation_tokens`, `login_history`, `audit_logs` (indexes in `Persistence/MongoDbInitializer.cs`).
+- **JWT** (`appsettings.json` → `Jwt`): `SecretKey` placeholder, issuer/audience `LifeBalance`, access 30m, refresh 7d. Security: 5 failed attempts → 15m lockout.
+- **Endpoints** (`api/v{version:apiVersion}/[controller]`, v1):
   - `POST api/v1/auth/register`, `login`, `refresh-token`, `logout`, `revoke-token`, `confirm-email`, `send-confirmation`, `forgot-password`, `reset-password`
   - `api/v1/profile`: `GET me`, `PUT me`, `GET preferences`, `PUT preferences`, `PUT change-password`
   - `api/v1/roles`: CRUD; `api/v1/permissions`: CRUD
   - `api/v1/audit`: `GET login-history`, `GET security-events`
-- **Archivos clave**: `Auth.Application/Handlers/Auth/{LoginHandler,RefreshTokenHandler,RegisterHandler}.cs` (fallback rol `USER`), `Auth.Infrastructure/Services/JwtService.cs`, `Auth.Infrastructure/Repositories/*.cs`.
-- **Hardening pendiente** (NO aplicado aún): placeholder JWT permitido, refresh tokens en texto plano (`RefreshToken.cs`), IDOR en revoke-all, lockout evadible por refresh, sin 2FA, Swagger/CORS `AllowAnyOrigin`.
+- **Key files**: `Auth.Application/Handlers/Auth/{LoginHandler,RefreshTokenHandler,RegisterHandler}.cs` (`USER` role fallback), `Auth.Infrastructure/Services/JwtService.cs`, `Auth.Infrastructure/Repositories/*.cs`.
+- **Pending Hardening**: placeholder JWT allowed, plaintext refresh tokens (`RefreshToken.cs`), IDOR on revoke-all, lockout bypass via refresh, no 2FA, Swagger/CORS `AllowAnyOrigin`.
 - **Render**: `lifebalance-auth-service`, health `/health`.
 
 ## 2. DashboardService (Dashboard)
 
-- **Solución**: `DashboardService/LifeBalance.DashboardService.sln`. **Proyectos**: `src/LifeBalance.Dashboard.API`, `src/LifeBalance.Dashboard.Application` (MediatR handlers), `src/LifeBalance.Dashboard.Contracts`, `src/LifeBalance.Dashboard.Domain`, `src/LifeBalance.Dashboard.Infrastructure` (HttpClients + Mongo), `src/LifeBalance.Dashboard.Shared`.
-- **BD**: MongoDB `lifebalance_dashboard` — colecciones: `DashboardCache`, `AggregationLogs`. Logging: Serilog consola + archivo `logs/dashboard-.log`.
-- **Clientes upstream** (config `ServiceUrls`): Auth, Organization, Notifications, MedicalData, SedentaryEngine, Gamification, ML Prediction, Reporting — **deben ser HTTPS** en producción (ver regla 6). Los 5 servicios "legado" (medical/sedentary/gamification/ml/reporting) NO están desplegados: sus endpoints devuelven 503 fail-closed.
-- **CORS**: solo `https://lifebalance-adv3.onrender.com` (frontend).
-- **Endpoints** (`api/v1/dashboard`, `api/v1/dashboard/individual`, `/family`, `/company`), todos GET, todos requieren JWT:
-    - General: `summary`, `kpis`, `indicators`, `system`, `version`, `health` (este último devuelve un 200 OK **simulado** por instrucción explícita del usuario para evitar bloqueos en el despliegue cuando los upstreams no están disponibles)
+- **Solution**: `DashboardService/LifeBalance.DashboardService.sln`. **Projects**: `src/LifeBalance.Dashboard.API`, `src/LifeBalance.Dashboard.Application` (MediatR handlers), `src/LifeBalance.Dashboard.Contracts`, `src/LifeBalance.Dashboard.Domain`, `src/LifeBalance.Dashboard.Infrastructure` (HttpClients + Mongo), `src/LifeBalance.Dashboard.Shared`.
+- **DB**: MongoDB `lifebalance_dashboard` — collections: `DashboardCache`, `AggregationLogs`. Logging: Serilog console + file `logs/dashboard-.log`.
+- **Upstream clients** (`ServiceUrls` config): Auth, Organization, Notifications, MedicalData, SedentaryEngine, Gamification, ML Prediction, Reporting — **MUST be HTTPS** in production (Rule 6). 5 legacy services (medical/sedentary/gamification/ml/reporting) are NOT deployed: endpoints return 503 fail-closed.
+- **CORS**: `https://lifebalance-adv3.onrender.com` only (frontend).
+- **Endpoints** (`api/v1/dashboard`, `api/v1/dashboard/individual`, `/family`, `/company`), all GET, all require JWT:
+  - General: `summary`, `kpis`, `indicators`, `system`, `version`, `health` (simulated 200 OK to prevent deployment blockers when upstreams are down)
   - Individual: `summary`, `kpis`, `activity`, `biometrics`, `goals`, `heatmap`, `notifications`, `progress`, `recommendations`, `rewards`, `statistics`
-  - Family: `GET /api/v1/dashboard/family`, `members`, `goals`, `challenges`, `ranking`, `rewards`, `heatmap`, `statistics` — requieren `familyId` válido y membresía (403 si no)
-  - Company: `GET /api/v1/dashboard/company`, `kpis`, `licenses`, `organization`, `departments`, `adherence`, `ranking`, `trends`, `statistics`, `heatmap` — requieren `companyId`/`organizationId` reales y membresía (403/503)
-- **Archivos clave**: `LifeBalance.Dashboard.Infrastructure/DependencyInjection.cs` (RegisterTypedClient + check HTTPS, línea ~102), `API/Middlewares/GlobalExceptionMiddleware.cs`, `Application/Features/**/*Queries.cs` (UpstreamServiceUnavailableException → 503), `Infrastructure/HttpClients/*.cs` (devuelven null ante fallo).
-  - **Render**: `lifebalance-dashboard-service`, health `/health/live` o `/api/v1/dashboard/health` (actualmente devuelve 200 OK simulado por instrucción del usuario).
+  - Family: `GET /api/v1/dashboard/family`, `members`, `goals`, `challenges`, `ranking`, `rewards`, `heatmap`, `statistics` — require valid `familyId` & membership (403 if not)
+  - Company: `GET /api/v1/dashboard/company`, `kpis`, `licenses`, `organization`, `departments`, `adherence`, `ranking`, `trends`, `statistics`, `heatmap` — require real `companyId`/`organizationId` & membership (403/503)
+- **Key files**: `LifeBalance.Dashboard.Infrastructure/DependencyInjection.cs` (RegisterTypedClient + HTTPS check), `API/Middlewares/GlobalExceptionMiddleware.cs`, `Application/Features/**/*Queries.cs` (`UpstreamServiceUnavailableException` → 503), `Infrastructure/HttpClients/*.cs` (return null on failure).
+- **Render**: `lifebalance-dashboard-service`, health `/health/live` or `/api/v1/dashboard/health`.
 
 ## 3. NotificationsAndAlerts (Notifications & Alerts)
 
-- **Solución**: `NotificationsAndAlerts/LifeBalance.Notifications.sln`. **Proyectos**: `src/LifeBalance.Notifications.Presentation` (web), `src/LifeBalance.Notifications.Application` (DTOs/interfaces, SIN MediatR), `src/LifeBalance.Notifications.Domain`, `src/LifeBalance.Notifications.Infrastructure`, `src/LifeBalance.Notifications.Shared`.
-- **IMPORTANTE**: NO usa MediatR. Patrón: Controller → interfaz (`Application/Interfaces`) → implementación (`Infrastructure/Services`) → MongoDB.
-- **BD**: MongoDB `LifeBalanceNotificationsDb` — colecciones: `notifications`, `notification_preferences`, `notification_templates`, `scheduled_notifications`, `delivery_logs`, `alerts`, `metrics_records`, `device_registrations` (todas en `Infrastructure/Data/MongoDbContext.cs`).
-- **JWT endurecido**: `ValidAlgorithms = {HmacSha256}`, ClockSkew 1 min, secreto placeholder/empty/short → crash en Production.
-- **Roles**: los endpoints de `Templates`, `Metrics`, `History` (global y `organization/{organizationId}`), `Push` (`broadcast`/`company`/`family`/`department`) y `Emails` requieren rol **`ADMIN`**. Los endpoints propios del usuario usan `userId` del claim (nunca query). Recursos ajenos → 403.
-- **Validaciones**: bulk ≤500 emails, validación de emails, rate limit 429.
+- **Solution**: `NotificationsAndAlerts/LifeBalance.Notifications.sln`. **Projects**: `src/LifeBalance.Notifications.Presentation` (web), `src/LifeBalance.Notifications.Application` (DTOs/interfaces, NO MediatR), `src/LifeBalance.Notifications.Domain`, `src/LifeBalance.Notifications.Infrastructure`, `src/LifeBalance.Notifications.Shared`.
+- **IMPORTANT**: Does NOT use MediatR. Pattern: Controller → interface (`Application/Interfaces`) → implementation (`Infrastructure/Services`) → MongoDB.
+- **DB**: MongoDB `LifeBalanceNotificationsDb` — collections: `notifications`, `notification_preferences`, `notification_templates`, `scheduled_notifications`, `delivery_logs`, `alerts`, `metrics_records`, `device_registrations` (all in `Infrastructure/Data/MongoDbContext.cs`).
+- **Hardened JWT**: `ValidAlgorithms = {HmacSha256}`, ClockSkew 1 min, placeholder/empty/short secret → crash in Production.
+- **Roles**: Endpoints for `Templates`, `Metrics`, `History` (global and `organization/{organizationId}`), `Push` (`broadcast`/`company`/`family`/`department`) and `Emails` require **`ADMIN`** role. User endpoints use claim `userId`. Resource belonging to others → 403.
+- **Validations**: bulk ≤500 emails, email validation, rate limit 429.
 - **Endpoints** (`api/v1/...`): `notifications` (CRUD + `schedule`, `bulk`, `read-all`, patches `read`/`archive`/`favorite`/`cancel`, `GET user`), `alerts` (CRUD + `PATCH {id}/read`/`dismiss`), `devices` (`POST register`, `DELETE unregister`), `emails` (`send`, `bulk`, `template`), `push` (`send`, `broadcast`, `company`, `family`, `department`, `wear`), `history` (`GET user`, `GET organization/{organizationId}`), `metrics` (global, `channels`, `delivery`, `errors`), `preferences` (GET/PUT + patches `email`/`push`/`wear`), `templates` (CRUD).
-- **Archivos clave**: `Presentation/Program.cs`, `Presentation/Controllers/*.cs`, `Presentation/Middlewares/ExceptionHandlingMiddleware.cs` (mensajes genéricos), `Application/DTOs/*.cs` (DataAnnotations).
-- **Render**: `lifebalance-notifications-api` (sin healthCheckPath definido).
+- **Key files**: `Presentation/Program.cs`, `Presentation/Controllers/*.cs`, `Presentation/Middlewares/ExceptionHandlingMiddleware.cs`, `Application/DTOs/*.cs`.
+- **Render**: `lifebalance-notifications-api`.
 
 ## 4. OrganizationAndSaaS (Organization & SaaS)
 
-- **Solución**: `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`. **Proyectos**: `src/Api/LifeBalance.OrganizationSaaS.Api`, `src/Core/LifeBalance.OrganizationSaaS.Application`, `src/Core/LifeBalance.OrganizationSaaS.Domain`, `src/Infrastructure/LifeBalance.OrganizationSaaS.Infrastructure`.
-- **BD**: MongoDB `LifeBalance_OrganizationSaaS` — colecciones: `organizations`, `families`, `departments`, `teams`, `licenses`, `invitations` (índices en `Infrastructure/Persistence/MongoDbContext.cs`).
-- **JWT** (config `JwtSettings`): **fail-fast**: `Secret` vacío/placeholder/<32 bytes → crash al arrancar**. `appsettings.json` tiene `Secret: ""` (Render debe inyectar `JwtSettings__Secret`); `appsettings.Development.json` tiene un secreto dev propio de 36 chars.
-- **Autorización**: `FallbackPolicy` con `RequireAuthenticatedUser()` — todo exige JWT salvo `GET /health` y `POST api/v1/invitations/{token}/accept`|`reject`.
-- **Multi-tenant**: ver regla 10. Handlers reciben `OrganizationId` desde `TenantContext` (claim `tenant_id` prioridad, luego header `X-Tenant-Id`).
-- **Licencias**: asignación validada contra `plan.Limits.MaxLicenses` → `LimitExceededException` (409); plan inexistente → `ResourceNotFoundException` (404). Consultas de agregación (count) en repositorio Mongo.
-- **Excepciones del dominio**: `ResourceNotFoundException`, `ValidationException` (400), `ConflictException` (409), `UnauthorizedOperationException` (403), `LimitExceededException` (409) — mapeadas en `Api/Middlewares/GlobalExceptionMiddleware.cs`.
-- **Endpoints** (`api/v1/...`): `organizations` (CRUD + `PATCH {id}/activate`|`suspend`|`restore`, `GET {id}/statistics`), `families` (CRUD + `PATCH {id}/administrator`, `POST {id}/members`, `DELETE {id}/members/{userId}`), `departments` y `teams` (CRUD + `POST {id}/members`, `DELETE {id}/members/{userId}`), `licenses` (CRUD + `POST {id}/assign`, `POST {id}/cancel`, `POST {id}/renew`, `PATCH {id}/change-plan`, `PATCH {id}/renew`), `subscriptions`, `invitations` (CRUD + `POST {id}/resend`, `POST {token}/accept`, `POST {token}/reject`).
-- **Paginación**: `pageIndex`/`pageSize` clamp 1–100; búsquedas con `Regex.Escape`.
-- **Archivos clave**: `Api/Program.cs` (fallback policy, CORS, rate limit, fail-fast JWT), `Infrastructure/Services/TenantServices.cs`, `Infrastructure/Persistence/MongoRepository.cs` (filtro de tenant), `Core/LifeBalance.OrganizationSaaS.Application/Features/LicensesAndSubscriptions/LicenseAndSubscriptionFeatures.cs`.
-- **Render**: `lifebalance-organization-saas`, health `/health`. **Crash-looppeará hasta que se configure `JwtSettings__Secret` en Render (intencional).**
+- **Solution**: `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`. **Projects**: `src/Api/LifeBalance.OrganizationSaaS.Api`, `src/Core/LifeBalance.OrganizationSaaS.Application`, `src/Core/LifeBalance.OrganizationSaaS.Domain`, `src/Infrastructure/LifeBalance.OrganizationSaaS.Infrastructure`.
+- **DB**: MongoDB `LifeBalance_OrganizationSaaS` — collections: `organizations`, `families`, `departments`, `teams`, `licenses`, `invitations` (indexes in `Infrastructure/Persistence/MongoDbContext.cs`).
+- **JWT** (`JwtSettings` config): **fail-fast**: empty/placeholder/<32 byte `Secret` → startup crash. `appsettings.json` has `Secret: ""` (Render must inject `JwtSettings__Secret`); `appsettings.Development.json` has a 36-char dev secret.
+- **Auth**: `FallbackPolicy` with `RequireAuthenticatedUser()` — everything requires JWT except `GET /health` and `POST api/v1/invitations/{token}/accept`|`reject`.
+- **Multi-tenant**: Handlers receive `OrganizationId` from `TenantContext` (`tenant_id` claim priority, then `X-Tenant-Id` header).
+- **Licenses**: Assignment checked against `plan.Limits.MaxLicenses` → `LimitExceededException` (409); missing plan → `ResourceNotFoundException` (404). Mongo aggregation counts.
+- **Domain Exceptions**: `ResourceNotFoundException`, `ValidationException` (400), `ConflictException` (409), `UnauthorizedOperationException` (403), `LimitExceededException` (409) — mapped in `Api/Middlewares/GlobalExceptionMiddleware.cs`.
+- **Endpoints** (`api/v1/...`): `organizations` (CRUD + `PATCH {id}/activate`|`suspend`|`restore`, `GET {id}/statistics`), `families` (CRUD + `PATCH {id}/administrator`, `POST {id}/members`, `DELETE {id}/members/{userId}`), `departments` & `teams` (CRUD + `POST {id}/members`, `DELETE {id}/members/{userId}`), `licenses` (CRUD + `POST {id}/assign`, `POST {id}/cancel`, `POST {id}/renew`, `PATCH {id}/change-plan`, `PATCH {id}/renew`), `subscriptions`, `invitations` (CRUD + `POST {id}/resend`, `POST {token}/accept`, `POST {token}/reject`).
+- **Pagination**: `pageIndex`/`pageSize` clamped 1–100; regex escape on searches.
+- **Key files**: `Api/Program.cs`, `Infrastructure/Services/TenantServices.cs`, `Infrastructure/Persistence/MongoRepository.cs`, `Core/LifeBalance.OrganizationSaaS.Application/Features/LicensesAndSubscriptions/LicenseAndSubscriptionFeatures.cs`.
+- **Render**: `lifebalance-organization-saas`, health `/health`. **Will crash-loop until `JwtSettings__Secret` is set in Render (intentional).**
 
 ---
 
-## Infraestructura / CI-CD / Deploy
+## Infrastructure / CI-CD / Deploy
 
-- **`.github/workflows/ci.yml`**: jobs independientes por servicio (restore → build Release → unit tests con trx + XPlat Code Coverage → `docker build` dry-run) + job `contract-tests` + gate `ci-success` que falla si algún job no es success. Dashboard parchea `global.json` con SDK `9.0.100` + `rollForward: latestMajor`. Triggers: push a `main`, `develop`, `feature/**`, `fix/**` y PRs a `main`/`develop`.
-- **`.github/workflows/codeql.yml`**: csharp autobuild, push/PR a `main`/`develop` + semanal (lun 02:30).
-- **`.github/dependabot.yml`**: nuget semanal para los 4 servicios + github-actions.
-- **`render.yaml`**: 4 servicios plan free — `lifebalance-auth-service`, `lifebalance-dashboard-service`, `lifebalance-notifications-api`, `lifebalance-organization-saas`. Env vars clave: `Jwt__SecretKey` (Auth/Dashboard), `JwtSettings__Secret` (Organization), `JwtSettings__Issuer/Audience=LifeBalance`, `ServiceUrls__*` (Dashboard, todas HTTPS), `MongoConnectionString`/`DatabaseName` por servicio. **Secreto JWT compartido entre los 4 servicios — rotar si se filtra y setear idéntico en Render.**
-- **Dockerfiles**: los 4 corren como usuario no-root (`appuser`/`appgroup`, chown de `/app`). Dashboard ya era non-root.
-- **docker-compose** (por servicio): Mongo en `127.0.0.1` (loopback), sin credenciales root hardcodeadas, mongo-express con `ME_CONFIG_BASICAUTH=true`; `OrganizationAndSaaS/docker/docker-compose.yml` usa `JWT_SECRET` del `.env.example` (placeholder `CHANGE_ME_GENERATE_A_32_PLUS_CHAR_RANDOM_SECRET`); Notifications expone `5000:10000`.
-- **`tests/ContractTests/`**: 4 tests de contrato (Auth↔Dashboard + degradación elegante) en la raíz, sin solución; se ejecutan desde el job `contract-tests`.
-- **Secreto JWT de Organization comprometido en historial git** (`SuperSecretKeyForLifeBalanceSaaSMicroservice2026!`): no volver a usarlo; rotación obligatoria antes de producción real.
+- **`.github/workflows/ci.yml`**: Independent service jobs (restore → Release build → unit tests + coverage → docker build dry-run) + `contract-tests` job + `ci-success` gate.
+- **`.github/workflows/codeql.yml`**: C# autobuild on push/PR + weekly.
+- **`.github/dependabot.yml`**: Weekly NuGet updates for 4 services + GitHub Actions.
+- **`render.yaml`**: 4 free-tier services — `lifebalance-auth-service`, `lifebalance-dashboard-service`, `lifebalance-notifications-api`, `lifebalance-organization-saas`. Shared JWT secret across services.
+- **Dockerfiles**: All 4 run as non-root (`appuser`/`appgroup`).
+- **docker-compose**: MongoDB on `127.0.0.1` (loopback), no hardcoded root credentials.
+- **`tests/ContractTests/`**: 4 root contract tests (Auth↔Dashboard + graceful degradation).
+- **Leaked JWT secret in history**: `SuperSecretKeyForLifeBalanceSaaSMicroservice2026!` (must rotate for real production).

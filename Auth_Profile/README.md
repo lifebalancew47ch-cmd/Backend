@@ -5,132 +5,89 @@
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
 ![Security](https://img.shields.io/badge/Security-JWT%20%7C%20RBAC-red)
 
-Microservicio robusto de Autenticación, Autorización y Gestión de Perfiles para la plataforma **LifeBalance**. Construido sobre **.NET 9.0** y diseñado siguiendo los principios de **Clean Architecture**, **DDD (Domain-Driven Design)** y el patrón **CQRS** con MediatR.
+Authentication, Authorization, and Profile Management microservice for **LifeBalance**. Built on **.NET 9.0** following **Clean Architecture**, **DDD**, and **CQRS** with MediatR.
 
-> Más detalle en el [AGENTS.md](../AGENTS.md) del repositorio.
-
----
-
-## 🏛️ Arquitectura del Sistema
-El microservicio está estructurado en 4 capas principales:
-1. **Auth.Domain**: Entidades de dominio, enumeraciones y reglas de negocio puras (sin dependencias externas).
-2. **Auth.Application**: Comandos, consultas, manejadores (handlers), DTOs, validaciones con FluentValidation y mapeos.
-3. **Auth.Infrastructure**: Implementación de repositorios MongoDB, servicios criptográficos, JWT, logs de auditoría y middlewares (excepciones globales, cabeceras de seguridad y logging de solicitudes).
-4. **Auth.Api**: Controladores REST con control de versiones de API, configuración de Swagger, CORS y Rate Limiting.
+> Details in [AGENTS.md](../AGENTS.md).
 
 ---
 
-## 🔒 Medidas de Seguridad Implementadas
-- **Autenticación JWT Bearer:** Tokens firmados con HS256, Issuer/Audience `LifeBalance`, `ClockSkew` 1 minuto.
-- **Rotación y Revocación de Refresh Tokens:** almacenados en MongoDB con índice único por `Token`, invalidados al cerrar sesión o revocar.
-- **Rol por defecto:** las cuentas sin `RoleIds` reciben automáticamente el rol `USER` en login/refresh (fix del 403 en Dashboard).
-- **BCrypt para Contraseñas:** hash seguro unidireccional (nunca se almacena en texto plano).
-- **Autorización Basada en Roles y Políticas (RBAC / PBAC):** restricciones por endpoint.
-- **Cabeceras de Seguridad HTTP:** `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy`, `X-XSS-Protection` y HSTS.
-- **Rate Limiting:** límite de solicitudes configurable a nivel global y específico (ej. `/auth/login`).
-- **Validación Estricta:** FluentValidation en cada comando (emails, contraseñas fuertes, UUIDs, longitudes máximas).
-- **Protección contra NoSQL Injection & Mass Assignment:** uso del driver oficial de MongoDB y separación estricta mediante DTOs.
-- **Bloqueo de Cuenta por Fuerza Bruta:** 5 intentos fallidos → lockout de 15 minutos (configurable).
-- **Auditoría Completa:** login, login fallido, cambio de contraseña, lockouts, etc.
-- **Manejo Global de Errores:** respuestas estandarizadas sin exponer StackTrace fuera de Development.
-
-### ⚠️ Limitaciones conocidas (hardening pendiente)
-- El secreto JWT placeholder de `appsettings.json` **no** aborta el arranque (los demás servicios ya lo hacen).
-- Los refresh tokens se almacenan **sin hash** (texto plano).
-- `revoke-all` no valida propiedad del token (posible IDOR).
-- El lockout de contraseña es evadible usando el refresh token.
-- Sin 2FA; Swagger habilitado y CORS `AllowAnyOrigin` fuera de Development.
+## 🏛️ System Architecture
+1. **Auth.Domain**: Domain entities, enums, pure business logic.
+2. **Auth.Application**: Commands, queries, handlers, DTOs, FluentValidation.
+3. **Auth.Infrastructure**: MongoDB repos, cryptographic services, JWT, audit logs, middlewares.
+4. **Auth.Api**: REST controllers, API versioning, Swagger, CORS, Rate Limiting.
 
 ---
 
-## 📂 Colecciones de MongoDB e Índices
-
-Colecciones inicializadas automáticamente por la aplicación al iniciar (`Persistence/MongoDbInitializer.cs`):
-
-- **`users`** — Índice único: `Email`, `Username`; índice: `CreatedAt`
-- **`refresh_tokens`** — Índice único: `Token`; índices: `UserId`, `ExpiresAt`, `CreatedAt`
-- **`roles`** — Índice único: `NormalizedName`
-- **`permissions`** — Índice único: `NormalizedName`
-- **`user_preferences`** — Índice: `UserId`
-- **`audit_logs`** — Índices: `UserId`, `Action`, `CreatedAt`
-- **`login_history`** — Índices: `UserId`, `CreatedAt`
-- **`password_reset_tokens`** — Índice único: `Token`; índices: `UserId`, `CreatedAt`
-- **`email_confirmation_tokens`** — Índice único: `Token`; índices: `UserId`, `CreatedAt`
+## 🔒 Security Implementation
+- **JWT Bearer Auth:** Signed HS256, Issuer/Audience `LifeBalance`, `ClockSkew` 1m.
+- **Refresh Token Rotation & Revocation:** Unique index on `Token` in MongoDB.
+- **Default Role:** Accounts without `RoleIds` receive `USER` role on login/refresh.
+- **BCrypt Password Hashing:** One-way salted hashing.
+- **RBAC / PBAC:** Role/Policy restrictions on endpoints.
+- **HTTP Security Headers:** `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy`, `X-XSS-Protection`, HSTS.
+- **Rate Limiting:** Configurable global and per-endpoint policies.
+- **Validation:** Strict FluentValidation rules on commands.
+- **NoSQL Injection & Mass Assignment Protection:** Official Mongo driver, strict DTO isolation.
+- **Brute Force Lockout:** 5 failed attempts → 15-min lockout.
+- **Full Audit Logging:** Logins, failed logins, password changes, lockouts.
+- **Global Error Handling:** Standardized responses hiding stack traces in non-Development.
 
 ---
 
-## 🛠️ Variables de Entorno y Configuración
-Configuración vía *Options Pattern*. En producción se definen con variables de entorno (p. ej. **Render**):
+## 📂 MongoDB Collections & Indexes
+- **`users`** — Unique: `Email`, `Username`; Index: `CreatedAt`
+- **`refresh_tokens`** — Unique: `Token`; Indexes: `UserId`, `ExpiresAt`, `CreatedAt`
+- **`roles`** — Unique: `NormalizedName`
+- **`permissions`** — Unique: `NormalizedName`
+- **`user_preferences`** — Index: `UserId`
+- **`audit_logs`** — Indexes: `UserId`, `Action`, `CreatedAt`
+- **`login_history`** — Indexes: `UserId`, `CreatedAt`
+- **`password_reset_tokens`** — Unique: `Token`; Indexes: `UserId`, `CreatedAt`
+- **`email_confirmation_tokens`** — Unique: `Token`; Indexes: `UserId`, `CreatedAt`
 
-| Variable de Entorno | Descripción | Valor por Defecto |
+---
+
+## 🛠️ Environment Variables
+
+| Variable | Description | Default |
 |---|---|---|
-| `MongoDb__ConnectionString` | URL de conexión a MongoDB | `mongodb://localhost:27017` |
-| `MongoDb__DatabaseName` | Nombre de la base de datos | `LifeBalance_Auth` |
-| `Jwt__SecretKey` | Clave secreta para firmar JWTs (compartida con los otros 3 servicios) | placeholder en dev |
-| `Jwt__Issuer` | Emisor del JWT | `LifeBalance` |
-| `Jwt__Audience` | Audiencia del JWT | `LifeBalance` |
-| `Jwt__AccessTokenExpirationMinutes` | Duración del token de acceso | `30` |
-| `Jwt__RefreshTokenExpirationDays` | Duración del token de refresco | `7` |
-| `Security__MaxFailedLoginAttempts` | Intentos fallidos antes del bloqueo | `5` |
-| `Security__LockoutDurationMinutes` | Duración del bloqueo | `15` |
+| `MongoDb__ConnectionString` | MongoDB connection URL | `mongodb://localhost:27017` |
+| `MongoDb__DatabaseName` | Database name | `LifeBalance_Auth` |
+| `Jwt__SecretKey` | JWT Secret Key (shared across services) | dev placeholder |
+| `Jwt__Issuer` | JWT Issuer | `LifeBalance` |
+| `Jwt__Audience` | JWT Audience | `LifeBalance` |
+| `Jwt__AccessTokenExpirationMinutes` | Access token lifespan | `30` |
+| `Jwt__RefreshTokenExpirationDays` | Refresh token lifespan | `7` |
+| `Security__MaxFailedLoginAttempts` | Max attempts before lockout | `5` |
+| `Security__LockoutDurationMinutes` | Lockout duration (minutes) | `15` |
 
 ---
 
-## 🚀 Despliegue en Render
-
-1. Web Service con **Environment: Docker** (Render lee el `Dockerfile` de la raíz).
-2. Agrega las variables de entorno de la tabla anterior — **el mismo `Jwt__SecretKey` que los otros 3 servicios**.
-3. Puerto del contenedor: `10000` (estándar de Render). Health check: `GET /health`.
-
----
-
-## 🐳 Docker en Desarrollo Local
-
-```bash
-docker-compose up --build
-```
-Levanta MongoDB + API. La API queda en `http://localhost:10000` y Swagger en `http://localhost:10000/swagger`. (Ejecución con `dotnet run`: `http://localhost:5200` / `https://localhost:7200`.)
+## 🚀 Render Deployment
+- Docker environment reading root Dockerfile.
+- Port: `10000`. Health check: `GET /health`.
 
 ---
 
 ## 🧪 Testing
-
 ```bash
 dotnet test tests/UnitTests/UnitTests.csproj --configuration Release
 ```
-~164 tests unitarios verdes.
+~164 green unit tests.
 
 ---
 
-## 📚 Endpoints de la API
+## 📚 API Endpoints
 
-### Autenticación (`/api/v1/auth/`)
-- `POST /register` - Registrar un nuevo usuario.
-- `POST /login` - Iniciar sesión (retorna tokens de acceso y refresco).
-- `POST /logout` - Cerrar sesión (revoca tokens).
-- `POST /refresh-token` - Obtener un nuevo token de acceso usando el token de refresco.
-- `POST /revoke-token` - Revocar un token de refresco manualmente.
-- `POST /forgot-password` - Solicitar enlace de recuperación de contraseña.
-- `POST /reset-password` - Reestablecer contraseña con un token válido.
-- `POST /send-confirmation` - Re-enviar email de confirmación.
-- `POST /confirm-email` - Confirmar cuenta de correo electrónico.
+### Auth (`/api/v1/auth/`)
+`register`, `login`, `logout`, `refresh-token`, `revoke-token`, `forgot-password`, `reset-password`, `send-confirmation`, `confirm-email`
 
-### Perfil (`/api/v1/profile/`)
-- `GET /me` - Obtener perfil del usuario autenticado.
-- `PUT /me` - Actualizar información del perfil.
-- `GET /preferences` - Obtener preferencias de interfaz/notificaciones.
-- `PUT /preferences` - Actualizar preferencias.
-- `PUT /change-password` - Cambiar contraseña actual.
+### Profile (`/api/v1/profile/`)
+`GET me`, `PUT me`, `GET preferences`, `PUT preferences`, `PUT change-password`
 
-### Roles (`/api/v1/roles/`) — Admin
-- `GET /` - Listar roles. · `POST /` - Crear rol. · `PUT /{id}` - Modificar rol. · `DELETE /{id}` - Eliminar rol.
+### Roles & Permissions — Admin
+`api/v1/roles`, `api/v1/permissions`
 
-### Permisos (`/api/v1/permissions/`) — Admin
-- `GET /` - Listar permisos. · `POST /` - Crear permiso. · `PUT /{id}` - Modificar permiso. · `DELETE /{id}` - Eliminar permiso.
-
-### Auditoría (`/api/v1/audit/`) — Admin
-- `GET /login-history` - Historial de inicios de sesión.
-- `GET /security-events` - Logs de seguridad y auditoría.
-
-### Healthcheck
-- `GET /health` - Estado de la API y conexión a la base de datos.
+### Audit & Health
+`api/v1/audit/login-history`, `security-events`, `/health`
