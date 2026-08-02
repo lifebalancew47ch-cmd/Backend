@@ -7,11 +7,13 @@
 
 El **Microservicio de Organización y Servicio SaaS** es el núcleo empresarial de la plataforma **LifeBalance**. Gestiona estructuras organizativas multi-inquilino (multi-tenant) como Empresas, Familias, Departamentos y Equipos, así como suscripciones SaaS, límites de planes, licencias, membresías, invitaciones y auditoría de cumplimiento.
 
+> Más detalle en el [AGENTS.md](../AGENTS.md) del repositorio.
+
 ---
 
 ## 🏛 Arquitectura y Patrones de Diseño
 
-El microservicio impone estrictamente **Clean Architecture**, **Domain-Driven Design (DDD)**, y **CQRS (Command Query Responsibility Segregation)**:
+El microservicio impone estrictamente **Clean Architecture**, **Domain-Driven Design (DDD)** y **CQRS**:
 
 ```mermaid
 graph TD
@@ -19,35 +21,50 @@ graph TD
     API --> APP[LifeBalance.OrganizationSaaS.Application]
     INFRA --> APP
     APP --> DOMAIN[LifeBalance.OrganizationSaaS.Domain]
-    
+
     subgraph Core
         DOMAIN
         APP
     end
-    
+
     subgraph Infrastructure Layer
         INFRA --> MONGO[(Base de Datos MongoDB)]
-        INFRA --> REDIS[(Caché Redis)]
-        INFRA --> EXT[Microservicios Externos vía HttpClientFactory + Polly]
+        INFRA --> REDIS[(Caché Redis - compose local)]
     end
 ```
 
 ### Desglose de Capas
-- `LifeBalance.OrganizationSaaS.Domain`: Aggregate Roots, Entidades (`Organization`, `Family`, `Department`, `Team`, `License`, `Subscription`, `Invitation`, `AuditLog`), Value Objects, Enums de Dominio, Excepciones de Dominio e Interfaces de Repositorio. Cero dependencias del framework.
-- `LifeBalance.OrganizationSaaS.Application`: Manejadores CQRS (MediatR), DTOs, Reglas de FluentValidation, Comportamientos de Pipeline (Logging, Validación Multi-Tenant, Validación de Request) e Interfaces de Microservicios.
-- `LifeBalance.OrganizationSaaS.Infrastructure`: Contexto MongoDB y `MongoRepository<T>` genérico con inyección automática de filtro de Tenant, Clientes HTTP tipados con políticas de resiliencia **Polly** (Retry, Circuit Breaker), Caché Distribuido y Tenant Accessor.
-- `LifeBalance.OrganizationSaaS.Api`: Controladores de API RESTful v1, Middleware de Cabeceras de Seguridad, Middleware de Correlation ID, Rate Limiting, Manejo de Excepciones (ProblemDetails RFC 7807) y Swagger/OpenAPI.
+- `LifeBalance.OrganizationSaaS.Domain`: Aggregate Roots, Entidades (`Organization`, `Family`, `Department`, `Team`, `License`, `Subscription`, `Invitation`), Value Objects, Enums de Dominio, Excepciones de Dominio (`ResourceNotFoundException`, `ValidationException`, `ConflictException`, `UnauthorizedOperationException`, `LimitExceededException`) e interfaces de repositorio. Cero dependencias del framework.
+- `LifeBalance.OrganizationSaaS.Application`: Manejadores CQRS (MediatR), DTOs, FluentValidation y comportamientos de pipeline (logging, validación multi-tenant).
+- `LifeBalance.OrganizationSaaS.Infrastructure`: Contexto MongoDB y `MongoRepository<T>` genérico con **filtro de tenant incondicional**, `IGlobalTenantEntity` (exime a entidades globales como `SaaSPlan`) y `TenantContextAccessor`.
+- `LifeBalance.OrganizationSaaS.Api`: Controladores RESTful v1, middleware de cabeceras de seguridad, Correlation ID, rate limiting, manejo global de excepciones (envelope `Response<T>`) y Swagger/OpenAPI.
 
 ---
 
-## 🏢 Modelo Multi-Tenant y Seguridad
+## 🔐 Seguridad (remediaciones OWASP aplicadas)
 
-El aislamiento se impone en la capa de persistencia utilizando un atributo obligatorio `TenantId`. Toda operación de base de datos añade automáticamente el `TenantId` actual a los filtros de consulta, previniendo la fuga de datos entre inquilinos (protección IDOR / Control de Acceso Roto).
+1. **Fail-fast JWT:** si `JwtSettings__Secret` está vacío, es placeholder o mide <32 bytes UTF-8, **el servicio aborta el arranque** (`InvalidOperationException`). Issuer/Audience: `LifeBalance`, HS256, ClockSkew 1 min. En dev se usa `appsettings.Development.json` con un secreto propio.
+2. **FallbackPolicy de autenticación:** **todo endpoint exige JWT válido** salvo `GET /health` y `POST api/v1/invitations/{token}/accept` | `reject`.
+3. **NoSQL Injection:** prevenido con mapeo fuertemente tipado (`BsonElement`) y expresiones LINQ en `MongoRepository<T>`.
+4. **Broken Access Control & IDOR:** filtro de tenant **incondicional** en todos los repositorios (ver resolución de tenant abajo) → fuga de datos entre inquilinos = imposible por construcción.
+5. **Mass Assignment:** entidades de dominio aisladas de las peticiones HTTP mediante DTOs de comandos estrictos.
+6. **Rate Limiting** por IP (`RemoteIpAddress`, ventana fija) → 429.
+7. **Paginación clamp 1–100** y `Regex.Escape` en búsquedas.
+8. **Security Headers:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`, `Content-Security-Policy`.
+9. **Mensajes de error genéricos** al cliente; detalle solo en logs.
+
+---
+
+## 🏢 Modelo Multi-Tenant
+
+El aislamiento se impone en la capa de persistencia: toda operación de base de datos añade automáticamente el `TenantId` actual a los filtros de consulta.
 
 ### Secuencia de Resolución de Contexto:
-1. Cabecera `X-Tenant-Id` (Petición HTTP).
-2. Claim `tenant_id` del JWT.
-3. Validación estricta: Si un usuario autenticado intenta solicitar datos fuera del `TenantId` asignado, se devuelve una respuesta `403 Forbidden`.
+1. **Claim `tenant_id` del JWT** (prioridad).
+2. **Header `X-Tenant-Id`** (petición HTTP).
+3. Validación estricta: acceder a datos fuera del tenant asignado → `403 Forbidden`.
+
+⚠️ *El orden fue invertido en la remediación de seguridad: antes el header tenía prioridad (podía suplantarse); ahora manda el claim del token.*
 
 ---
 
@@ -65,36 +82,39 @@ El aislamiento se impone en la capa de persistencia utilizando un atributo oblig
 | **AI Insights y Gamificación** | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **Acceso API** | ❌ | ❌ | ❌ | ✅ | ✅ |
 
+### Licencias
+La asignación de una licencia se valida contra `plan.Limits.MaxLicenses`: superar el límite → `LimitExceededException` (**409 Conflict**); plan inexistente → `ResourceNotFoundException` (**404**).
+
 ---
 
 ## 🔄 Matriz de Comunicación de Microservicios
 
-El **Microservicio de Organización y SaaS** se comunica con otros microservicios de la plataforma a través de Clientes HTTP resilientes (`HttpClientFactory` + Polly):
+El servicio se comunica con el resto del ecosistema mediante clientes HTTP tipados (`HttpClientFactory` + Polly) configurados en la sección `Microservices`:
 
-| Microservicio Destino | Dirección | Propósito / Responsabilidad |
+| Microservicio Destino | Config | Propósito |
 | :--- | :---: | :--- |
-| **Auth & Profile Service** | Salida | Validación de usuario, búsqueda de perfil, actualización de la referencia de organización del usuario. |
-| **Dashboard Service** | Salida | Envío de KPIs organizacionales y métricas agregadas no biométricas. |
-| **Reporting Service** | Salida | Envío de datos de catálogos de empresas, departamentos, suscripciones y licencias para reportes. |
-| **Notification Service** | Salida | Envío de enlaces de invitación, alertas de caducidad de licencias y correos de cambio de membresía. |
-| **Gamification Service** | Salida | Consulta de desafíos organizacionales y clasificaciones de familias. |
-| **ML Prediction Service** | Salida | Envío de datos estructurales anonimizados para predicciones de modelos de Machine Learning. |
-| **Administration Service** | Salida | Consulta de parámetros globales y catálogos del sistema. |
+| **Auth & Profile Service** | `AuthProfileUrl` | Validación de usuario y perfiles |
+| **Dashboard Service** | `DashboardUrl` | KPIs y métricas organizacionales |
+| **Reporting Service** | `ReportingUrl` | Reportes de empresas, departamentos, suscripciones y licencias |
+| **Notification Service** | `NotificationUrl` | Invitaciones y alertas de licencias |
+| **Gamification Service** | `GamificationUrl` | Desafíos y clasificaciones |
+| **ML Prediction Service** | `MlPredictionUrl` | Datos anonimizados para predicciones |
+| **Administration Service** | `AdministrationUrl` | Parámetros globales y catálogos |
 
 ---
 
 ## 🚀 Referencia de Endpoints API REST
 
+Todos requieren JWT (ver FallbackPolicy) salvo `accept`/`reject` de invitaciones.
+
 ### 1. Empresas (`/api/v1/organizations`)
 - `POST /api/v1/organizations`: Registrar nueva empresa.
-- `GET /api/v1/organizations`: Listar empresas (Paginado y Filtrado).
-- `GET /api/v1/organizations/{id}`: Obtener detalles de la empresa.
-- `PUT /api/v1/organizations/{id}`: Actualizar información de la empresa.
-- `DELETE /api/v1/organizations/{id}`: Eliminación lógica / suspender empresa.
-- `PATCH /api/v1/organizations/{id}/activate`: Activar empresa.
-- `PATCH /api/v1/organizations/{id}/suspend`: Suspender empresa.
-- `PATCH /api/v1/organizations/{id}/restore`: Restaurar empresa.
-- `GET /api/v1/organizations/{id}/statistics`: Obtener métricas de la empresa.
+- `GET /api/v1/organizations`: Listar empresas (paginado y filtrado, clamp 1–100).
+- `GET /api/v1/organizations/{id}`: Obtener detalles.
+- `PUT /api/v1/organizations/{id}`: Actualizar.
+- `DELETE /api/v1/organizations/{id}`: Eliminación lógica.
+- `PATCH /api/v1/organizations/{id}/activate` | `/suspend` | `/restore`: Estados.
+- `GET /api/v1/organizations/{id}/statistics`: Métricas.
 
 #### Ejemplo de Petición: `POST /api/v1/organizations`
 ```json
@@ -117,7 +137,7 @@ El **Microservicio de Organización y SaaS** se comunica con otros microservicio
 }
 ```
 
-#### Ejemplo de Respuesta: `201 Created`
+#### Ejemplo de Respuesta: `201 Created` (envelope `Response<T>`)
 ```json
 {
   "success": true,
@@ -129,20 +149,6 @@ El **Microservicio de Organización y SaaS** se comunica con otros microservicio
     "taxId": "ACM-990812-XX1",
     "status": "Active",
     "planId": "PLAN_BUSINESS",
-    "subscriptionId": "",
-    "configurationId": "",
-    "contactInfo": {
-      "email": "contact@acme.com",
-      "phone": "+1-555-0199",
-      "contactPerson": "John Doe"
-    },
-    "address": {
-      "street": "100 Innovation Way",
-      "city": "Austin",
-      "state": "Texas",
-      "country": "USA",
-      "zipCode": "78701"
-    },
     "createdAt": "2026-07-29T16:00:00Z",
     "updatedAt": null
   },
@@ -151,46 +157,17 @@ El **Microservicio de Organización y SaaS** se comunica con otros microservicio
 ```
 
 ### 2. Familias (`/api/v1/families`)
-- `POST /api/v1/families`: Crear familia.
-- `GET /api/v1/families`: Listar familias.
-- `GET /api/v1/families/{id}`: Obtener familia por ID.
-- `PUT /api/v1/families/{id}`: Actualizar familia.
-- `DELETE /api/v1/families/{id}`: Disolver familia.
-- `POST /api/v1/families/{id}/members`: Añadir miembro a la familia.
-- `DELETE /api/v1/families/{id}/members/{userId}`: Eliminar miembro de la familia.
-- `PATCH /api/v1/families/{id}/administrator`: Transferir administrador de la familia.
+- `POST /` | `GET /` | `GET /{id}` | `PUT /{id}` | `DELETE /{id}` (disolver)
+- `POST /{id}/members` · `DELETE /{id}/members/{userId}` · `PATCH /{id}/administrator`
 
 ### 3. Departamentos y Equipos
-- `POST /api/v1/departments` | `GET /api/v1/departments` | `PUT /api/v1/departments/{id}` | `DELETE /api/v1/departments/{id}`
-- `POST /api/v1/teams` | `GET /api/v1/teams` | `PUT /api/v1/teams/{id}` | `DELETE /api/v1/teams/{id}`
+- `/api/v1/departments`: `POST /` | `GET /` | `GET /{id}` | `PUT /{id}` | `DELETE /{id}` | `POST /{id}/members` | `DELETE /{id}/members/{userId}`
+- `/api/v1/teams`: idéntico a departamentos.
 
 ### 4. Licencias, Suscripciones e Invitaciones
-- `POST /api/v1/licenses` | `POST /api/v1/licenses/{id}/assign` | `POST /api/v1/licenses/{id}/renew`
-- `POST /api/v1/subscriptions` | `PATCH /api/v1/subscriptions/{id}/renew` | `PATCH /api/v1/subscriptions/{id}/change-plan`
-- `POST /api/v1/invitations` | `POST /api/v1/invitations/{token}/accept` | `POST /api/v1/invitations/{token}/reject`
-
----
-
-## 🛡 Implementaciones de Seguridad OWASP
-
-1. **NoSQL Injection**: Prevenido a través del mapeo fuertemente tipado `BsonElement` y expresiones LINQ en `MongoRepository<T>`.
-2. **Broken Access Control & IDOR**: Estrictamente validado por `TenantContextAccessor` asegurando que el acceso a los recursos se mantenga dentro del `TenantId` de la petición.
-3. **Mass Assignment**: Entidades de dominio aisladas de las peticiones HTTP utilizando DTOs de Comandos estrictos.
-4. **Security Headers**:
-   - `X-Content-Type-Options: nosniff`
-   - `X-Frame-Options: DENY`
-   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
-   - `Content-Security-Policy: default-src 'self';`
-5. **Rate Limiting**: Configurado a 100 peticiones / minuto por ventana fija usando `X-Tenant-Id` / IP.
-6. **Correlation ID**: Middleware que propaga `X-Correlation-Id` a través de peticiones para rastreo distribuido.
-
----
-
-## ⚡ Rendimiento y Resiliencia
-
-- **Resiliencia con Polly**: Los clientes HTTP envuelven las peticiones salientes con **Exponential Backoff Retry** (3 intentos) y **Circuit Breaker** (5 errores consecutivos -> pausa de 30s).
-- **Compresión de Respuesta**: Compresión Gzip y Brotli habilitada para salidas JSON de la API.
-- **Caché Distribuida**: Integración IMemoryCache / Redis para los metadatos de los Planes SaaS y la configuración del Tenant.
+- `/api/v1/licenses`: `POST /` | `GET /` | `GET /{id}` | `DELETE /{id}` | `POST /{id}/assign` | `POST /{id}/cancel` | `POST /{id}/renew` | `PATCH /{id}/change-plan` | `PATCH /{id}/renew`
+- `/api/v1/subscriptions`: `POST /` | `GET /` | `PATCH /{id}/renew` | `PATCH /{id}/change-plan`
+- `/api/v1/invitations`: `POST /` | `GET /` | `POST /{id}/resend` | `POST /{token}/accept` *(anónimo)* | `POST /{token}/reject` *(anónimo)*
 
 ---
 
@@ -198,24 +175,31 @@ El **Microservicio de Organización y SaaS** se comunica con otros microservicio
 
 ### Ejecutar con Docker Compose
 ```bash
+# Desde OrganizationAndSaaS/ — levanta API (8080:8080), MongoDB y Redis (loopback)
 docker-compose -f docker/docker-compose.yml up -d --build
 ```
 
-### Variables de Entorno (.env)
+### Variables de Entorno
 ```env
+# Usa el archivo docker/.env.example (NO commitees secretos reales)
 ASPNETCORE_ENVIRONMENT=Production
 ConnectionStrings__MongoDB=mongodb://mongo-db:27017
 DatabaseSettings__DatabaseName=LifeBalance_OrganizationSaaS
-JwtSettings__Secret=SuperSecretKeyForLifeBalanceSaaSMicroservice2026!
+JwtSettings__Secret=${JWT_SECRET}
 Microservices__AuthProfileUrl=http://auth-profile-service:5001
 Microservices__NotificationUrl=http://notification-service:5004
 ```
+
+> ⚠️ **`JwtSettings__Secret` es obligatorio**: con valor vacío o placeholder el servicio no arranca (fail-fast). En Render la variable es `JwtSettings__Secret` y debe ser **idéntica al `Jwt__SecretKey`** de los otros 3 servicios. El antiguo secreto que figuraba en la documentación se consideró **comprometido** y fue removido del repositorio — genera uno nuevo con ≥32 bytes.
+
+### Render
+Configurado en `render.yaml` de la raíz como `lifebalance-organization-saas` (plan free, puerto 10000, health `GET /health`).
 
 ---
 
 ## 🧪 Testing
 
-Ejecutar las pruebas unitarias automatizadas:
 ```bash
-dotnet test tests/LifeBalance.OrganizationSaaS.UnitTests/LifeBalance.OrganizationSaaS.UnitTests.csproj
+# Pruebas unitarias (~244 verdes)
+dotnet test tests/LifeBalance.OrganizationSaaS.UnitTests/LifeBalance.OrganizationSaaS.UnitTests.csproj --configuration Release
 ```
