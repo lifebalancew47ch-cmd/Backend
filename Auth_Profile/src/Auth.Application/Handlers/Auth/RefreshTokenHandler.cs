@@ -68,7 +68,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         }
 
         var user = await _userRepository.GetByIdAsync(refreshToken.UserId, cancellationToken);
-        if (user is null || !user.IsActive)
+        if (user is null || !user.IsActive || user.IsLockedOut)
             return ApiResponse<RefreshTokenResponse>.FailResponse("User account is not available.");
 
         var roles = await _roleRepository.GetByIdsAsync(user.RoleIds, cancellationToken);
