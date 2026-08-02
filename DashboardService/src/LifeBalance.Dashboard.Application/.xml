@@ -112,6 +112,19 @@
             <param name="services">The service collection.</param>
             <returns>The same service collection for chaining.</returns>
         </member>
+        <member name="T:LifeBalance.Dashboard.Application.Exceptions.UpstreamServiceUnavailableException">
+            <summary>
+            Exception raised when a required upstream microservice is unreachable or
+            does not return the expected data. Converted to a 503 Service Unavailable
+            response by the global exception middleware (fail closed, never fabricated data).
+            </summary>
+        </member>
+        <member name="M:LifeBalance.Dashboard.Application.Exceptions.UpstreamServiceUnavailableException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Application.Exceptions.UpstreamServiceUnavailableException"/>.
+            </summary>
+            <param name="message">A description of the unavailable upstream data.</param>
+        </member>
         <member name="T:LifeBalance.Dashboard.Application.Exceptions.ValidationException">
             <summary>
             Exception raised when one or more FluentValidation validators fail in the pipeline.

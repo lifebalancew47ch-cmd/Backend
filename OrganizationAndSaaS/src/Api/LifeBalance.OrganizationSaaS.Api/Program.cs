@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -24,46 +25,61 @@ builder.Host.UseSerilog();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// 3. Controllers & OpenAPI / Swagger
+// 3. Controllers & OpenAPI / Swagger (Development only)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+
+if (builder.Environment.IsDevelopment())
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    builder.Services.AddSwaggerGen(c =>
     {
-        Title = "LifeBalance - Organization & SaaS Service API",
-        Version = "v1",
-        Description = "Microservicio Multi-Tenant Empresarial de LifeBalance. Administra entidades jerárquicas (Empresas, Familias, Departamentos, Equipos), suscripciones, límites de planes SaaS (Free/Pro/Business/Enterprise) e invitaciones.",
-        Contact = new OpenApiContact { Name = "LifeBalance Architecture Team", Email = "architecture@lifebalance.app" }
-    });
-
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        c.SwaggerDoc("v1", new OpenApiInfo
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
-    });
+            Title = "LifeBalance - Organization & SaaS Service API",
+            Version = "v1",
+            Description = "Microservicio Multi-Tenant Empresarial de LifeBalance. Administra entidades jerárquicas (Empresas, Familias, Departamentos, Equipos), suscripciones, límites de planes SaaS (Free/Pro/Business/Enterprise) e invitaciones.",
+            Contact = new OpenApiContact { Name = "LifeBalance Architecture Team", Email = "architecture@lifebalance.app" }
+        });
 
-    c.EnableAnnotations();
-});
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                },
+                Array.Empty<string>()
+            }
+        });
+
+        c.EnableAnnotations();
+    });
+}
 
 // 4. Authentication & JWT Validation
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secret = jwtSettings["Secret"] ?? "SuperSecretKeyForLifeBalanceSaaSMicroservice2026!";
-var key = Encoding.ASCII.GetBytes(secret);
+var secret = jwtSettings["Secret"];
+if (string.IsNullOrWhiteSpace(secret))
+{
+    throw new InvalidOperationException("JwtSettings:Secret is not configured. Set JwtSettings:Secret (at least 32 bytes) via configuration or environment variables before starting the service.");
+}
+if (Encoding.UTF8.GetByteCount(secret) < 32)
+{
+    throw new InvalidOperationException($"JwtSettings:Secret must be at least 32 bytes long (current length: {Encoding.UTF8.GetByteCount(secret)} bytes).");
+}
+
+var issuer = jwtSettings["Issuer"] ?? string.Empty;
+var audience = jwtSettings["Audience"] ?? string.Empty;
+var key = Encoding.UTF8.GetBytes(secret);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -78,21 +94,29 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(1)
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
-// 5. Rate Limiting Setup
+// 5. Rate Limiting Setup (partitioned per remote IP)
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Request.Headers["X-Tenant-Id"].ToString() ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "global",
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "global",
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
@@ -113,14 +137,24 @@ builder.Services.AddResponseCompression(options =>
 // 7. Health Checks
 builder.Services.AddHealthChecks();
 
-// 8. CORS — allow any origin
+// 8. CORS — only configured origins; AllowAnyOrigin fallback limited to Development
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedOrigins is { Length: > 0 })
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
@@ -130,17 +164,20 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Organization & SaaS API v1");
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Organization & SaaS API v1");
+        c.RoutePrefix = string.Empty;
+    });
+}
 
 app.UseResponseCompression();
 app.UseRouting();
 
-app.UseCors("AllowAll");
+app.UseCors("CorsPolicy");
 
 app.UseRateLimiter();
 
@@ -148,7 +185,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();
 

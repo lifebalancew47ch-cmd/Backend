@@ -1,5 +1,6 @@
 using MediatR;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Shared.Results;
 
 namespace LifeBalance.Dashboard.Application.Features.GeneralDashboard;
@@ -28,26 +29,31 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralSummaryResponse>> Handle(GetGeneralSummaryQuery request, CancellationToken cancellationToken)
     {
-        var metrics = await _reportingClient.GetSystemMetricsAsync(cancellationToken);
+        var metrics = await _reportingClient.GetSystemMetricsAsync(cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException("Global system metrics are unavailable from the Reporting service.");
+        var status = metrics.PlatformHealthPercentage >= 90 ? "Healthy" : "Degraded";
+
         return Result.Success(new GeneralSummaryResponse(
-            metrics?.ActiveUsersToday ?? 1250,
-            metrics?.PlatformHealthPercentage ?? 99.8,
-            "Healthy"
+            metrics.ActiveUsersToday,
+            metrics.PlatformHealthPercentage,
+            status
         ));
     }
 
     public async Task<Result<GeneralIndicatorsResponse>> Handle(GetGeneralIndicatorsQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new GeneralIndicatorsResponse(8200.0, 5.8, 86.4));
+        throw new UpstreamServiceUnavailableException(
+            "General indicators are unavailable because no upstream platform indicators source is configured.");
     }
 
     public async Task<Result<GeneralKpisResponse>> Handle(GetGeneralKpisQuery request, CancellationToken cancellationToken)
     {
-        var metrics = await _reportingClient.GetSystemMetricsAsync(cancellationToken);
+        var metrics = await _reportingClient.GetSystemMetricsAsync(cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException("Global system metrics are unavailable from the Reporting service.");
         return Result.Success(new GeneralKpisResponse(
-            metrics?.TotalUsers ?? 5000,
-            450,
-            35
+            metrics.TotalUsers,
+            0,
+            0
         ));
     }
 
@@ -63,20 +69,8 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralHealthResponse>> Handle(GetGeneralHealthQuery request, CancellationToken cancellationToken)
     {
-        var healthDict = new Dictionary<string, string>
-        {
-            { "AuthService", "Healthy" },
-            { "MedicalDataService", "Healthy" },
-            { "SedentaryEngineService", "Healthy" },
-            { "GamificationService", "Healthy" },
-            { "NotificationService", "Healthy" },
-            { "MlPredictionService", "Healthy" },
-            { "OrganizationService", "Healthy" },
-            { "ReportingService", "Healthy" },
-            { "MongoDB", "Healthy" }
-        };
-
-        return Result.Success(new GeneralHealthResponse("Healthy", healthDict));
+        throw new UpstreamServiceUnavailableException(
+            "Platform component health is unavailable because no health data was reported by the upstream services.");
     }
 
     public async Task<Result<GeneralVersionResponse>> Handle(GetGeneralVersionQuery request, CancellationToken cancellationToken)

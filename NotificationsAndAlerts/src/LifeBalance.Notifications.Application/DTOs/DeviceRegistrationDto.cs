@@ -9,6 +9,7 @@ public class DeviceRegistrationDto
     public string UserId { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(2048)]
     public string DeviceToken { get; set; } = string.Empty;
 
     public DevicePlatform Platform { get; set; }

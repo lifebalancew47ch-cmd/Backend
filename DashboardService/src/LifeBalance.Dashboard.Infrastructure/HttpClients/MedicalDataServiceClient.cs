@@ -24,21 +24,20 @@ public class MedicalDataServiceClient : IMedicalDataServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve biometrics for UserId: {UserId}", userId);
-            return new MedicalDataResponseDto(userId, 72, 120, 80, 70, 1.75, 22.8, DateTime.UtcNow);
+            return null;
         }
     }
 
-    public async Task<List<MedicalDataResponseDto>> GetFamilyBiometricsAsync(string familyId, CancellationToken cancellationToken = default)
+    public async Task<List<MedicalDataResponseDto>?> GetFamilyBiometricsAsync(string familyId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<MedicalDataResponseDto>>($"/api/v1/medical/family/{familyId}", cancellationToken);
-            return res ?? new List<MedicalDataResponseDto>();
+            return await _httpClient.GetFromJsonAsync<List<MedicalDataResponseDto>>($"/api/v1/medical/family/{familyId}", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve family biometrics for FamilyId: {FamilyId}", familyId);
-            return new List<MedicalDataResponseDto>();
+            return null;
         }
     }
 }

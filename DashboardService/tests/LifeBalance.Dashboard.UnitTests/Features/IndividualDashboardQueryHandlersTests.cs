@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Application.Features.IndividualDashboard;
 using NSubstitute;
 using Xunit;
@@ -31,14 +32,30 @@ public class IndividualDashboardQueryHandlersTests
     private static AuthUserResponseDto CreateProfile(string userId) =>
         new(userId, "test@lifebalance.io", "John", "Doe", new List<string> { "User" }, "fam_1", "comp_1");
 
+    private static MedicalDataResponseDto CreateBiometrics(string userId) =>
+        new(userId, 70, 120, 80, 70, 1.75, 22.8, DateTime.UtcNow);
+
+    private static SedentaryActivityResponseDto CreateActivity(string userId) =>
+        new(userId, 8500, 45, 6.5, 420, Enumerable.Repeat(2, 24).ToList());
+
+    private static UserRewardsResponseDto CreateRewards(string userId) =>
+        new(userId, 1200, 4, 7, new List<string>());
+
+    private void StubIndividualSources(string userId)
+    {
+        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateBiometrics(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
+    }
+
     // ── GET /api/v1/dashboard/individual ──
 
     [Fact]
     public async Task Handle_GetIndividualDashboardQuery_ReturnsSuccessfulResult()
     {
         var userId = "usr_test_123";
-        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(CreateProfile(userId));
+        StubIndividualSources(userId);
 
         var result = await _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None);
 
@@ -49,22 +66,34 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualDashboardQuery_AllDownstreamNull_UsesFallbackProfile()
+    public async Task Handle_GetIndividualDashboardQuery_ProfileUnavailable_ThrowsUpstreamUnavailable()
     {
         var userId = "usr_fallback";
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateBiometrics(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
 
-        var result = await _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+    }
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.UserProfile.UserId.Should().Be(userId);
-        result.Value.UserProfile.Email.Should().Be("user@lifebalance.io");
+    [Fact]
+    public async Task Handle_GetIndividualDashboardQuery_BiometricsUnavailable_ThrowsUpstreamUnavailable()
+    {
+        var userId = "usr_test_123";
+        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
+
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetIndividualDashboardQuery_NotificationsNull_ReturnsEmptyList()
     {
         var userId = "usr_test_123";
-        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        StubIndividualSources(userId);
         _notificationClient.GetUserNotificationsAsync(userId, 10, Arg.Any<CancellationToken>()).Returns((List<NotificationItemDto>?)null);
 
         var result = await _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None);
@@ -76,7 +105,7 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualDashboardQuery_AggregatesAllSixSources()
     {
         var userId = "usr_test_123";
-        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        StubIndividualSources(userId);
 
         await _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None);
 
@@ -95,6 +124,8 @@ public class IndividualDashboardQueryHandlersTests
         var biometrics = new MedicalDataResponseDto(userId, 65, 110, 70, 68, 1.70, 23.5, DateTime.UtcNow);
         _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(biometrics);
         _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
 
         var result = await _handler.Handle(new GetIndividualDashboardQuery(userId), CancellationToken.None);
 
@@ -109,6 +140,8 @@ public class IndividualDashboardQueryHandlersTests
         var userId = "usr_test_123";
         _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>())
             .Returns(new AuthUserResponseDto(userId, "test@lifebalance.io", "Jane", "Doe", new List<string> { "User" }, "fam_1", "comp_1"));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
 
         var result = await _handler.Handle(new GetIndividualSummaryQuery(userId), CancellationToken.None);
 
@@ -117,23 +150,32 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualSummaryQuery_NullProfile_UsesDefaultName()
+    public async Task Handle_GetIndividualSummaryQuery_NullProfile_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualSummaryQuery("usr_ghost"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.FullName.Should().Be("User");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualSummaryQuery("usr_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetIndividualSummaryQuery_NullActivityAndRewards_DefaultsToZero()
+    public async Task Handle_GetIndividualSummaryQuery_NullActivity_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualSummaryQuery("usr_ghost"), CancellationToken.None);
+        var userId = "usr_ghost";
+        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
 
-        result.Value.DailySteps.Should().Be(0);
-        result.Value.ActiveMinutes.Should().Be(0);
-        result.Value.Points.Should().Be(0);
-        result.Value.StreakDays.Should().Be(0);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualSummaryQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+    }
+
+    [Fact]
+    public async Task Handle_GetIndividualSummaryQuery_NullRewards_ThrowsUpstreamUnavailable()
+    {
+        var userId = "usr_ghost";
+        _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualSummaryQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -159,6 +201,8 @@ public class IndividualDashboardQueryHandlersTests
     {
         var userId = "usr_test_123";
         _authClient.GetUserProfileAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateProfile(userId));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
+        _gamificationClient.GetUserRewardsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateRewards(userId));
 
         await _handler.Handle(new GetIndividualSummaryQuery(userId), CancellationToken.None);
 
@@ -188,27 +232,31 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualKpisQuery_NullBiometrics_UsesDefaults()
+    public async Task Handle_GetIndividualKpisQuery_NullBiometrics_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualKpisQuery("usr_ghost"), CancellationToken.None);
+        var userId = "usr_ghost";
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
 
-        result.Value.Bmi.Should().Be(22.5);
-        result.Value.HeartRate.Should().Be(72);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualKpisQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetIndividualKpisQuery_NullActivity_UsesDefaults()
+    public async Task Handle_GetIndividualKpisQuery_NullActivity_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualKpisQuery("usr_ghost"), CancellationToken.None);
+        var userId = "usr_ghost";
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateBiometrics(userId));
 
-        result.Value.DailySteps.Should().Be(8500);
-        result.Value.CaloriesBurned.Should().Be(450);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualKpisQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetIndividualKpisQuery_CallsMedicalAndSedentary()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualKpisQuery(userId), CancellationToken.None);
 
         await _medicalClient.Received(1).GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>());
@@ -218,7 +266,10 @@ public class IndividualDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetIndividualKpisQuery_ReturnsUserIdEcho()
     {
-        var result = await _handler.Handle(new GetIndividualKpisQuery("usr_echo"), CancellationToken.None);
+        var userId = "usr_echo";
+        StubIndividualSources(userId);
+
+        var result = await _handler.Handle(new GetIndividualKpisQuery(userId), CancellationToken.None);
 
         result.Value.UserId.Should().Be("usr_echo");
     }
@@ -231,6 +282,7 @@ public class IndividualDashboardQueryHandlersTests
         var userId = "usr_test_123";
         _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>())
             .Returns(new SedentaryActivityResponseDto(userId, 8000, 120, 4.0, 350, new List<int>()));
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateBiometrics(userId));
 
         var result = await _handler.Handle(new GetIndividualStatisticsQuery(userId), CancellationToken.None);
 
@@ -239,20 +291,23 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualStatisticsQuery_NullActivity_UsesDefaults()
+    public async Task Handle_GetIndividualStatisticsQuery_NullActivity_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualStatisticsQuery("usr_ghost"), CancellationToken.None);
+        var userId = "usr_ghost";
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateBiometrics(userId));
 
-        result.Value.ActiveHoursThisWeek.Should().Be(3.0);
-        result.Value.SedentaryHoursThisWeek.Should().Be(6.5);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualStatisticsQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetIndividualStatisticsQuery_NullBiometrics_UsesDefaultHeartRate()
+    public async Task Handle_GetIndividualStatisticsQuery_NullBiometrics_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualStatisticsQuery("usr_ghost"), CancellationToken.None);
+        var userId = "usr_ghost";
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
 
-        result.Value.AverageHeartRate.Should().Be(72);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualStatisticsQuery(userId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -261,6 +316,7 @@ public class IndividualDashboardQueryHandlersTests
         var userId = "usr_test_123";
         _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>())
             .Returns(new MedicalDataResponseDto(userId, 85, 130, 85, 70, 1.75, 22.8, DateTime.UtcNow));
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(CreateActivity(userId));
 
         var result = await _handler.Handle(new GetIndividualStatisticsQuery(userId), CancellationToken.None);
 
@@ -271,6 +327,8 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualStatisticsQuery_CallsSedentaryAndMedical()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualStatisticsQuery(userId), CancellationToken.None);
 
         await _sedentaryClient.Received(1).GetUserActivityAsync(userId, Arg.Any<CancellationToken>());
@@ -318,6 +376,8 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualHeatmapQuery_CallsSedentaryClient()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualHeatmapQuery(userId), CancellationToken.None);
 
         await _sedentaryClient.Received(1).GetUserActivityAsync(userId, Arg.Any<CancellationToken>());
@@ -326,7 +386,10 @@ public class IndividualDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetIndividualHeatmapQuery_ReturnsUserIdEcho()
     {
-        var result = await _handler.Handle(new GetIndividualHeatmapQuery("usr_heat"), CancellationToken.None);
+        var userId = "usr_heat";
+        StubIndividualSources(userId);
+
+        var result = await _handler.Handle(new GetIndividualHeatmapQuery(userId), CancellationToken.None);
 
         result.Value.UserId.Should().Be("usr_heat");
     }
@@ -334,100 +397,40 @@ public class IndividualDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/individual/goals ──
 
     [Fact]
-    public async Task Handle_GetIndividualGoalsQuery_ReturnsChallenges()
+    public async Task Handle_GetIndividualGoalsQuery_ThrowsWhenFamilyContextUnavailable()
     {
-        var userId = "usr_test_123";
-        var challenges = new List<ChallengeProgressDto> { new("c1", "Walk 10k", 50.0, false) };
-        _gamificationClient.GetFamilyChallengesAsync("user_default_family", Arg.Any<CancellationToken>()).Returns(challenges);
-
-        var result = await _handler.Handle(new GetIndividualGoalsQuery(userId), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Goals.Should().HaveCount(1);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>()
+            .WithMessage("*family*");
     }
 
     [Fact]
-    public async Task Handle_GetIndividualGoalsQuery_NullChallenges_ReturnsEmpty()
+    public async Task Handle_GetIndividualGoalsQuery_DoesNotCallDownstream()
     {
-        var result = await _handler.Handle(new GetIndividualGoalsQuery("usr_ghost"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
-        result.Value.Goals.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualGoalsQuery_UsesDefaultFamilyId()
-    {
-        var userId = "usr_test_123";
-        await _handler.Handle(new GetIndividualGoalsQuery(userId), CancellationToken.None);
-
-        await _gamificationClient.Received(1).GetFamilyChallengesAsync("user_default_family", Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualGoalsQuery_PropagatesChallengeData()
-    {
-        var userId = "usr_test_123";
-        _gamificationClient.GetFamilyChallengesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new List<ChallengeProgressDto> { new("c9", "Hydration", 100.0, true) });
-
-        var result = await _handler.Handle(new GetIndividualGoalsQuery(userId), CancellationToken.None);
-
-        result.Value.Goals.Single().Completed.Should().BeTrue();
-        result.Value.Goals.Single().Title.Should().Be("Hydration");
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualGoalsQuery_ReturnsUserIdEcho()
-    {
-        var result = await _handler.Handle(new GetIndividualGoalsQuery("usr_goal"), CancellationToken.None);
-
-        result.Value.UserId.Should().Be("usr_goal");
+        await _gamificationClient.DidNotReceiveWithAnyArgs().GetFamilyChallengesAsync(default, default);
+        await _authClient.DidNotReceiveWithAnyArgs().GetUserProfileAsync(default, default);
     }
 
     // ── GET /api/v1/dashboard/individual/progress ──
 
     [Fact]
-    public async Task Handle_GetIndividualProgressQuery_ReturnsFixedValues()
+    public async Task Handle_GetIndividualProgressQuery_ThrowsWhenNoProgressSource()
     {
-        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.WeeklyGoalCompletionPercentage.Should().Be(85.0);
-        result.Value.DaysActive.Should().Be(5);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetIndividualProgressQuery_DoesNotCallDownstream()
     {
-        await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         await _authClient.DidNotReceiveWithAnyArgs().GetUserProfileAsync(default, default);
         await _sedentaryClient.DidNotReceiveWithAnyArgs().GetUserActivityAsync(default, default);
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualProgressQuery_StableAcrossCalls()
-    {
-        var first = await _handler.Handle(new GetIndividualProgressQuery("u1"), CancellationToken.None);
-        var second = await _handler.Handle(new GetIndividualProgressQuery("u1"), CancellationToken.None);
-
-        first.Value.Should().BeEquivalentTo(second.Value);
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualProgressQuery_SucceedsForAnyUser()
-    {
-        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_unknown"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualProgressQuery_ReturnsUserIdEcho()
-    {
-        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_prog"), CancellationToken.None);
-
-        result.Value.UserId.Should().Be("usr_prog");
     }
 
     // ── GET /api/v1/dashboard/individual/activity ──
@@ -446,22 +449,10 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualActivityQuery_NullActivity_UsesFallbackDefaults()
+    public async Task Handle_GetIndividualActivityQuery_NullActivity_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualActivityQuery("usr_ghost"), CancellationToken.None);
-
-        result.Value.Activity.DailySteps.Should().Be(8000);
-        result.Value.Activity.ActiveMinutes.Should().Be(45);
-        result.Value.Activity.SedentaryHours.Should().Be(6.0);
-        result.Value.Activity.CaloriesBurned.Should().Be(350);
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualActivityQuery_FallbackHas24HeatmapEntries()
-    {
-        var result = await _handler.Handle(new GetIndividualActivityQuery("usr_ghost"), CancellationToken.None);
-
-        result.Value.Activity.HourlyHeatmap.Should().HaveCount(24);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualActivityQuery("usr_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -480,6 +471,8 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualActivityQuery_CallsSedentaryClient()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualActivityQuery(userId), CancellationToken.None);
 
         await _sedentaryClient.Received(1).GetUserActivityAsync(userId, Arg.Any<CancellationToken>());
@@ -553,21 +546,10 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualRewardsQuery_NullRewards_UsesFallback()
+    public async Task Handle_GetIndividualRewardsQuery_NullRewards_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualRewardsQuery("usr_ghost"), CancellationToken.None);
-
-        result.Value.Rewards.Points.Should().Be(1500);
-        result.Value.Rewards.CurrentStreakDays.Should().Be(7);
-    }
-
-    [Fact]
-    public async Task Handle_GetIndividualRewardsQuery_FallbackHasBadges()
-    {
-        var result = await _handler.Handle(new GetIndividualRewardsQuery("usr_ghost"), CancellationToken.None);
-
-        result.Value.Rewards.RecentRewards.Should().Contain("First Step");
-        result.Value.Rewards.RecentRewards.Should().Contain("7 Day Streak");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualRewardsQuery("usr_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -586,6 +568,8 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualRewardsQuery_CallsGamificationClient()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualRewardsQuery(userId), CancellationToken.None);
 
         await _gamificationClient.Received(1).GetUserRewardsAsync(userId, Arg.Any<CancellationToken>());
@@ -659,12 +643,10 @@ public class IndividualDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetIndividualBiometricsQuery_NullBiometrics_UsesFallbackDefaults()
+    public async Task Handle_GetIndividualBiometricsQuery_NullBiometrics_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetIndividualBiometricsQuery("usr_ghost"), CancellationToken.None);
-
-        result.Value.Biometrics.HeartRate.Should().Be(72);
-        result.Value.Biometrics.Bmi.Should().Be(22.8);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualBiometricsQuery("usr_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -684,6 +666,8 @@ public class IndividualDashboardQueryHandlersTests
     public async Task Handle_GetIndividualBiometricsQuery_CallsMedicalClient()
     {
         var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
         await _handler.Handle(new GetIndividualBiometricsQuery(userId), CancellationToken.None);
 
         await _medicalClient.Received(1).GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>());
@@ -692,7 +676,10 @@ public class IndividualDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetIndividualBiometricsQuery_ReturnsUserIdEcho()
     {
-        var result = await _handler.Handle(new GetIndividualBiometricsQuery("usr_bio"), CancellationToken.None);
+        var userId = "usr_bio";
+        StubIndividualSources(userId);
+
+        var result = await _handler.Handle(new GetIndividualBiometricsQuery(userId), CancellationToken.None);
 
         result.Value.UserId.Should().Be("usr_bio");
     }

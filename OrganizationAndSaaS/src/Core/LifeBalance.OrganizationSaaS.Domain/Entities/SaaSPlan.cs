@@ -1,10 +1,11 @@
 using LifeBalance.OrganizationSaaS.Domain.Common;
 using LifeBalance.OrganizationSaaS.Domain.Enums;
+using LifeBalance.OrganizationSaaS.Domain.Interfaces;
 using LifeBalance.OrganizationSaaS.Domain.ValueObjects;
 
 namespace LifeBalance.OrganizationSaaS.Domain.Entities;
 
-public class SaaSPlan : AggregateRoot
+public class SaaSPlan : AggregateRoot, IGlobalTenantEntity
 {
     public string Name { get; private set; } = string.Empty;
     public PlanTier Tier { get; private set; }

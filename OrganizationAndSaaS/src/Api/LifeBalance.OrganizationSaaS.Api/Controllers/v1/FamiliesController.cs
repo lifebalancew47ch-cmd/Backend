@@ -23,6 +23,8 @@ public class FamiliesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetFamiliesPagedQuery(pageIndex, pageSize));
         return Ok(result);
     }

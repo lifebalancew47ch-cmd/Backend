@@ -2,7 +2,7 @@
 
 > **Microservicio de Agregación del Dashboard** — parte del ecosistema *LifeBalance*.
 >
-> Construido sobre **.NET 10**, **Clean Architecture**, **DDD** y **CQRS**.
+> Construido sobre **.NET 9.0**, **Clean Architecture**, **DDD** y **CQRS**.
 
 ---
 
@@ -67,7 +67,7 @@
 
 ## Prerrequisitos
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) 4.x+
 - [MongoDB](https://www.mongodb.com/try/download/community) 7+ (o usar el compose)
 - Visual Studio 2022 17.x+ / Rider 2024+

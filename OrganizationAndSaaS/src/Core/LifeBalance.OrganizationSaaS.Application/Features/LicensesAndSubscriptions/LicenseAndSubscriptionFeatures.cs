@@ -3,6 +3,7 @@ using MediatR;
 using LifeBalance.OrganizationSaaS.Application.Common.Models;
 using LifeBalance.OrganizationSaaS.Application.Interfaces;
 using LifeBalance.OrganizationSaaS.Domain.Entities;
+using LifeBalance.OrganizationSaaS.Domain.Enums;
 using LifeBalance.OrganizationSaaS.Domain.Exceptions;
 using LifeBalance.OrganizationSaaS.Domain.Interfaces;
 
@@ -87,6 +88,8 @@ public class LicenseAndSubscriptionCommandHandler :
     private readonly IRepository<License> _licenseRepo;
     private readonly IRepository<Subscription> _subscriptionRepo;
     private readonly IRepository<Invitation> _invitationRepo;
+    private readonly IRepository<Organization> _orgRepository;
+    private readonly IRepository<SaaSPlan> _planRepository;
     private readonly ITenantContext _tenantContext;
     private readonly INotificationServiceClient _notificationClient;
 
@@ -95,17 +98,35 @@ public class LicenseAndSubscriptionCommandHandler :
         IRepository<Subscription> subscriptionRepo,
         IRepository<Invitation> invitationRepo,
         ITenantContext tenantContext,
-        INotificationServiceClient notificationClient)
+        INotificationServiceClient notificationClient,
+        IRepository<Organization> orgRepository,
+        IRepository<SaaSPlan> planRepository)
     {
         _licenseRepo = licenseRepo;
         _subscriptionRepo = subscriptionRepo;
         _invitationRepo = invitationRepo;
         _tenantContext = tenantContext;
         _notificationClient = notificationClient;
+        _orgRepository = orgRepository;
+        _planRepository = planRepository;
     }
 
     public async Task<ApiResponse<LicenseDto>> Handle(CreateLicenseCommand request, CancellationToken cancellationToken)
     {
+        var org = await _orgRepository.GetByIdAsync(request.OrganizationId, cancellationToken);
+        if (org == null) throw new ResourceNotFoundException(nameof(Organization), request.OrganizationId);
+
+        var plan = await _planRepository.GetByIdAsync(org.PlanId, cancellationToken);
+        if (plan == null) throw new ResourceNotFoundException(nameof(SaaSPlan), org.PlanId);
+
+        var activeCount = await _licenseRepo.CountAsync(
+            x => x.OrganizationId == request.OrganizationId && x.Status != LicenseStatus.Revoked,
+            cancellationToken);
+        if (activeCount >= plan.Limits.MaxLicenses)
+        {
+            throw new LimitExceededException(nameof(License), plan.Limits.MaxLicenses);
+        }
+
         var tenantId = _tenantContext.TenantId;
         if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
 

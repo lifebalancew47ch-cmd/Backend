@@ -6,5 +6,5 @@ public record ChallengeProgressDto(string ChallengeId, string Title, double Prog
 public interface IGamificationServiceClient
 {
     Task<UserRewardsResponseDto?> GetUserRewardsAsync(string userId, CancellationToken cancellationToken = default);
-    Task<List<ChallengeProgressDto>> GetFamilyChallengesAsync(string familyId, CancellationToken cancellationToken = default);
+    Task<List<ChallengeProgressDto>?> GetFamilyChallengesAsync(string familyId, CancellationToken cancellationToken = default);
 }

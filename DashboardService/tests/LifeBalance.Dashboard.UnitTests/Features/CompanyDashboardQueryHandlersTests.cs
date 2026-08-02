@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Application.Features.CompanyDashboard;
 using NSubstitute;
 using Xunit;
@@ -25,14 +26,26 @@ public class CompanyDashboardQueryHandlersTests
             new DepartmentSummaryDto("d2", "Engineering", 60, 78.5)
         };
 
+    private static CompanyAdherenceResponseDto CreateAdherence(string companyId) =>
+        new(companyId, 92.0, 100, 92, new List<string>());
+
+    private static CompanyLicenseDto CreateLicenses(string companyId) =>
+        new(companyId, 200, 150, DateTime.UtcNow.AddYears(1), "Enterprise");
+
+    private void StubCompanySources(string companyId)
+    {
+        _sedentaryClient.GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateAdherence(companyId));
+        _orgClient.GetCompanyLicensesAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateLicenses(companyId));
+        _orgClient.GetDepartmentsAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateDepartments(companyId));
+    }
+
     // ── GET /api/v1/dashboard/company ──
 
     [Fact]
     public async Task Handle_GetCompanyDashboardQuery_ReturnsSuccessfulResult()
     {
         var companyId = "comp_test_001";
-        _sedentaryClient.GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>())
-            .Returns(new CompanyAdherenceResponseDto(companyId, 92.0, 100, 92, new List<string>()));
+        StubCompanySources(companyId);
 
         var result = await _handler.Handle(new GetCompanyDashboardQuery(companyId), CancellationToken.None);
 
@@ -42,23 +55,32 @@ public class CompanyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetCompanyDashboardQuery_AllDownstreamNull_ReturnsEmptyDepartments()
+    public async Task Handle_GetCompanyDashboardQuery_AdherenceUnavailable_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetCompanyDashboardQuery("comp_empty"), CancellationToken.None);
+        var companyId = "comp_empty";
+        _orgClient.GetCompanyLicensesAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateLicenses(companyId));
+        _orgClient.GetDepartmentsAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateDepartments(companyId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Departments.Should().BeEmpty();
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyDashboardQuery(companyId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+    }
+
+    [Fact]
+    public async Task Handle_GetCompanyDashboardQuery_LicensesUnavailable_ThrowsUpstreamUnavailable()
+    {
+        var companyId = "comp_empty";
+        _sedentaryClient.GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateAdherence(companyId));
+        _orgClient.GetDepartmentsAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateDepartments(companyId));
+
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyDashboardQuery(companyId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetCompanyDashboardQuery_AggregatesThreeSources()
     {
         var companyId = "comp_test_001";
-        _sedentaryClient.GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>())
-            .Returns(new CompanyAdherenceResponseDto(companyId, 92.0, 100, 92, new List<string>()));
-        _orgClient.GetCompanyLicensesAsync(companyId, Arg.Any<CancellationToken>())
-            .Returns(new CompanyLicenseDto(companyId, 200, 150, DateTime.UtcNow.AddYears(1), "Enterprise"));
-        _orgClient.GetDepartmentsAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateDepartments(companyId));
+        StubCompanySources(companyId);
 
         await _handler.Handle(new GetCompanyDashboardQuery(companyId), CancellationToken.None);
 
@@ -73,6 +95,7 @@ public class CompanyDashboardQueryHandlersTests
         var companyId = "comp_test_001";
         var departments = CreateDepartments(companyId);
         var licenses = new CompanyLicenseDto(companyId, 500, 250, DateTime.UtcNow.AddMonths(6), "Business");
+        _sedentaryClient.GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>()).Returns(CreateAdherence(companyId));
         _orgClient.GetDepartmentsAsync(companyId, Arg.Any<CancellationToken>()).Returns(departments);
         _orgClient.GetCompanyLicensesAsync(companyId, Arg.Any<CancellationToken>()).Returns(licenses);
 
@@ -85,7 +108,10 @@ public class CompanyDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetCompanyDashboardQuery_ReturnsCompanyIdEcho()
     {
-        var result = await _handler.Handle(new GetCompanyDashboardQuery("comp_echo"), CancellationToken.None);
+        var companyId = "comp_echo";
+        StubCompanySources(companyId);
+
+        var result = await _handler.Handle(new GetCompanyDashboardQuery(companyId), CancellationToken.None);
 
         result.Value.CompanyId.Should().Be("comp_echo");
     }
@@ -108,13 +134,10 @@ public class CompanyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetCompanyKpisQuery_NullAdherence_UsesDefaults()
+    public async Task Handle_GetCompanyKpisQuery_NullAdherence_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetCompanyKpisQuery("comp_ghost"), CancellationToken.None);
-
-        result.Value.AdherencePercentage.Should().Be(82.5);
-        result.Value.TotalEmployees.Should().Be(150);
-        result.Value.HighRiskCount.Should().Be(2);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyKpisQuery("comp_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -133,6 +156,8 @@ public class CompanyDashboardQueryHandlersTests
     public async Task Handle_GetCompanyKpisQuery_CallsSedentaryClient()
     {
         var companyId = "comp_test_001";
+        StubCompanySources(companyId);
+
         await _handler.Handle(new GetCompanyKpisQuery(companyId), CancellationToken.None);
 
         await _sedentaryClient.Received(1).GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>());
@@ -141,7 +166,10 @@ public class CompanyDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetCompanyKpisQuery_ReturnsCompanyIdEcho()
     {
-        var result = await _handler.Handle(new GetCompanyKpisQuery("comp_kpi"), CancellationToken.None);
+        var companyId = "comp_kpi";
+        StubCompanySources(companyId);
+
+        var result = await _handler.Handle(new GetCompanyKpisQuery(companyId), CancellationToken.None);
 
         result.Value.CompanyId.Should().Be("comp_kpi");
     }
@@ -149,47 +177,20 @@ public class CompanyDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/company/statistics ──
 
     [Fact]
-    public async Task Handle_GetCompanyStatisticsQuery_ReturnsFixedValues()
+    public async Task Handle_GetCompanyStatisticsQuery_ThrowsWhenNoStatisticsSource()
     {
-        var result = await _handler.Handle(new GetCompanyStatisticsQuery("comp_test_001"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalSedentaryHours.Should().Be(1250.0);
-        result.Value.TotalActiveMinutes.Should().Be(3400.0);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyStatisticsQuery("comp_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetCompanyStatisticsQuery_DoesNotCallDownstream()
     {
-        await _handler.Handle(new GetCompanyStatisticsQuery("comp_test_001"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyStatisticsQuery("comp_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         await _sedentaryClient.DidNotReceiveWithAnyArgs().GetCompanyAdherenceAsync(default, default);
         await _orgClient.DidNotReceiveWithAnyArgs().GetDepartmentsAsync(default, default);
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyStatisticsQuery_StableAcrossCalls()
-    {
-        var first = await _handler.Handle(new GetCompanyStatisticsQuery("comp_1"), CancellationToken.None);
-        var second = await _handler.Handle(new GetCompanyStatisticsQuery("comp_1"), CancellationToken.None);
-
-        first.Value.Should().BeEquivalentTo(second.Value);
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyStatisticsQuery_SucceedsForAnyCompany()
-    {
-        var result = await _handler.Handle(new GetCompanyStatisticsQuery("comp_unknown"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyStatisticsQuery_ReturnsCompanyIdEcho()
-    {
-        var result = await _handler.Handle(new GetCompanyStatisticsQuery("comp_stat"), CancellationToken.None);
-
-        result.Value.CompanyId.Should().Be("comp_stat");
     }
 
     // ── GET /api/v1/dashboard/company/departments ──
@@ -255,11 +256,11 @@ public class CompanyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetCompanyHeatmapQuery_AllEntriesFixedAtTwentyFive()
+    public async Task Handle_GetCompanyHeatmapQuery_AllEntriesAreStructuralZeros()
     {
         var result = await _handler.Handle(new GetCompanyHeatmapQuery("comp_test_001"), CancellationToken.None);
 
-        result.Value.DepartmentHeatmap.Should().OnlyContain(v => v == 25);
+        result.Value.DepartmentHeatmap.Should().OnlyContain(v => v == 0);
     }
 
     [Fact]
@@ -304,21 +305,10 @@ public class CompanyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetCompanyAdherenceQuery_NullAdherence_UsesFallback()
+    public async Task Handle_GetCompanyAdherenceQuery_NullAdherence_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetCompanyAdherenceQuery("comp_ghost"), CancellationToken.None);
-
-        result.Value.Adherence.AdherencePercentage.Should().Be(85.0);
-        result.Value.Adherence.TotalEmployees.Should().Be(100);
-        result.Value.Adherence.ActiveEmployees.Should().Be(85);
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyAdherenceQuery_FallbackHasHighRiskDepartments()
-    {
-        var result = await _handler.Handle(new GetCompanyAdherenceQuery("comp_ghost"), CancellationToken.None);
-
-        result.Value.Adherence.HighRiskDepartments.Should().Contain("Sales");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyAdherenceQuery("comp_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -337,6 +327,8 @@ public class CompanyDashboardQueryHandlersTests
     public async Task Handle_GetCompanyAdherenceQuery_CallsSedentaryClient()
     {
         var companyId = "comp_test_001";
+        StubCompanySources(companyId);
+
         await _handler.Handle(new GetCompanyAdherenceQuery(companyId), CancellationToken.None);
 
         await _sedentaryClient.Received(1).GetCompanyAdherenceAsync(companyId, Arg.Any<CancellationToken>());
@@ -345,44 +337,19 @@ public class CompanyDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/company/trends ──
 
     [Fact]
-    public async Task Handle_GetCompanyTrendsQuery_ReturnsFivePointTrend()
+    public async Task Handle_GetCompanyTrendsQuery_ThrowsWhenNoTrendsSource()
     {
-        var result = await _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.MonthlyAdherenceTrend.Should().HaveCount(5);
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyTrendsQuery_TrendIsMonotonicallyIncreasing()
-    {
-        var result = await _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None);
-
-        result.Value.MonthlyAdherenceTrend.Should().BeInAscendingOrder();
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyTrendsQuery_FixedValues()
-    {
-        var result = await _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None);
-
-        result.Value.MonthlyAdherenceTrend.Should().BeEquivalentTo(new List<double> { 70.0, 75.0, 80.0, 85.0, 88.0 });
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetCompanyTrendsQuery_DoesNotCallDownstream()
     {
-        await _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyTrendsQuery("comp_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         await _orgClient.DidNotReceiveWithAnyArgs().GetDepartmentsAsync(default, default);
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyTrendsQuery_ReturnsCompanyIdEcho()
-    {
-        var result = await _handler.Handle(new GetCompanyTrendsQuery("comp_trend"), CancellationToken.None);
-
-        result.Value.CompanyId.Should().Be("comp_trend");
     }
 
     // ── GET /api/v1/dashboard/company/ranking ──
@@ -454,21 +421,10 @@ public class CompanyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetCompanyLicensesQuery_NullLicenses_UsesFallback()
+    public async Task Handle_GetCompanyLicensesQuery_NullLicenses_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetCompanyLicensesQuery("comp_ghost"), CancellationToken.None);
-
-        result.Value.Licenses.TotalLicenses.Should().Be(200);
-        result.Value.Licenses.UsedLicenses.Should().Be(150);
-        result.Value.Licenses.PlanType.Should().Be("Enterprise");
-    }
-
-    [Fact]
-    public async Task Handle_GetCompanyLicensesQuery_FallbackExpiryInFuture()
-    {
-        var result = await _handler.Handle(new GetCompanyLicensesQuery("comp_ghost"), CancellationToken.None);
-
-        result.Value.Licenses.ExpirationDateUtc.Should().BeAfter(DateTime.UtcNow);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetCompanyLicensesQuery("comp_ghost"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -487,6 +443,8 @@ public class CompanyDashboardQueryHandlersTests
     public async Task Handle_GetCompanyLicensesQuery_CallsOrgClient()
     {
         var companyId = "comp_test_001";
+        StubCompanySources(companyId);
+
         await _handler.Handle(new GetCompanyLicensesQuery(companyId), CancellationToken.None);
 
         await _orgClient.Received(1).GetCompanyLicensesAsync(companyId, Arg.Any<CancellationToken>());

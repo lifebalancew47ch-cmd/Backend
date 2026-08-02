@@ -23,6 +23,8 @@ public class DepartmentsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string organizationId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetDepartmentsPagedQuery(organizationId, pageIndex, pageSize));
         return Ok(result);
     }
@@ -82,6 +84,8 @@ public class TeamsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string organizationId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetTeamsPagedQuery(organizationId, pageIndex, pageSize));
         return Ok(result);
     }

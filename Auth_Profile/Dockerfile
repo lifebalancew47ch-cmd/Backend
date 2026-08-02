@@ -23,6 +23,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Security: run as non-root user
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN chown -R appuser:appgroup /app
+USER appuser
+
 # Expose port and configure ASP.NET Core URLs (Render compatibility)
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000

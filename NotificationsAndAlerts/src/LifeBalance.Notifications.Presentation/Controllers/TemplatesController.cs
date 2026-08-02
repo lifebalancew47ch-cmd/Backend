@@ -3,11 +3,13 @@ using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LifeBalance.Notifications.Presentation.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin")]
+[EnableRateLimiting("fixed")]
 [Route("api/v1/templates")]
 public class TemplatesController : ControllerBase
 {

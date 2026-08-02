@@ -9,6 +9,7 @@ using LifeBalance.Dashboard.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
 using Polly.Extensions.Http;
@@ -20,7 +21,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         // ------ Options ------
         services.Configure<MongoDbOptions>(
@@ -71,32 +73,39 @@ public static class DependencyInjection
                     ValidAudience            = jwtOptions.Audience,
                     IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
-                    ClockSkew = TimeSpan.FromMinutes(5)
+                    ClockSkew = TimeSpan.FromMinutes(1)
                 };
             });
 
         // ------ HTTP Clients Registration with Polly Resilience ------
         var serviceUrls = configuration.GetSection(ServiceUrlsOptions.SectionName).Get<ServiceUrlsOptions>() ?? new ServiceUrlsOptions();
 
-        RegisterTypedClient<IAuthServiceClient, AuthServiceClient>(services, serviceUrls.AuthServiceUrl);
-        RegisterTypedClient<IMedicalDataServiceClient, MedicalDataServiceClient>(services, serviceUrls.MedicalDataServiceUrl);
-        RegisterTypedClient<ISedentaryEngineServiceClient, SedentaryEngineServiceClient>(services, serviceUrls.SedentaryEngineServiceUrl);
-        RegisterTypedClient<IGamificationServiceClient, GamificationServiceClient>(services, serviceUrls.GamificationServiceUrl);
-        RegisterTypedClient<INotificationServiceClient, NotificationServiceClient>(services, serviceUrls.NotificationServiceUrl);
-        RegisterTypedClient<IMlPredictionServiceClient, MlPredictionServiceClient>(services, serviceUrls.MlPredictionServiceUrl);
-        RegisterTypedClient<IOrganizationServiceClient, OrganizationServiceClient>(services, serviceUrls.OrganizationServiceUrl);
-        RegisterTypedClient<IReportingServiceClient, ReportingServiceClient>(services, serviceUrls.ReportingServiceUrl);
+        RegisterTypedClient<IAuthServiceClient, AuthServiceClient>(services, serviceUrls.AuthServiceUrl, environment);
+        RegisterTypedClient<IMedicalDataServiceClient, MedicalDataServiceClient>(services, serviceUrls.MedicalDataServiceUrl, environment);
+        RegisterTypedClient<ISedentaryEngineServiceClient, SedentaryEngineServiceClient>(services, serviceUrls.SedentaryEngineServiceUrl, environment);
+        RegisterTypedClient<IGamificationServiceClient, GamificationServiceClient>(services, serviceUrls.GamificationServiceUrl, environment);
+        RegisterTypedClient<INotificationServiceClient, NotificationServiceClient>(services, serviceUrls.NotificationServiceUrl, environment);
+        RegisterTypedClient<IMlPredictionServiceClient, MlPredictionServiceClient>(services, serviceUrls.MlPredictionServiceUrl, environment);
+        RegisterTypedClient<IOrganizationServiceClient, OrganizationServiceClient>(services, serviceUrls.OrganizationServiceUrl, environment);
+        RegisterTypedClient<IReportingServiceClient, ReportingServiceClient>(services, serviceUrls.ReportingServiceUrl, environment);
 
         return services;
     }
 
-    private static void RegisterTypedClient<TInterface, TImplementation>(IServiceCollection services, string baseUrl)
+    private static void RegisterTypedClient<TInterface, TImplementation>(IServiceCollection services, string baseUrl, IHostEnvironment environment)
         where TInterface : class
         where TImplementation : class, TInterface
     {
+        var uri = new Uri(baseUrl);
+        if (!environment.IsDevelopment() && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                $"Service URL '{baseUrl}' must use HTTPS outside the Development environment.");
+        }
+
         services.AddHttpClient<TInterface, TImplementation>(client =>
         {
-            client.BaseAddress = new Uri(baseUrl);
+            client.BaseAddress = uri;
             client.Timeout = TimeSpan.FromSeconds(10);
         })
         .AddHttpMessageHandler<CorrelationIdDelegatingHandler>()

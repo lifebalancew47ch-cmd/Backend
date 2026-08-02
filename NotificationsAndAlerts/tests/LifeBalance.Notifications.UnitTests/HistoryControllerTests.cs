@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Domain.Enums;
 using LifeBalance.Notifications.Presentation.Controllers;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -18,6 +21,21 @@ public class HistoryControllerTests
     {
         _historyService = new Mock<IHistoryService>();
         _controller = new HistoryController(_historyService.Object);
+        SetUser(_controller, "user-1");
+    }
+
+    private static void SetUser(ControllerBase controller, string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
+
+    private static void SetNoUser(ControllerBase controller)
+    {
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static NotificationHistoryDto BuildHistoryItem(string id = "h-1") => new()
@@ -101,7 +119,8 @@ public class HistoryControllerTests
     {
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(new List<NotificationHistoryDto> { BuildHistoryItem() });
 
-        var result = await _controller.GetByUser("u1");
+        SetUser(_controller, "u1");
+        var result = await _controller.GetByUser();
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -112,7 +131,8 @@ public class HistoryControllerTests
         var items = new List<NotificationHistoryDto> { BuildHistoryItem("h5") };
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(items);
 
-        var ok = (OkObjectResult)await _controller.GetByUser("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetByUser();
 
         var wrapper = ok.Value.Should().BeOfType<Response<List<NotificationHistoryDto>>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -120,11 +140,12 @@ public class HistoryControllerTests
     }
 
     [Fact]
-    public async Task GetByUser_CallsServiceWithUserId()
+    public async Task GetByUser_CallsServiceWithClaimUserId()
     {
         _historyService.Setup(s => s.GetByUserAsync(It.IsAny<string>())).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        await _controller.GetByUser("user-42");
+        SetUser(_controller, "user-42");
+        await _controller.GetByUser();
 
         _historyService.Verify(s => s.GetByUserAsync("user-42"), Times.Once);
     }
@@ -134,7 +155,8 @@ public class HistoryControllerTests
     {
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        var ok = (OkObjectResult)await _controller.GetByUser("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetByUser();
 
         var wrapper = ok.Value.Should().BeOfType<Response<List<NotificationHistoryDto>>>().Subject;
         wrapper.Data.Should().BeEmpty();
@@ -145,9 +167,20 @@ public class HistoryControllerTests
     {
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        var ok = (OkObjectResult)await _controller.GetByUser("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetByUser();
 
         ok.StatusCode.Should().Be(200);
+    }
+
+    [Fact]
+    public async Task GetByUser_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.GetByUser();
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
     }
 
     [Fact]

@@ -10,6 +10,8 @@ namespace LifeBalance.Notifications.Infrastructure.Services;
 
 public class PushService : IPushService
 {
+    private const string DeliveryFailedMessage = "Delivery failed";
+
     private readonly MongoDbContext _db;
     private readonly IPushNotificationProvider _pushProvider;
     private readonly IDeviceRegistrationService _deviceService;
@@ -57,13 +59,15 @@ public class PushService : IPushService
         var allSucceeded = results.All(r => r.Success);
         var anySucceeded = results.Any(r => r.Success);
         var firstError = results.FirstOrDefault(r => !r.Success)?.ErrorMessage;
+        if (firstError is not null)
+            _logger.LogWarning("Push delivery failed for user {UserId}: {Error}", dto.UserId, firstError);
 
         var status = allSucceeded ? NotificationStatus.Sent
                     : anySucceeded ? NotificationStatus.Sent
                     : NotificationStatus.Failed;
 
         return await Save(dto.UserId, dto.Title, dto.Body, dto.Payload, channel,
-            status, allSucceeded ? null : firstError ?? "All delivery attempts failed", deviceTokens.Count);
+            status, allSucceeded ? null : DeliveryFailedMessage, deviceTokens.Count);
     }
 
     public async Task<List<NotificationResponseDto>> BroadcastAsync(BroadcastPushDto dto)

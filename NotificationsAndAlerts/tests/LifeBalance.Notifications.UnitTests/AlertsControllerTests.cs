@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Domain.Enums;
 using LifeBalance.Notifications.Presentation.Controllers;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -18,6 +21,22 @@ public class AlertsControllerTests
     {
         _alertService = new Mock<IAlertService>();
         _controller = new AlertsController(_alertService.Object);
+        SetUser(_controller, "user-1");
+        _alertService.Setup(s => s.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(BuildAlert());
+    }
+
+    private static void SetUser(ControllerBase controller, string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
+
+    private static void SetNoUser(ControllerBase controller)
+    {
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static AlertDto BuildAlert(string id = "alert-1") => new()
@@ -107,7 +126,8 @@ public class AlertsControllerTests
     {
         _alertService.Setup(s => s.GetAllAsync("u1")).ReturnsAsync(new List<AlertDto> { BuildAlert() });
 
-        var result = await _controller.GetAll("u1");
+        SetUser(_controller, "u1");
+        var result = await _controller.GetAll();
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -118,7 +138,8 @@ public class AlertsControllerTests
         var alerts = new List<AlertDto> { BuildAlert("a1"), BuildAlert("a2") };
         _alertService.Setup(s => s.GetAllAsync("u1")).ReturnsAsync(alerts);
 
-        var ok = (OkObjectResult)await _controller.GetAll("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetAll();
 
         var wrapper = ok.Value.Should().BeOfType<Response<List<AlertDto>>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -126,11 +147,12 @@ public class AlertsControllerTests
     }
 
     [Fact]
-    public async Task GetAll_CallsServiceWithUserId()
+    public async Task GetAll_CallsServiceWithClaimUserId()
     {
         _alertService.Setup(s => s.GetAllAsync(It.IsAny<string>())).ReturnsAsync(new List<AlertDto>());
 
-        await _controller.GetAll("user-42");
+        SetUser(_controller, "user-42");
+        await _controller.GetAll();
 
         _alertService.Verify(s => s.GetAllAsync("user-42"), Times.Once);
     }
@@ -140,7 +162,8 @@ public class AlertsControllerTests
     {
         _alertService.Setup(s => s.GetAllAsync("u1")).ReturnsAsync(new List<AlertDto>());
 
-        var ok = (OkObjectResult)await _controller.GetAll("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetAll();
 
         var wrapper = ok.Value.Should().BeOfType<Response<List<AlertDto>>>().Subject;
         wrapper.Data.Should().BeEmpty();
@@ -151,9 +174,20 @@ public class AlertsControllerTests
     {
         _alertService.Setup(s => s.GetAllAsync("u1")).ReturnsAsync(new List<AlertDto>());
 
-        var ok = (OkObjectResult)await _controller.GetAll("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetAll();
 
         ok.StatusCode.Should().Be(200);
+    }
+
+    [Fact]
+    public async Task GetAll_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.GetAll();
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
     }
 
     [Fact]
@@ -320,5 +354,17 @@ public class AlertsControllerTests
         await _controller.Dismiss("alert-4");
 
         _alertService.Verify(s => s.DismissAsync("alert-4"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetById_WhenAlertBelongsToAnotherUser_ReturnsForbidResult()
+    {
+        var alert = BuildAlert("alert-1");
+        alert.UserId = "another-user";
+        _alertService.Setup(s => s.GetByIdAsync("alert-1")).ReturnsAsync(alert);
+
+        var result = await _controller.GetById("alert-1");
+
+        result.Should().BeOfType<ForbidResult>();
     }
 }

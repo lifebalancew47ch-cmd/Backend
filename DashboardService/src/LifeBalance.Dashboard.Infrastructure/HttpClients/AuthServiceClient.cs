@@ -24,41 +24,33 @@ public class AuthServiceClient : IAuthServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve user profile for UserId: {UserId}", userId);
-            return new AuthUserResponseDto(userId, "user@lifebalance.io", "User", "LifeBalance", new List<string> { "User" }, "fam_001", "comp_001");
+            return null;
         }
     }
 
-    public async Task<List<AuthUserResponseDto>> GetFamilyMembersProfileAsync(string familyId, CancellationToken cancellationToken = default)
+    public async Task<List<AuthUserResponseDto>?> GetFamilyMembersProfileAsync(string familyId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<AuthUserResponseDto>>($"/api/v1/families/{familyId}/members", cancellationToken);
-            return res ?? GetFallbackFamilyMembers(familyId);
+            return await _httpClient.GetFromJsonAsync<List<AuthUserResponseDto>>($"/api/v1/families/{familyId}/members", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve family members for FamilyId: {FamilyId}", familyId);
-            return GetFallbackFamilyMembers(familyId);
+            return null;
         }
     }
 
-    public async Task<List<AuthUserResponseDto>> GetCompanyUsersAsync(string companyId, CancellationToken cancellationToken = default)
+    public async Task<List<AuthUserResponseDto>?> GetCompanyUsersAsync(string companyId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<AuthUserResponseDto>>($"/api/v1/companies/{companyId}/users", cancellationToken);
-            return res ?? new List<AuthUserResponseDto>();
+            return await _httpClient.GetFromJsonAsync<List<AuthUserResponseDto>>($"/api/v1/companies/{companyId}/users", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve company users for CompanyId: {CompanyId}", companyId);
-            return new List<AuthUserResponseDto>();
+            return null;
         }
     }
-
-    private static List<AuthUserResponseDto> GetFallbackFamilyMembers(string familyId) => new()
-    {
-        new AuthUserResponseDto("usr_001", "parent1@lifebalance.io", "Carlos", "Garcia", new List<string> { "User" }, familyId, "comp_001"),
-        new AuthUserResponseDto("usr_002", "parent2@lifebalance.io", "Maria", "Garcia", new List<string> { "User" }, familyId, "comp_001")
-    };
 }

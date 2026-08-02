@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentValidation;
 using MediatR;
 using LifeBalance.OrganizationSaaS.Application.Common.Models;
@@ -224,8 +225,15 @@ public class OrganizationQueryHandler :
 
     public async Task<ApiResponse<PagedResult<OrganizationDto>>> Handle(GetOrganizationsPagedQuery request, CancellationToken cancellationToken)
     {
+        var search = request.Search;
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            if (search.Length > 100) search = search[..100];
+            search = Regex.Escape(search);
+        }
+
         var (items, total) = await _orgRepository.GetPagedAsync(
-            x => string.IsNullOrEmpty(request.Search) || x.Name.Contains(request.Search),
+            x => string.IsNullOrEmpty(search) || x.Name.Contains(search),
             request.PageIndex,
             request.PageSize,
             x => x.CreatedAt,

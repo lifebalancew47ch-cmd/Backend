@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeBalance.OrganizationSaaS.Application.Features.LicensesAndSubscriptions;
 
@@ -23,6 +24,8 @@ public class LicensesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string organizationId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetLicensesPagedQuery(organizationId, pageIndex, pageSize));
         return Ok(result);
     }
@@ -75,6 +78,8 @@ public class SubscriptionsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetSubscriptionsPagedQuery(pageIndex, pageSize));
         return Ok(result);
     }
@@ -120,6 +125,8 @@ public class InvitationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetInvitationsPagedQuery(pageIndex, pageSize));
         return Ok(result);
     }
@@ -132,6 +139,7 @@ public class InvitationsController : ControllerBase
     }
 
     [HttpPost("{token}/accept")]
+    [AllowAnonymous] // Public by design: invitation token in the URL is the credential
     public async Task<IActionResult> Accept(string token)
     {
         var result = await _mediator.Send(new AcceptInvitationCommand(token));
@@ -139,6 +147,7 @@ public class InvitationsController : ControllerBase
     }
 
     [HttpPost("{token}/reject")]
+    [AllowAnonymous] // Public by design: invitation token in the URL is the credential
     public async Task<IActionResult> Reject(string token)
     {
         var result = await _mediator.Send(new RejectInvitationCommand(token));

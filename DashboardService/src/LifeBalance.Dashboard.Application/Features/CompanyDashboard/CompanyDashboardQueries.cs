@@ -1,5 +1,6 @@
 using MediatR;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Shared.Results;
 
 namespace LifeBalance.Dashboard.Application.Features.CompanyDashboard;
@@ -46,8 +47,10 @@ public class CompanyDashboardQueryHandlers :
 
         await Task.WhenAll(adherenceTask, licensesTask, departmentsTask);
 
-        var adherence = await adherenceTask;
-        var licenses = await licensesTask;
+        var adherence = await adherenceTask
+            ?? throw new UpstreamServiceUnavailableException($"Company adherence for company '{request.CompanyId}' is unavailable.");
+        var licenses = await licensesTask
+            ?? throw new UpstreamServiceUnavailableException($"Company licenses for company '{request.CompanyId}' are unavailable.");
         var departments = await departmentsTask ?? new List<DepartmentSummaryDto>();
 
         return Result.Success(new CompanyDashboardResponse(request.CompanyId, adherence, licenses, departments));
@@ -55,18 +58,20 @@ public class CompanyDashboardQueryHandlers :
 
     public async Task<Result<CompanyKpisResponse>> Handle(GetCompanyKpisQuery request, CancellationToken cancellationToken)
     {
-        var adherence = await _sedentaryClient.GetCompanyAdherenceAsync(request.CompanyId, cancellationToken);
+        var adherence = await _sedentaryClient.GetCompanyAdherenceAsync(request.CompanyId, cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException($"Company adherence for company '{request.CompanyId}' is unavailable.");
         return Result.Success(new CompanyKpisResponse(
             request.CompanyId,
-            adherence?.AdherencePercentage ?? 82.5,
-            adherence?.TotalEmployees ?? 150,
-            adherence?.HighRiskDepartments.Count ?? 2
+            adherence.AdherencePercentage,
+            adherence.TotalEmployees,
+            adherence.HighRiskDepartments.Count
         ));
     }
 
     public async Task<Result<CompanyStatisticsResponse>> Handle(GetCompanyStatisticsQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new CompanyStatisticsResponse(request.CompanyId, 1250.0, 3400.0));
+        throw new UpstreamServiceUnavailableException(
+            $"Company statistics for company '{request.CompanyId}' are unavailable because no upstream statistics source is configured.");
     }
 
     public async Task<Result<CompanyDepartmentsResponse>> Handle(GetCompanyDepartmentsQuery request, CancellationToken cancellationToken)
@@ -77,38 +82,41 @@ public class CompanyDashboardQueryHandlers :
 
     public async Task<Result<CompanyHeatmapResponse>> Handle(GetCompanyHeatmapQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new CompanyHeatmapResponse(request.CompanyId, Enumerable.Repeat(25, 24).ToList()));
+        return Result.Success(new CompanyHeatmapResponse(request.CompanyId, Enumerable.Repeat(0, 24).ToList()));
     }
 
     public async Task<Result<CompanyAdherenceResponse>> Handle(GetCompanyAdherenceQuery request, CancellationToken cancellationToken)
     {
         var adherence = await _sedentaryClient.GetCompanyAdherenceAsync(request.CompanyId, cancellationToken)
-                        ?? new CompanyAdherenceResponseDto(request.CompanyId, 85.0, 100, 85, new List<string> { "Sales" });
+            ?? throw new UpstreamServiceUnavailableException($"Company adherence for company '{request.CompanyId}' is unavailable.");
         return Result.Success(new CompanyAdherenceResponse(request.CompanyId, adherence));
     }
 
     public async Task<Result<CompanyTrendsResponse>> Handle(GetCompanyTrendsQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new CompanyTrendsResponse(request.CompanyId, new List<double> { 70.0, 75.0, 80.0, 85.0, 88.0 }));
+        throw new UpstreamServiceUnavailableException(
+            $"Company trends for company '{request.CompanyId}' are unavailable because no upstream trends source is configured.");
     }
 
     public async Task<Result<CompanyRankingResponse>> Handle(GetCompanyRankingQuery request, CancellationToken cancellationToken)
     {
-        var depts = await _orgClient.GetDepartmentsAsync(request.CompanyId, cancellationToken) ?? new List<DepartmentSummaryDto>();
-        var ranks = depts.Select((d, i) => new DepartmentRankDto(d.DepartmentId, d.Name, d.ActiveAdherenceScore, i + 1)).ToList();
+        var depts = await _orgClient.GetDepartmentsAsync(request.CompanyId, cancellationToken);
+        var ranks = (depts ?? new List<DepartmentSummaryDto>())
+            .Select((d, i) => new DepartmentRankDto(d.DepartmentId, d.Name, d.ActiveAdherenceScore, i + 1)).ToList();
         return Result.Success(new CompanyRankingResponse(request.CompanyId, ranks));
     }
 
     public async Task<Result<CompanyLicensesResponse>> Handle(GetCompanyLicensesQuery request, CancellationToken cancellationToken)
     {
         var lic = await _orgClient.GetCompanyLicensesAsync(request.CompanyId, cancellationToken)
-                  ?? new CompanyLicenseDto(request.CompanyId, 200, 150, DateTime.UtcNow.AddYears(1), "Enterprise");
+            ?? throw new UpstreamServiceUnavailableException($"Company licenses for company '{request.CompanyId}' are unavailable.");
         return Result.Success(new CompanyLicensesResponse(request.CompanyId, lic));
     }
 
     public async Task<Result<CompanyOrganizationResponse>> Handle(GetCompanyOrganizationQuery request, CancellationToken cancellationToken)
     {
-        var depts = await _orgClient.GetDepartmentsAsync(request.CompanyId, cancellationToken) ?? new List<DepartmentSummaryDto>();
-        return Result.Success(new CompanyOrganizationResponse(request.CompanyId, depts.Count, depts.Sum(d => d.TotalMembers), depts.Select(d => d.Name).ToList()));
+        var depts = await _orgClient.GetDepartmentsAsync(request.CompanyId, cancellationToken);
+        var departments = depts ?? new List<DepartmentSummaryDto>();
+        return Result.Success(new CompanyOrganizationResponse(request.CompanyId, departments.Count, departments.Sum(d => d.TotalMembers), departments.Select(d => d.Name).ToList()));
     }
 }

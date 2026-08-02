@@ -25,6 +25,8 @@ public class OrganizationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
     {
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var result = await _mediator.Send(new GetOrganizationsPagedQuery(pageIndex, pageSize, search));
         return Ok(result);
     }

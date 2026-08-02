@@ -1,5 +1,6 @@
 using MediatR;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Shared.Results;
 
 namespace LifeBalance.Dashboard.Application.Features.FamilyDashboard;
@@ -45,8 +46,10 @@ public class FamilyDashboardQueryHandlers :
 
         await Task.WhenAll(membersTask, biometricsTask, challengesTask);
 
-        var members = await membersTask ?? new List<AuthUserResponseDto>();
-        var biometrics = await biometricsTask ?? new List<MedicalDataResponseDto>();
+        var members = await membersTask
+            ?? throw new UpstreamServiceUnavailableException($"Family members for family '{request.FamilyId}' are unavailable.");
+        var biometrics = await biometricsTask
+            ?? throw new UpstreamServiceUnavailableException($"Family biometrics for family '{request.FamilyId}' are unavailable.");
         var challenges = await challengesTask ?? new List<ChallengeProgressDto>();
 
         return Result.Success(new FamilyDashboardResponse(request.FamilyId, members, biometrics, challenges));
@@ -54,9 +57,9 @@ public class FamilyDashboardQueryHandlers :
 
     public async Task<Result<FamilyStatisticsResponse>> Handle(GetFamilyStatisticsQuery request, CancellationToken cancellationToken)
     {
-        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken);
-        int count = members?.Count ?? 0;
-        return Result.Success(new FamilyStatisticsResponse(request.FamilyId, count, count * 7500, 45.0));
+        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException($"Family members for family '{request.FamilyId}' are unavailable.");
+        return Result.Success(new FamilyStatisticsResponse(request.FamilyId, members.Count, 0, 0.0));
     }
 
     public async Task<Result<FamilyGoalsResponse>> Handle(GetFamilyGoalsQuery request, CancellationToken cancellationToken)
@@ -67,15 +70,17 @@ public class FamilyDashboardQueryHandlers :
 
     public async Task<Result<FamilyRankingResponse>> Handle(GetFamilyRankingQuery request, CancellationToken cancellationToken)
     {
-        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken) ?? new List<AuthUserResponseDto>();
-        var rankings = members.Select((m, index) => new FamilyMemberRankDto(m.UserId, $"{m.FirstName} {m.LastName}", 1000 - (index * 100), index + 1)).ToList();
+        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException($"Family members for family '{request.FamilyId}' are unavailable.");
+        var rankings = members.Select((m, index) => new FamilyMemberRankDto(m.UserId, $"{m.FirstName} {m.LastName}", 0, index + 1)).ToList();
         return Result.Success(new FamilyRankingResponse(request.FamilyId, rankings));
     }
 
     public async Task<Result<FamilyMembersResponse>> Handle(GetFamilyMembersQuery request, CancellationToken cancellationToken)
     {
-        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken);
-        return Result.Success(new FamilyMembersResponse(request.FamilyId, members ?? new List<AuthUserResponseDto>()));
+        var members = await _authClient.GetFamilyMembersProfileAsync(request.FamilyId, cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException($"Family members for family '{request.FamilyId}' are unavailable.");
+        return Result.Success(new FamilyMembersResponse(request.FamilyId, members));
     }
 
     public async Task<Result<FamilyChallengesResponse>> Handle(GetFamilyChallengesQuery request, CancellationToken cancellationToken)
@@ -86,11 +91,12 @@ public class FamilyDashboardQueryHandlers :
 
     public async Task<Result<FamilyRewardsResponse>> Handle(GetFamilyRewardsQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new FamilyRewardsResponse(request.FamilyId, 4500, new List<string> { "Family Champion", "Together Strong" }));
+        throw new UpstreamServiceUnavailableException(
+            $"Family rewards for family '{request.FamilyId}' are unavailable because no upstream family rewards source is configured.");
     }
 
     public async Task<Result<FamilyHeatmapResponse>> Handle(GetFamilyHeatmapQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new FamilyHeatmapResponse(request.FamilyId, Enumerable.Repeat(5, 24).ToList()));
+        return Result.Success(new FamilyHeatmapResponse(request.FamilyId, Enumerable.Repeat(0, 24).ToList()));
     }
 }

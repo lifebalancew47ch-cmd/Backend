@@ -15,17 +15,16 @@ public class MlPredictionServiceClient : IMlPredictionServiceClient
         _logger = logger;
     }
 
-    public async Task<List<RecommendationDto>> GetRecommendationsAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<List<RecommendationDto>?> GetRecommendationsAsync(string userId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<RecommendationDto>>($"/api/v1/ml/recommendations/{userId}", cancellationToken);
-            return res ?? GetFallbackRecommendations();
+            return await _httpClient.GetFromJsonAsync<List<RecommendationDto>>($"/api/v1/ml/recommendations/{userId}", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve ML recommendations for UserId: {UserId}", userId);
-            return GetFallbackRecommendations();
+            return null;
         }
     }
 
@@ -38,13 +37,7 @@ public class MlPredictionServiceClient : IMlPredictionServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve ML health risk trend for UserId: {UserId}", userId);
-            return new HealthRiskTrendDto(userId, "Low", 0.15, new List<string> { "Maintain 8000 daily steps", "Take 5 min walk every 2 hours" });
+            return null;
         }
     }
-
-    private static List<RecommendationDto> GetFallbackRecommendations() => new()
-    {
-        new RecommendationDto("rec_1", "Posture", "Take a posture check break", "Standing up for 2 minutes reduces lumbar strain.", 0.95),
-        new RecommendationDto("rec_2", "Hydration", "Drink 250ml of water", "Optimal hydration boosts energy levels during work hours.", 0.88)
-    };
 }

@@ -15,17 +15,17 @@ public class OrganizationServiceClient : IOrganizationServiceClient
         _logger = logger;
     }
 
-    public async Task<List<DepartmentSummaryDto>> GetDepartmentsAsync(string companyId, CancellationToken cancellationToken = default)
+    public async Task<List<DepartmentSummaryDto>?> GetDepartmentsAsync(string companyId, CancellationToken cancellationToken = default)
     {
         try
         {
             var res = await _httpClient.GetFromJsonAsync<List<DepartmentSummaryDto>>($"/api/v1/org/companies/{companyId}/departments", cancellationToken);
-            return res ?? GetFallbackDepartments();
+            return res;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve departments for CompanyId: {CompanyId}", companyId);
-            return GetFallbackDepartments();
+            return null;
         }
     }
 
@@ -38,14 +38,47 @@ public class OrganizationServiceClient : IOrganizationServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve license info for CompanyId: {CompanyId}", companyId);
-            return new CompanyLicenseDto(companyId, 250, 180, DateTime.UtcNow.AddYears(1), "Enterprise Pro");
+            return null;
         }
     }
 
-    private static List<DepartmentSummaryDto> GetFallbackDepartments() => new()
+    public async Task<FamilyMembershipDto?> GetFamilyByIdAsync(string familyId, CancellationToken cancellationToken = default)
     {
-        new DepartmentSummaryDto("dept_1", "Engineering", 45, 91.2),
-        new DepartmentSummaryDto("dept_2", "Human Resources", 15, 88.5),
-        new DepartmentSummaryDto("dept_3", "Marketing", 20, 84.0)
-    };
+        try
+        {
+            var res = await _httpClient.GetFromJsonAsync<OrganizationApiResponse<FamilyMembershipDto>>($"/api/v1/families/{familyId}", cancellationToken);
+            return res?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve family membership for FamilyId: {FamilyId}", familyId);
+            return null;
+        }
+    }
+
+    public async Task<List<CompanyDepartmentMembersDto>?> GetCompanyDepartmentsWithMembersAsync(string companyId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var res = await _httpClient.GetFromJsonAsync<OrganizationApiResponse<OrganizationPagedResult<CompanyDepartmentMembersDto>>>(
+                $"/api/v1/departments?organizationId={companyId}&pageIndex=1&pageSize=100", cancellationToken);
+            return res?.Data?.Items;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve company departments with members for CompanyId: {CompanyId}", companyId);
+            return null;
+        }
+    }
+
+    private sealed class OrganizationApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public T? Data { get; set; }
+    }
+
+    private sealed class OrganizationPagedResult<T>
+    {
+        public List<T>? Items { get; set; }
+    }
 }

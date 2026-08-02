@@ -3,11 +3,13 @@ using LifeBalance.Dashboard.API.Authorization;
 using LifeBalance.Dashboard.Application.Features.GeneralDashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LifeBalance.Dashboard.API.Controllers;
 
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/dashboard")]
+[EnableRateLimiting("fixed")]
 public class GeneralDashboardController : ApiControllerBase
 {
     [HttpGet("summary")]

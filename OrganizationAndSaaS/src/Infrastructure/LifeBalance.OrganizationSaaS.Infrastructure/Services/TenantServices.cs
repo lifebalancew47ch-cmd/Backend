@@ -22,17 +22,19 @@ public class TenantContextAccessor : ITenantContext
             var context = _httpContextAccessor.HttpContext;
             if (context == null) return string.Empty;
 
-            // 1. Try header X-Tenant-Id
-            if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader) && !string.IsNullOrWhiteSpace(tenantHeader))
-            {
-                return tenantHeader.ToString();
-            }
-
-            // 2. Try JWT claim 'tenant_id'
+            // 1. JWT claim 'tenant_id' always takes precedence over any header
             var tenantClaim = context.User?.FindFirst("tenant_id")?.Value;
             if (!string.IsNullOrWhiteSpace(tenantClaim))
             {
                 return tenantClaim;
+            }
+
+            // 2. X-Tenant-Id header is trusted only as a fallback for authenticated users
+            if (context.User?.Identity?.IsAuthenticated == true
+                && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader)
+                && !string.IsNullOrWhiteSpace(tenantHeader))
+            {
+                return tenantHeader.ToString();
             }
 
             return string.Empty;

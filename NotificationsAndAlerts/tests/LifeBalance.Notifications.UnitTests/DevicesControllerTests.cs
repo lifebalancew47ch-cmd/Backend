@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Domain.Enums;
 using LifeBalance.Notifications.Presentation.Controllers;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -18,6 +21,21 @@ public class DevicesControllerTests
     {
         _deviceService = new Mock<IDeviceRegistrationService>();
         _controller = new DevicesController(_deviceService.Object);
+        SetUser(_controller, "user-1");
+    }
+
+    private static void SetUser(ControllerBase controller, string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
+
+    private static void SetNoUser(ControllerBase controller)
+    {
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static DeviceRegistrationDto BuildRegistrationDto() => new()
@@ -84,11 +102,37 @@ public class DevicesControllerTests
     }
 
     [Fact]
+    public async Task Register_OverridesDtoUserIdWithClaim()
+    {
+        DeviceRegistrationDto? captured = null;
+        _deviceService.Setup(s => s.RegisterAsync(It.IsAny<DeviceRegistrationDto>()))
+            .Callback<DeviceRegistrationDto>(d => captured = d)
+            .Returns(Task.CompletedTask);
+
+        SetUser(_controller, "claim-user");
+        await _controller.Register(BuildRegistrationDto());
+
+        captured.Should().NotBeNull();
+        captured!.UserId.Should().Be("claim-user");
+    }
+
+    [Fact]
+    public async Task Register_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.Register(BuildRegistrationDto());
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
+    }
+
+    [Fact]
     public async Task Unregister_WhenServiceReturnsTrue_ReturnsOkObjectResult()
     {
         _deviceService.Setup(s => s.UnregisterAsync("u1", "tok1")).ReturnsAsync(true);
 
-        var result = await _controller.Unregister("u1", "tok1");
+        SetUser(_controller, "u1");
+        var result = await _controller.Unregister("tok1");
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -98,7 +142,8 @@ public class DevicesControllerTests
     {
         _deviceService.Setup(s => s.UnregisterAsync("u1", "tok1")).ReturnsAsync(true);
 
-        var ok = (OkObjectResult)await _controller.Unregister("u1", "tok1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Unregister("tok1");
 
         ok.StatusCode.Should().Be(200);
         var wrapper = ok.Value.Should().BeOfType<Response<string>>().Subject;
@@ -112,7 +157,8 @@ public class DevicesControllerTests
     {
         _deviceService.Setup(s => s.UnregisterAsync("u1", "tok1")).ReturnsAsync(false);
 
-        var result = await _controller.Unregister("u1", "tok1");
+        SetUser(_controller, "u1");
+        var result = await _controller.Unregister("tok1");
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -122,7 +168,8 @@ public class DevicesControllerTests
     {
         _deviceService.Setup(s => s.UnregisterAsync("u1", "tok1")).ReturnsAsync(false);
 
-        var nf = (NotFoundObjectResult)await _controller.Unregister("u1", "tok1");
+        SetUser(_controller, "u1");
+        var nf = (NotFoundObjectResult)await _controller.Unregister("tok1");
 
         nf.StatusCode.Should().Be(404);
         var wrapper = nf.Value.Should().BeOfType<Response<string>>().Subject;
@@ -131,12 +178,23 @@ public class DevicesControllerTests
     }
 
     [Fact]
-    public async Task Unregister_CallsServiceWithUserIdAndToken()
+    public async Task Unregister_CallsServiceWithClaimUserIdAndToken()
     {
         _deviceService.Setup(s => s.UnregisterAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
-        await _controller.Unregister("user-42", "token-99");
+        SetUser(_controller, "user-42");
+        await _controller.Unregister("token-99");
 
         _deviceService.Verify(s => s.UnregisterAsync("user-42", "token-99"), Times.Once);
+    }
+
+    [Fact]
+    public async Task Unregister_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.Unregister("tok1");
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
     }
 }

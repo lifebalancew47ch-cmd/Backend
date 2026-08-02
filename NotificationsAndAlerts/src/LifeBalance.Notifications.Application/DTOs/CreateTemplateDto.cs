@@ -6,14 +6,18 @@ namespace LifeBalance.Notifications.Application.DTOs;
 public class CreateTemplateDto
 {
     [Required]
+    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(200)]
     public string Subject { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(5000)]
     public string BodyContent { get; set; } = string.Empty;
 
+    [MaxLength(5000)]
     public string? HtmlContent { get; set; }
 
     [Required]

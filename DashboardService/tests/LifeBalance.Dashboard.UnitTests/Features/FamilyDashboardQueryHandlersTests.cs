@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Application.Features.FamilyDashboard;
 using NSubstitute;
 using Xunit;
@@ -26,14 +27,20 @@ public class FamilyDashboardQueryHandlersTests
             new AuthUserResponseDto("u2", "fam2@lifebalance.io", "Bob", "Smith", new List<string> { "User" }, familyId, "c1")
         };
 
+    private void StubFamilySources(string familyId)
+    {
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+        _medicalClient.GetFamilyBiometricsAsync(familyId, Arg.Any<CancellationToken>()).Returns(new List<MedicalDataResponseDto>());
+        _gamificationClient.GetFamilyChallengesAsync(familyId, Arg.Any<CancellationToken>()).Returns(new List<ChallengeProgressDto>());
+    }
+
     // ── GET /api/v1/dashboard/family ──
 
     [Fact]
     public async Task Handle_GetFamilyDashboardQuery_ReturnsSuccessfulResult()
     {
         var familyId = "fam_test_001";
-        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>())
-            .Returns(CreateMembers(familyId));
+        StubFamilySources(familyId);
 
         var result = await _handler.Handle(new GetFamilyDashboardQuery(familyId), CancellationToken.None);
 
@@ -43,21 +50,32 @@ public class FamilyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetFamilyDashboardQuery_AllDownstreamNull_UsesEmptyCollections()
+    public async Task Handle_GetFamilyDashboardQuery_MembersUnavailable_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetFamilyDashboardQuery("fam_empty"), CancellationToken.None);
+        var familyId = "fam_empty";
+        _medicalClient.GetFamilyBiometricsAsync(familyId, Arg.Any<CancellationToken>()).Returns(new List<MedicalDataResponseDto>());
+        _gamificationClient.GetFamilyChallengesAsync(familyId, Arg.Any<CancellationToken>()).Returns(new List<ChallengeProgressDto>());
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Members.Should().BeEmpty();
-        result.Value.FamilyBiometrics.Should().BeEmpty();
-        result.Value.Challenges.Should().BeEmpty();
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyDashboardQuery(familyId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+    }
+
+    [Fact]
+    public async Task Handle_GetFamilyDashboardQuery_BiometricsUnavailable_ThrowsUpstreamUnavailable()
+    {
+        var familyId = "fam_empty";
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+        _gamificationClient.GetFamilyChallengesAsync(familyId, Arg.Any<CancellationToken>()).Returns(new List<ChallengeProgressDto>());
+
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyDashboardQuery(familyId), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetFamilyDashboardQuery_AggregatesThreeSources()
     {
         var familyId = "fam_test_001";
-        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+        StubFamilySources(familyId);
 
         await _handler.Handle(new GetFamilyDashboardQuery(familyId), CancellationToken.None);
 
@@ -72,6 +90,7 @@ public class FamilyDashboardQueryHandlersTests
         var familyId = "fam_test_001";
         var biometrics = new List<MedicalDataResponseDto> { new("u1", 70, 120, 80, 70, 1.75, 22.8, DateTime.UtcNow) };
         var challenges = new List<ChallengeProgressDto> { new("c1", "Family Walk", 60.0, false) };
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
         _medicalClient.GetFamilyBiometricsAsync(familyId, Arg.Any<CancellationToken>()).Returns(biometrics);
         _gamificationClient.GetFamilyChallengesAsync(familyId, Arg.Any<CancellationToken>()).Returns(challenges);
 
@@ -84,7 +103,10 @@ public class FamilyDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetFamilyDashboardQuery_ReturnsFamilyIdEcho()
     {
-        var result = await _handler.Handle(new GetFamilyDashboardQuery("fam_echo"), CancellationToken.None);
+        var familyId = "fam_echo";
+        StubFamilySources(familyId);
+
+        var result = await _handler.Handle(new GetFamilyDashboardQuery(familyId), CancellationToken.None);
 
         result.Value.FamilyId.Should().Be("fam_echo");
     }
@@ -92,7 +114,7 @@ public class FamilyDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/family/statistics ──
 
     [Fact]
-    public async Task Handle_GetFamilyStatisticsQuery_CountsMembersAndComputesSteps()
+    public async Task Handle_GetFamilyStatisticsQuery_CountsMembers()
     {
         var familyId = "fam_test_001";
         _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
@@ -101,24 +123,26 @@ public class FamilyDashboardQueryHandlersTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.MemberCount.Should().Be(2);
-        result.Value.TotalFamilySteps.Should().Be(2 * 7500);
-    }
-
-    [Fact]
-    public async Task Handle_GetFamilyStatisticsQuery_NullMembers_ReturnsZeroCount()
-    {
-        var result = await _handler.Handle(new GetFamilyStatisticsQuery("fam_empty"), CancellationToken.None);
-
-        result.Value.MemberCount.Should().Be(0);
         result.Value.TotalFamilySteps.Should().Be(0);
     }
 
     [Fact]
-    public async Task Handle_GetFamilyStatisticsQuery_AverageActiveMinutesFixed()
+    public async Task Handle_GetFamilyStatisticsQuery_NullMembers_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetFamilyStatisticsQuery("fam_x"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyStatisticsQuery("fam_empty"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+    }
 
-        result.Value.AverageActiveMinutes.Should().Be(45.0);
+    [Fact]
+    public async Task Handle_GetFamilyStatisticsQuery_StructuralCountsAreZero()
+    {
+        var familyId = "fam_x";
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+
+        var result = await _handler.Handle(new GetFamilyStatisticsQuery(familyId), CancellationToken.None);
+
+        result.Value.AverageActiveMinutes.Should().Be(0.0);
+        result.Value.TotalFamilySteps.Should().Be(0);
     }
 
     [Fact]
@@ -133,7 +157,7 @@ public class FamilyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetFamilyStatisticsQuery_ThreeMembersTripleSteps()
+    public async Task Handle_GetFamilyStatisticsQuery_ThreeMembersCounted()
     {
         var familyId = "fam_test_001";
         var members = new List<AuthUserResponseDto>
@@ -147,7 +171,7 @@ public class FamilyDashboardQueryHandlersTests
         var result = await _handler.Handle(new GetFamilyStatisticsQuery(familyId), CancellationToken.None);
 
         result.Value.MemberCount.Should().Be(3);
-        result.Value.TotalFamilySteps.Should().Be(3 * 7500);
+        result.Value.TotalFamilySteps.Should().Be(0);
     }
 
     // ── GET /api/v1/dashboard/family/goals ──
@@ -219,23 +243,21 @@ public class FamilyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetFamilyRankingQuery_PointsDescendingByIndex()
+    public async Task Handle_GetFamilyRankingQuery_PointsAreZeroWithoutUpstreamScores()
     {
         var familyId = "fam_test_001";
         _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
 
         var result = await _handler.Handle(new GetFamilyRankingQuery(familyId), CancellationToken.None);
 
-        result.Value.Rankings[0].Points.Should().Be(1000);
-        result.Value.Rankings[1].Points.Should().Be(900);
+        result.Value.Rankings.Should().OnlyContain(r => r.Points == 0);
     }
 
     [Fact]
-    public async Task Handle_GetFamilyRankingQuery_NullMembers_ReturnsEmptyRanking()
+    public async Task Handle_GetFamilyRankingQuery_NullMembers_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetFamilyRankingQuery("fam_empty"), CancellationToken.None);
-
-        result.Value.Rankings.Should().BeEmpty();
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyRankingQuery("fam_empty"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -275,11 +297,10 @@ public class FamilyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetFamilyMembersQuery_NullMembers_ReturnsEmpty()
+    public async Task Handle_GetFamilyMembersQuery_NullMembers_ThrowsUpstreamUnavailable()
     {
-        var result = await _handler.Handle(new GetFamilyMembersQuery("fam_empty"), CancellationToken.None);
-
-        result.Value.Members.Should().BeEmpty();
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyMembersQuery("fam_empty"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -298,6 +319,8 @@ public class FamilyDashboardQueryHandlersTests
     public async Task Handle_GetFamilyMembersQuery_CallsAuthClient()
     {
         var familyId = "fam_test_001";
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+
         await _handler.Handle(new GetFamilyMembersQuery(familyId), CancellationToken.None);
 
         await _authClient.Received(1).GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>());
@@ -306,7 +329,10 @@ public class FamilyDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetFamilyMembersQuery_ReturnsFamilyIdEcho()
     {
-        var result = await _handler.Handle(new GetFamilyMembersQuery("fam_mem"), CancellationToken.None);
+        var familyId = "fam_mem";
+        _authClient.GetFamilyMembersProfileAsync(familyId, Arg.Any<CancellationToken>()).Returns(CreateMembers(familyId));
+
+        var result = await _handler.Handle(new GetFamilyMembersQuery(familyId), CancellationToken.None);
 
         result.Value.FamilyId.Should().Be("fam_mem");
     }
@@ -366,47 +392,20 @@ public class FamilyDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/family/rewards ──
 
     [Fact]
-    public async Task Handle_GetFamilyRewardsQuery_ReturnsFixedPoints()
+    public async Task Handle_GetFamilyRewardsQuery_ThrowsWhenNoRewardsSource()
     {
-        var result = await _handler.Handle(new GetFamilyRewardsQuery("fam_test_001"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalFamilyPoints.Should().Be(4500);
-    }
-
-    [Fact]
-    public async Task Handle_GetFamilyRewardsQuery_ReturnsUnlockedBadges()
-    {
-        var result = await _handler.Handle(new GetFamilyRewardsQuery("fam_test_001"), CancellationToken.None);
-
-        result.Value.UnlockedBadges.Should().Contain("Family Champion");
-        result.Value.UnlockedBadges.Should().Contain("Together Strong");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyRewardsQuery("fam_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetFamilyRewardsQuery_DoesNotCallDownstream()
     {
-        await _handler.Handle(new GetFamilyRewardsQuery("fam_test_001"), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetFamilyRewardsQuery("fam_test_001"), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         await _authClient.DidNotReceiveWithAnyArgs().GetFamilyMembersProfileAsync(default, default);
         await _gamificationClient.DidNotReceiveWithAnyArgs().GetFamilyChallengesAsync(default, default);
-    }
-
-    [Fact]
-    public async Task Handle_GetFamilyRewardsQuery_StableAcrossCalls()
-    {
-        var first = await _handler.Handle(new GetFamilyRewardsQuery("fam_1"), CancellationToken.None);
-        var second = await _handler.Handle(new GetFamilyRewardsQuery("fam_1"), CancellationToken.None);
-
-        first.Value.Should().BeEquivalentTo(second.Value);
-    }
-
-    [Fact]
-    public async Task Handle_GetFamilyRewardsQuery_ReturnsFamilyIdEcho()
-    {
-        var result = await _handler.Handle(new GetFamilyRewardsQuery("fam_rew"), CancellationToken.None);
-
-        result.Value.FamilyId.Should().Be("fam_rew");
     }
 
     // ── GET /api/v1/dashboard/family/heatmap ──
@@ -421,11 +420,11 @@ public class FamilyDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetFamilyHeatmapQuery_AllEntriesFixedAtFive()
+    public async Task Handle_GetFamilyHeatmapQuery_AllEntriesAreStructuralZeros()
     {
         var result = await _handler.Handle(new GetFamilyHeatmapQuery("fam_test_001"), CancellationToken.None);
 
-        result.Value.CombinedHourlyHeatmap.Should().OnlyContain(v => v == 5);
+        result.Value.CombinedHourlyHeatmap.Should().OnlyContain(v => v == 0);
     }
 
     [Fact]

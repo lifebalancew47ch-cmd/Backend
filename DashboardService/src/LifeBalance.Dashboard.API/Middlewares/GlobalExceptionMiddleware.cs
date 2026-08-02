@@ -53,6 +53,12 @@ public sealed class GlobalExceptionMiddleware
                 notFoundEx.Message,
                 (object?)null),
 
+            UpstreamServiceUnavailableException upstreamEx => (
+                (int)HttpStatusCode.ServiceUnavailable,
+                "Upstream Service Unavailable",
+                upstreamEx.Message,
+                (object?)null),
+
             DomainException domainEx => (
                 (int)HttpStatusCode.BadRequest,
                 "Domain Rule Violation",

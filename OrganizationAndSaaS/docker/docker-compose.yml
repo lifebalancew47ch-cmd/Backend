@@ -12,7 +12,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__MongoDB=mongodb://mongo-db:27017
       - DatabaseSettings__DatabaseName=LifeBalance_OrganizationSaaS
-      - JwtSettings__Secret=SuperSecretKeyForLifeBalanceSaaSMicroservice2026!
+      - JwtSettings__Secret=${JWT_SECRET}
       - Microservices__AuthProfileUrl=http://auth-profile-service:5001
       - Microservices__DashboardUrl=http://dashboard-service:5002
       - Microservices__ReportingUrl=http://reporting-service:5003
@@ -29,7 +29,7 @@ services:
     image: mongo:7.0
     container_name: lifebalance-mongo
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
     restart: always
@@ -38,7 +38,7 @@ services:
     image: redis:7.2-alpine
     container_name: lifebalance-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: always
 
 volumes:

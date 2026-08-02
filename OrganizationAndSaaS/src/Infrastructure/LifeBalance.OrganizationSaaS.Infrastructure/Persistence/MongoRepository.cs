@@ -22,8 +22,10 @@ public class MongoRepository<TEntity> : IRepository<TEntity> where TEntity : Bas
         var builder = Builders<TEntity>.Filter;
         var filters = new List<FilterDefinition<TEntity>> { baseFilter, builder.Eq(x => x.IsDeleted, false) };
 
-        // Automatically append TenantId if context has a valid TenantId and model isn't global
-        if (_tenantContext.IsAuthenticated && !string.IsNullOrWhiteSpace(_tenantContext.TenantId))
+        // Apply tenant isolation whenever a TenantId is known, regardless of authentication state.
+        // Global catalog entities (e.g. SaaSPlan) are exempt from the tenant filter.
+        if (!typeof(IGlobalTenantEntity).IsAssignableFrom(typeof(TEntity))
+            && !string.IsNullOrWhiteSpace(_tenantContext.TenantId))
         {
             filters.Add(builder.Eq(x => x.TenantId, _tenantContext.TenantId));
         }

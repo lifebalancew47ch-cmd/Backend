@@ -1,8 +1,11 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Presentation.Controllers;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -17,6 +20,21 @@ public class PreferencesControllerTests
     {
         _preferenceService = new Mock<IPreferenceService>();
         _controller = new PreferencesController(_preferenceService.Object);
+        SetUser(_controller, "user-1");
+    }
+
+    private static void SetUser(ControllerBase controller, string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
+
+    private static void SetNoUser(ControllerBase controller)
+    {
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static NotificationPreferenceDto BuildPreference() => new()
@@ -35,7 +53,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.GetAsync("u1")).ReturnsAsync(BuildPreference());
 
-        var result = await _controller.Get("u1");
+        SetUser(_controller, "u1");
+        var result = await _controller.Get();
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -46,7 +65,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.GetAsync("u1")).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.Get("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Get();
 
         ok.StatusCode.Should().Be(200);
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
@@ -56,11 +76,12 @@ public class PreferencesControllerTests
     }
 
     [Fact]
-    public async Task Get_CallsServiceWithUserId()
+    public async Task Get_CallsServiceWithClaimUserId()
     {
         _preferenceService.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(BuildPreference());
 
-        await _controller.Get("user-42");
+        SetUser(_controller, "user-42");
+        await _controller.Get();
 
         _preferenceService.Verify(s => s.GetAsync("user-42"), Times.Once);
     }
@@ -71,7 +92,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.GetAsync("u1")).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.Get("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Get();
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Data.Should().BeSameAs(preference);
@@ -83,9 +105,20 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.GetAsync("u1")).ReturnsAsync(BuildPreference());
 
-        var ok = (OkObjectResult)await _controller.Get("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Get();
 
         ok.StatusCode.Should().Be(200);
+    }
+
+    [Fact]
+    public async Task Get_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.Get();
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
     }
 
     [Fact]
@@ -94,7 +127,8 @@ public class PreferencesControllerTests
         var dto = new UpdatePreferenceDto { ReceivePush = true, QuietModeEnabled = true };
         _preferenceService.Setup(s => s.UpdateAsync("u1", dto)).ReturnsAsync(BuildPreference());
 
-        var result = await _controller.Update("u1", dto);
+        SetUser(_controller, "u1");
+        var result = await _controller.Update(dto);
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -106,7 +140,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.UpdateAsync("u1", dto)).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.Update("u1", dto);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Update(dto);
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -114,12 +149,13 @@ public class PreferencesControllerTests
     }
 
     [Fact]
-    public async Task Update_CallsServiceWithUserIdAndDto()
+    public async Task Update_CallsServiceWithClaimUserIdAndDto()
     {
         var dto = new UpdatePreferenceDto { ReceiveEmail = false };
         _preferenceService.Setup(s => s.UpdateAsync(It.IsAny<string>(), It.IsAny<UpdatePreferenceDto>())).ReturnsAsync(BuildPreference());
 
-        await _controller.Update("user-7", dto);
+        SetUser(_controller, "user-7");
+        await _controller.Update(dto);
 
         _preferenceService.Verify(s => s.UpdateAsync("user-7", dto), Times.Once);
     }
@@ -131,7 +167,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.UpdateAsync(It.IsAny<string>(), It.IsAny<UpdatePreferenceDto>())).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.Update("u1", dto);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Update(dto);
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Data.Should().BeSameAs(preference);
@@ -143,7 +180,8 @@ public class PreferencesControllerTests
         var dto = new UpdatePreferenceDto();
         _preferenceService.Setup(s => s.UpdateAsync(It.IsAny<string>(), It.IsAny<UpdatePreferenceDto>())).ReturnsAsync(BuildPreference());
 
-        var ok = (OkObjectResult)await _controller.Update("u1", dto);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.Update(dto);
 
         ok.StatusCode.Should().Be(200);
     }
@@ -153,17 +191,19 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdatePushAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var result = await _controller.UpdatePush("u1", true);
+        SetUser(_controller, "u1");
+        var result = await _controller.UpdatePush(true);
 
         result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task UpdatePush_CallsServiceWithUserIdAndEnabled()
+    public async Task UpdatePush_CallsServiceWithClaimUserIdAndEnabled()
     {
         _preferenceService.Setup(s => s.UpdatePushAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdatePush("user-1", true);
+        SetUser(_controller, "user-1");
+        await _controller.UpdatePush(true);
 
         _preferenceService.Verify(s => s.UpdatePushAsync("user-1", true), Times.Once);
     }
@@ -173,7 +213,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdatePushAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdatePush("user-1", false);
+        SetUser(_controller, "user-1");
+        await _controller.UpdatePush(false);
 
         _preferenceService.Verify(s => s.UpdatePushAsync("user-1", false), Times.Once);
     }
@@ -184,7 +225,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.UpdatePushAsync("u1", true)).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.UpdatePush("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdatePush(true);
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -196,7 +238,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdatePushAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var ok = (OkObjectResult)await _controller.UpdatePush("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdatePush(true);
 
         ok.StatusCode.Should().Be(200);
     }
@@ -206,17 +249,19 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateEmailAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var result = await _controller.UpdateEmail("u1", true);
+        SetUser(_controller, "u1");
+        var result = await _controller.UpdateEmail(true);
 
         result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task UpdateEmail_CallsServiceWithUserIdAndEnabled()
+    public async Task UpdateEmail_CallsServiceWithClaimUserIdAndEnabled()
     {
         _preferenceService.Setup(s => s.UpdateEmailAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdateEmail("user-1", true);
+        SetUser(_controller, "user-1");
+        await _controller.UpdateEmail(true);
 
         _preferenceService.Verify(s => s.UpdateEmailAsync("user-1", true), Times.Once);
     }
@@ -226,7 +271,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateEmailAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdateEmail("user-1", false);
+        SetUser(_controller, "user-1");
+        await _controller.UpdateEmail(false);
 
         _preferenceService.Verify(s => s.UpdateEmailAsync("user-1", false), Times.Once);
     }
@@ -237,7 +283,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.UpdateEmailAsync("u1", true)).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.UpdateEmail("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdateEmail(true);
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -249,7 +296,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateEmailAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var ok = (OkObjectResult)await _controller.UpdateEmail("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdateEmail(true);
 
         ok.StatusCode.Should().Be(200);
     }
@@ -259,17 +307,19 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateWearOSAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var result = await _controller.UpdateWear("u1", true);
+        SetUser(_controller, "u1");
+        var result = await _controller.UpdateWear(true);
 
         result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task UpdateWear_CallsServiceWithUserIdAndEnabled()
+    public async Task UpdateWear_CallsServiceWithClaimUserIdAndEnabled()
     {
         _preferenceService.Setup(s => s.UpdateWearOSAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdateWear("user-1", true);
+        SetUser(_controller, "user-1");
+        await _controller.UpdateWear(true);
 
         _preferenceService.Verify(s => s.UpdateWearOSAsync("user-1", true), Times.Once);
     }
@@ -279,7 +329,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateWearOSAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(BuildPreference());
 
-        await _controller.UpdateWear("user-1", false);
+        SetUser(_controller, "user-1");
+        await _controller.UpdateWear(false);
 
         _preferenceService.Verify(s => s.UpdateWearOSAsync("user-1", false), Times.Once);
     }
@@ -290,7 +341,8 @@ public class PreferencesControllerTests
         var preference = BuildPreference();
         _preferenceService.Setup(s => s.UpdateWearOSAsync("u1", true)).ReturnsAsync(preference);
 
-        var ok = (OkObjectResult)await _controller.UpdateWear("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdateWear(true);
 
         var wrapper = ok.Value.Should().BeOfType<Response<NotificationPreferenceDto>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -302,7 +354,8 @@ public class PreferencesControllerTests
     {
         _preferenceService.Setup(s => s.UpdateWearOSAsync("u1", true)).ReturnsAsync(BuildPreference());
 
-        var ok = (OkObjectResult)await _controller.UpdateWear("u1", true);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.UpdateWear(true);
 
         ok.StatusCode.Should().Be(200);
     }

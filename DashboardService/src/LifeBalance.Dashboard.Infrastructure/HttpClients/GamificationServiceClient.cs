@@ -24,27 +24,20 @@ public class GamificationServiceClient : IGamificationServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve rewards for UserId: {UserId}", userId);
-            return new UserRewardsResponseDto(userId, 1200, 4, 7, new List<string> { "Early Bird", "10k Steps" });
+            return null;
         }
     }
 
-    public async Task<List<ChallengeProgressDto>> GetFamilyChallengesAsync(string familyId, CancellationToken cancellationToken = default)
+    public async Task<List<ChallengeProgressDto>?> GetFamilyChallengesAsync(string familyId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<ChallengeProgressDto>>($"/api/v1/gamification/family/{familyId}/challenges", cancellationToken);
-            return res ?? GetFallbackChallenges();
+            return await _httpClient.GetFromJsonAsync<List<ChallengeProgressDto>>($"/api/v1/gamification/family/{familyId}/challenges", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve family challenges for FamilyId: {FamilyId}", familyId);
-            return GetFallbackChallenges();
+            return null;
         }
     }
-
-    private static List<ChallengeProgressDto> GetFallbackChallenges() => new()
-    {
-        new ChallengeProgressDto("ch_1", "Weekly 50k Steps Challenge", 75.0, false),
-        new ChallengeProgressDto("ch_2", "Zero Sedentary Afternoon", 100.0, true)
-    };
 }

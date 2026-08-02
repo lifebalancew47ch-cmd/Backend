@@ -1,6 +1,11 @@
 # LifeBalance - Auth & Profile Microservice
 
-Microservicio robusto de Autenticación, Autorización y Gestión de Perfiles para la plataforma **LifeBalance**. Diseñado siguiendo los principios de **Clean Architecture**, **DDD (Domain-Driven Design)** y el patrón **CQRS** con MediatR.
+![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)
+![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2B%20DDD%20%2B%20CQRS-blue)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
+![Security](https://img.shields.io/badge/Security-JWT%20%7C%20RBAC-red)
+
+Microservicio robusto de Autenticación, Autorización y Gestión de Perfiles para la plataforma **LifeBalance**. Construido sobre **.NET 9.0** y diseñado siguiendo los principios de **Clean Architecture**, **DDD (Domain-Driven Design)** y el patrón **CQRS** con MediatR.
 
 ---
 

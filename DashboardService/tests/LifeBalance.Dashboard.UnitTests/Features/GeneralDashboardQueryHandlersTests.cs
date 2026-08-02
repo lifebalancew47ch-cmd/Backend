@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
+using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Application.Features.GeneralDashboard;
 using NSubstitute;
 using Xunit;
@@ -16,12 +17,15 @@ public class GeneralDashboardQueryHandlersTests
         _handler = new GeneralDashboardQueryHandlers(_reportingClient);
     }
 
+    private static GeneralSystemMetricsDto CreateMetrics() =>
+        new(5000, 1500, 99.9, "1.0.0");
+
     [Fact]
     public async Task Handle_GetGeneralSummaryQuery_ReturnsSummary()
     {
         // Arrange
         _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
-            .Returns(new GeneralSystemMetricsDto(5000, 1500, 99.9, "1.0.0"));
+            .Returns(CreateMetrics());
 
         var query = new GetGeneralSummaryQuery();
 
@@ -35,20 +39,15 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralSummaryQuery_ReportingDown_UsesFallbackDefaults()
+    public async Task Handle_GetGeneralSummaryQuery_ReportingDown_ThrowsUpstreamUnavailable()
     {
         // Arrange
         _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
             .Returns((GeneralSystemMetricsDto?)null);
 
         // Act
-        var result = await _handler.Handle(new GetGeneralSummaryQuery(), CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.ActiveUsers.Should().Be(1250);
-        result.Value.GlobalHealthScore.Should().Be(99.8);
-        result.Value.SystemStatus.Should().Be("Healthy");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralSummaryQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
@@ -67,8 +66,12 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralSummaryQuery_SystemStatus_AlwaysHealthy()
+    public async Task Handle_GetGeneralSummaryQuery_SystemStatusHealthyWhenScoreHigh()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
         // Act
         var result = await _handler.Handle(new GetGeneralSummaryQuery(), CancellationToken.None);
 
@@ -77,8 +80,26 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
+    public async Task Handle_GetGeneralSummaryQuery_SystemStatusDegradedWhenScoreLow()
+    {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(new GeneralSystemMetricsDto(5000, 1500, 70.0, "1.0.0"));
+
+        // Act
+        var result = await _handler.Handle(new GetGeneralSummaryQuery(), CancellationToken.None);
+
+        // Assert
+        result.Value.SystemStatus.Should().Be("Degraded");
+    }
+
+    [Fact]
     public async Task Handle_GetGeneralSummaryQuery_ReportingClient_InvokedOnce()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
         // Act
         await _handler.Handle(new GetGeneralSummaryQuery(), CancellationToken.None);
 
@@ -87,61 +108,22 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_ReturnsFixedPlatformValues()
+    public async Task Handle_GetGeneralIndicatorsQuery_ThrowsWhenNoIndicatorsSource()
     {
         // Act
-        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.AverageDailySteps.Should().Be(8200.0);
-        result.Value.AverageSedentaryTime.Should().Be(5.8);
-        result.Value.PlatformAdherenceRate.Should().Be(86.4);
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_AlwaysSucceedsWithoutDownstream()
-    {
-        // Act
-        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
     public async Task Handle_GetGeneralIndicatorsQuery_DoesNotCallReportingClient()
     {
         // Act
-        await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         // Assert
         await _reportingClient.DidNotReceive().GetSystemMetricsAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_ValuesAreStableAcrossCalls()
-    {
-        // Act
-        var first = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
-        var second = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
-
-        // Assert
-        first.Value.Should().BeEquivalentTo(second.Value);
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_HonorsCancellationToken()
-    {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), cts.Token);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -160,33 +142,39 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralKpisQuery_ReportingDown_UsesFallbackUserCount()
+    public async Task Handle_GetGeneralKpisQuery_ReportingDown_ThrowsUpstreamUnavailable()
     {
         // Arrange
         _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
             .Returns((GeneralSystemMetricsDto?)null);
 
         // Act
-        var result = await _handler.Handle(new GetGeneralKpisQuery(), CancellationToken.None);
-
-        // Assert
-        result.Value.TotalRegisteredUsers.Should().Be(5000);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralKpisQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetGeneralKpisQuery_FamiliesAndCompanies_AreConstant()
+    public async Task Handle_GetGeneralKpisQuery_FamiliesAndCompanies_AreStructuralZeros()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
         // Act
         var result = await _handler.Handle(new GetGeneralKpisQuery(), CancellationToken.None);
 
         // Assert
-        result.Value.ActiveFamilies.Should().Be(450);
-        result.Value.ActiveCompanies.Should().Be(35);
+        result.Value.ActiveFamilies.Should().Be(0);
+        result.Value.ActiveCompanies.Should().Be(0);
     }
 
     [Fact]
     public async Task Handle_GetGeneralKpisQuery_ReportingClient_InvokedOnce()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
         // Act
         await _handler.Handle(new GetGeneralKpisQuery(), CancellationToken.None);
 
@@ -261,60 +249,22 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralHealthQuery_ReturnsHealthyOverall()
+    public async Task Handle_GetGeneralHealthQuery_ThrowsWhenNoHealthData()
     {
         // Act
-        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.OverallStatus.Should().Be("Healthy");
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetGeneralHealthQuery_ReportsAllNineComponents()
+    public async Task Handle_GetGeneralHealthQuery_DoesNotCallReportingClient()
     {
         // Act
-        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
+        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None))
+            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
 
         // Assert
-        result.Value.ComponentHealth.Should().HaveCount(9);
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralHealthQuery_IncludesMongoDbComponent()
-    {
-        // Act
-        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
-
-        // Assert
-        result.Value.ComponentHealth.Should().ContainKey("MongoDB");
-        result.Value.ComponentHealth["MongoDB"].Should().Be("Healthy");
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralHealthQuery_AllCoreServicesReported()
-    {
-        // Act
-        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
-
-        // Assert
-        result.Value.ComponentHealth.Keys.Should().Contain(new[]
-        {
-            "AuthService", "MedicalDataService", "SedentaryEngineService",
-            "GamificationService", "NotificationService", "MlPredictionService",
-            "OrganizationService", "ReportingService"
-        });
-    }
-
-    [Fact]
-    public async Task Handle_GetGeneralHealthQuery_AllComponentsHealthy()
-    {
-        // Act
-        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
-
-        // Assert
-        result.Value.ComponentHealth.Values.Should().OnlyContain(v => v == "Healthy");
+        await _reportingClient.DidNotReceive().GetSystemMetricsAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

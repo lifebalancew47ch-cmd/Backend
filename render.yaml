@@ -142,9 +142,9 @@ services:
       - key: JwtSettings__Secret
         sync: false
       - key: JwtSettings__Issuer
-        value: LifeBalance.AuthService
+        value: LifeBalance
       - key: JwtSettings__Audience
-        value: LifeBalance.Clients
+        value: LifeBalance
       - key: Microservices__AuthProfileUrl
         value: https://lifebalance-auth-service.onrender.com
       - key: Microservices__DashboardUrl

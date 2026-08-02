@@ -21,4 +21,10 @@ RUN dotnet publish "LifeBalance.Notifications.Presentation.csproj" -c Release -o
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Security: run as non-root user
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN chown -R appuser:appgroup /app
+USER appuser
+
 ENTRYPOINT ["dotnet", "LifeBalance.Notifications.Presentation.dll"]

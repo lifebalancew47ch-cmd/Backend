@@ -14,12 +14,20 @@ public static class RateLimitingConfiguration
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            options.AddFixedWindowLimiter("fixed", limiterOptions =>
+            options.AddPolicy("fixed", context =>
             {
-                limiterOptions.Window = TimeSpan.FromMinutes(1);
-                limiterOptions.PermitLimit = 100;
-                limiterOptions.QueueLimit = 0;
-                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                var partitionKey = context.Connection.RemoteIpAddress?.ToString()
+                    ?? context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                    ?? "unknown";
+
+                return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
+                    new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 100,
+                        QueueLimit = 0,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                    });
             });
         });
 

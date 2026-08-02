@@ -1,17 +1,17 @@
-# LifeBalance - Organization & SaaS Service Microservice
+# LifeBalance - Microservicio de Organización y Servicio SaaS
 
 ![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2B%20DDD%20%2B%20CQRS-blue)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
 ![License](https://img.shields.io/badge/Security-OWASP%20Compliant-red)
 
-The **Organization & SaaS Service** is the enterprise core microservice of the **LifeBalance** platform. It manages multi-tenant organizational structures (Companies, Families, Departments, Teams), SaaS subscriptions, plan tier limits, licenses, memberships, invitations, and compliance auditing.
+El **Microservicio de Organización y Servicio SaaS** es el núcleo empresarial de la plataforma **LifeBalance**. Gestiona estructuras organizativas multi-inquilino (multi-tenant) como Empresas, Familias, Departamentos y Equipos, así como suscripciones SaaS, límites de planes, licencias, membresías, invitaciones y auditoría de cumplimiento.
 
 ---
 
-## 🏛 Architecture & Design Patterns
+## 🏛 Arquitectura y Patrones de Diseño
 
-The microservice strictly enforces **Clean Architecture**, **Domain-Driven Design (DDD)**, and **CQRS (Command Query Responsibility Segregation)**:
+El microservicio impone estrictamente **Clean Architecture**, **Domain-Driven Design (DDD)**, y **CQRS (Command Query Responsibility Segregation)**:
 
 ```mermaid
 graph TD
@@ -26,77 +26,77 @@ graph TD
     end
     
     subgraph Infrastructure Layer
-        INFRA --> MONGO[(MongoDB Database)]
-        INFRA --> REDIS[(Redis Cache)]
-        INFRA --> EXT[External Microservices via HttpClientFactory + Polly]
+        INFRA --> MONGO[(Base de Datos MongoDB)]
+        INFRA --> REDIS[(Caché Redis)]
+        INFRA --> EXT[Microservicios Externos vía HttpClientFactory + Polly]
     end
 ```
 
-### Layer Breakdown
-- `LifeBalance.OrganizationSaaS.Domain`: Aggregate Roots, Entities (`Organization`, `Family`, `Department`, `Team`, `License`, `Subscription`, `Invitation`, `AuditLog`), Value Objects, Domain Enums, Domain Exceptions, and Repository Interfaces. Zero framework dependencies.
-- `LifeBalance.OrganizationSaaS.Application`: CQRS Handlers (MediatR), DTOs, FluentValidation rules, Pipeline Behaviors (Logging, MultiTenant Validation, Request Validation), and Microservice Interfaces.
-- `LifeBalance.OrganizationSaaS.Infrastructure`: MongoDB Context and generic `MongoRepository<T>` with automatic Tenant filter injection, Typed HTTP Clients with **Polly** resilience policies (Retry, Circuit Breaker), Distributed Caching, and Tenant Accessor.
-- `LifeBalance.OrganizationSaaS.Api`: RESTful API Controllers v1, Security Headers Middleware, Correlation ID Middleware, Rate Limiting, Exception Handling (ProblemDetails RFC 7807), and Swagger/OpenAPI.
+### Desglose de Capas
+- `LifeBalance.OrganizationSaaS.Domain`: Aggregate Roots, Entidades (`Organization`, `Family`, `Department`, `Team`, `License`, `Subscription`, `Invitation`, `AuditLog`), Value Objects, Enums de Dominio, Excepciones de Dominio e Interfaces de Repositorio. Cero dependencias del framework.
+- `LifeBalance.OrganizationSaaS.Application`: Manejadores CQRS (MediatR), DTOs, Reglas de FluentValidation, Comportamientos de Pipeline (Logging, Validación Multi-Tenant, Validación de Request) e Interfaces de Microservicios.
+- `LifeBalance.OrganizationSaaS.Infrastructure`: Contexto MongoDB y `MongoRepository<T>` genérico con inyección automática de filtro de Tenant, Clientes HTTP tipados con políticas de resiliencia **Polly** (Retry, Circuit Breaker), Caché Distribuido y Tenant Accessor.
+- `LifeBalance.OrganizationSaaS.Api`: Controladores de API RESTful v1, Middleware de Cabeceras de Seguridad, Middleware de Correlation ID, Rate Limiting, Manejo de Excepciones (ProblemDetails RFC 7807) y Swagger/OpenAPI.
 
 ---
 
-## 🏢 Multi-Tenant Model & Security
+## 🏢 Modelo Multi-Tenant y Seguridad
 
-Isolation is enforced at the persistence layer using a mandatory `TenantId` attribute. Every database operation automatically appends the current `TenantId` to query filters, preventing cross-tenant data leakage (IDOR / Broken Access Control protection).
+El aislamiento se impone en la capa de persistencia utilizando un atributo obligatorio `TenantId`. Toda operación de base de datos añade automáticamente el `TenantId` actual a los filtros de consulta, previniendo la fuga de datos entre inquilinos (protección IDOR / Control de Acceso Roto).
 
-### Context Resolution Sequence:
-1. `X-Tenant-Id` header (HTTP Request).
-2. JWT `tenant_id` claim.
-3. Strict validation: If an authenticated user attempts to request data outside their assigned `TenantId`, a `403 Forbidden` response is returned.
+### Secuencia de Resolución de Contexto:
+1. Cabecera `X-Tenant-Id` (Petición HTTP).
+2. Claim `tenant_id` del JWT.
+3. Validación estricta: Si un usuario autenticado intenta solicitar datos fuera del `TenantId` asignado, se devuelve una respuesta `403 Forbidden`.
 
 ---
 
-## 💎 SaaS Plans Matrix
+## 💎 Matriz de Planes SaaS
 
-| Feature / Limit | Free | Personal | Family | Business | Enterprise |
+| Característica / Límite | Free | Personal | Family | Business | Enterprise |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Max Users** | 5 | 1 | 6 | 250 | 10,000+ |
-| **Max Families** | 1 | 0 | 1 | 0 | 500 |
-| **Max Companies** | 1 | 0 | 0 | 1 | 50 |
-| **Max Departments** | 2 | 0 | 0 | 20 | 200 |
-| **Max Teams** | 2 | 0 | 0 | 50 | 1,000 |
-| **Data Retention** | 30 days | 90 days | 180 days | 365 days | Custom |
-| **Dashboards & Reports** | Basic | Basic | Family | Full | Custom |
-| **AI Insights & Gamification** | ❌ | ❌ | ✅ | ✅ | ✅ |
-| **API Access** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Max Usuarios** | 5 | 1 | 6 | 250 | 10,000+ |
+| **Max Familias** | 1 | 0 | 1 | 0 | 500 |
+| **Max Empresas** | 1 | 0 | 0 | 1 | 50 |
+| **Max Departamentos** | 2 | 0 | 0 | 20 | 200 |
+| **Max Equipos** | 2 | 0 | 0 | 50 | 1,000 |
+| **Retención de Datos** | 30 días | 90 días | 180 días | 365 días | Personalizado |
+| **Dashboards y Reportes** | Básico | Básico | Familia | Completo | Personalizado |
+| **AI Insights y Gamificación** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Acceso API** | ❌ | ❌ | ❌ | ✅ | ✅ |
 
 ---
 
-## 🔄 Microservices Communication Matrix
+## 🔄 Matriz de Comunicación de Microservicios
 
-The **Organization & SaaS Service** communicates with sibling microservices via resilient HTTP Clients (`HttpClientFactory` + Polly):
+El **Microservicio de Organización y SaaS** se comunica con otros microservicios de la plataforma a través de Clientes HTTP resilientes (`HttpClientFactory` + Polly):
 
-| Target Microservice | Direction | Purpose / Responsibility |
+| Microservicio Destino | Dirección | Propósito / Responsabilidad |
 | :--- | :---: | :--- |
-| **Auth & Profile Service** | Outbound | User validation, user profile lookup, updating user organization reference. |
-| **Dashboard Service** | Outbound | Streaming organizational KPIs and aggregated non-biometric metrics. |
-| **Reporting Service** | Outbound | Dispatching company, department, subscription, and license catalog data for reports. |
-| **Notification Service** | Outbound | Sending invitation links, license expiration alerts, and membership change emails. |
-| **Gamification Service** | Outbound | Fetching organizational challenges and family rankings. |
-| **ML Prediction Service** | Outbound | Pushing anonymized structural data for machine learning model predictions. |
-| **Administration Service** | Outbound | Consulting global parameters and system catalogs. |
+| **Auth & Profile Service** | Salida | Validación de usuario, búsqueda de perfil, actualización de la referencia de organización del usuario. |
+| **Dashboard Service** | Salida | Envío de KPIs organizacionales y métricas agregadas no biométricas. |
+| **Reporting Service** | Salida | Envío de datos de catálogos de empresas, departamentos, suscripciones y licencias para reportes. |
+| **Notification Service** | Salida | Envío de enlaces de invitación, alertas de caducidad de licencias y correos de cambio de membresía. |
+| **Gamification Service** | Salida | Consulta de desafíos organizacionales y clasificaciones de familias. |
+| **ML Prediction Service** | Salida | Envío de datos estructurales anonimizados para predicciones de modelos de Machine Learning. |
+| **Administration Service** | Salida | Consulta de parámetros globales y catálogos del sistema. |
 
 ---
 
-## 🚀 REST API Endpoints Reference
+## 🚀 Referencia de Endpoints API REST
 
-### 1. Companies (`/api/v1/organizations`)
-- `POST /api/v1/organizations`: Register new company.
-- `GET /api/v1/organizations`: List companies (Paginated & Filtered).
-- `GET /api/v1/organizations/{id}`: Get company details.
-- `PUT /api/v1/organizations/{id}`: Update company information.
-- `DELETE /api/v1/organizations/{id}`: Soft delete / suspend company.
-- `PATCH /api/v1/organizations/{id}/activate`: Activate company.
-- `PATCH /api/v1/organizations/{id}/suspend`: Suspend company.
-- `PATCH /api/v1/organizations/{id}/restore`: Restore company.
-- `GET /api/v1/organizations/{id}/statistics`: Get company metrics.
+### 1. Empresas (`/api/v1/organizations`)
+- `POST /api/v1/organizations`: Registrar nueva empresa.
+- `GET /api/v1/organizations`: Listar empresas (Paginado y Filtrado).
+- `GET /api/v1/organizations/{id}`: Obtener detalles de la empresa.
+- `PUT /api/v1/organizations/{id}`: Actualizar información de la empresa.
+- `DELETE /api/v1/organizations/{id}`: Eliminación lógica / suspender empresa.
+- `PATCH /api/v1/organizations/{id}/activate`: Activar empresa.
+- `PATCH /api/v1/organizations/{id}/suspend`: Suspender empresa.
+- `PATCH /api/v1/organizations/{id}/restore`: Restaurar empresa.
+- `GET /api/v1/organizations/{id}/statistics`: Obtener métricas de la empresa.
 
-#### Request Example: `POST /api/v1/organizations`
+#### Ejemplo de Petición: `POST /api/v1/organizations`
 ```json
 {
   "name": "Acme Global Industries",
@@ -117,7 +117,7 @@ The **Organization & SaaS Service** communicates with sibling microservices via 
 }
 ```
 
-#### Response Example: `201 Created`
+#### Ejemplo de Respuesta: `201 Created`
 ```json
 {
   "success": true,
@@ -150,58 +150,58 @@ The **Organization & SaaS Service** communicates with sibling microservices via 
 }
 ```
 
-### 2. Families (`/api/v1/families`)
-- `POST /api/v1/families`: Create family.
-- `GET /api/v1/families`: List families.
-- `GET /api/v1/families/{id}`: Get family by ID.
-- `PUT /api/v1/families/{id}`: Update family.
-- `DELETE /api/v1/families/{id}`: Dissolve family.
-- `POST /api/v1/families/{id}/members`: Add family member.
-- `DELETE /api/v1/families/{id}/members/{userId}`: Remove family member.
-- `PATCH /api/v1/families/{id}/administrator`: Transfer family admin.
+### 2. Familias (`/api/v1/families`)
+- `POST /api/v1/families`: Crear familia.
+- `GET /api/v1/families`: Listar familias.
+- `GET /api/v1/families/{id}`: Obtener familia por ID.
+- `PUT /api/v1/families/{id}`: Actualizar familia.
+- `DELETE /api/v1/families/{id}`: Disolver familia.
+- `POST /api/v1/families/{id}/members`: Añadir miembro a la familia.
+- `DELETE /api/v1/families/{id}/members/{userId}`: Eliminar miembro de la familia.
+- `PATCH /api/v1/families/{id}/administrator`: Transferir administrador de la familia.
 
-### 3. Departments & Teams
+### 3. Departamentos y Equipos
 - `POST /api/v1/departments` | `GET /api/v1/departments` | `PUT /api/v1/departments/{id}` | `DELETE /api/v1/departments/{id}`
 - `POST /api/v1/teams` | `GET /api/v1/teams` | `PUT /api/v1/teams/{id}` | `DELETE /api/v1/teams/{id}`
 
-### 4. Licenses, Subscriptions & Invitations
+### 4. Licencias, Suscripciones e Invitaciones
 - `POST /api/v1/licenses` | `POST /api/v1/licenses/{id}/assign` | `POST /api/v1/licenses/{id}/renew`
 - `POST /api/v1/subscriptions` | `PATCH /api/v1/subscriptions/{id}/renew` | `PATCH /api/v1/subscriptions/{id}/change-plan`
 - `POST /api/v1/invitations` | `POST /api/v1/invitations/{token}/accept` | `POST /api/v1/invitations/{token}/reject`
 
 ---
 
-## 🛡 OWASP Security Implementations
+## 🛡 Implementaciones de Seguridad OWASP
 
-1. **NoSQL Injection**: Prevented via strongly-typed `BsonElement` mapping and LINQ expressions in `MongoRepository<T>`.
-2. **Broken Access Control & IDOR**: Strictly validated by `TenantContextAccessor` ensuring resource access stays within the request's `TenantId`.
-3. **Mass Assignment**: Isolated domain entities from HTTP requests using strict Command DTOs.
+1. **NoSQL Injection**: Prevenido a través del mapeo fuertemente tipado `BsonElement` y expresiones LINQ en `MongoRepository<T>`.
+2. **Broken Access Control & IDOR**: Estrictamente validado por `TenantContextAccessor` asegurando que el acceso a los recursos se mantenga dentro del `TenantId` de la petición.
+3. **Mass Assignment**: Entidades de dominio aisladas de las peticiones HTTP utilizando DTOs de Comandos estrictos.
 4. **Security Headers**:
    - `X-Content-Type-Options: nosniff`
    - `X-Frame-Options: DENY`
    - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
    - `Content-Security-Policy: default-src 'self';`
-5. **Rate Limiting**: Configured 100 requests / minute per `X-Tenant-Id` / IP fixed window limiter.
-6. **Correlation ID**: Middleware propagates `X-Correlation-Id` across requests for distributed tracing.
+5. **Rate Limiting**: Configurado a 100 peticiones / minuto por ventana fija usando `X-Tenant-Id` / IP.
+6. **Correlation ID**: Middleware que propaga `X-Correlation-Id` a través de peticiones para rastreo distribuido.
 
 ---
 
-## ⚡ Performance & Resiliency
+## ⚡ Rendimiento y Resiliencia
 
-- **Polly Resilience**: HTTP clients wrap outbound requests with **Exponential Backoff Retry** (3 attempts) and **Circuit Breaker** (5 consecutive errors -> 30s pause).
-- **Response Compression**: Gzip and Brotli compression enabled for API JSON outputs.
-- **Distributed Cache**: IMemoryCache / Redis integration for SaaS Plan metadata and Tenant configuration.
+- **Resiliencia con Polly**: Los clientes HTTP envuelven las peticiones salientes con **Exponential Backoff Retry** (3 intentos) y **Circuit Breaker** (5 errores consecutivos -> pausa de 30s).
+- **Compresión de Respuesta**: Compresión Gzip y Brotli habilitada para salidas JSON de la API.
+- **Caché Distribuida**: Integración IMemoryCache / Redis para los metadatos de los Planes SaaS y la configuración del Tenant.
 
 ---
 
-## 🐳 Docker & Deployment
+## 🐳 Docker y Despliegue
 
-### Run with Docker Compose
+### Ejecutar con Docker Compose
 ```bash
 docker-compose -f docker/docker-compose.yml up -d --build
 ```
 
-### Environment Variables (.env)
+### Variables de Entorno (.env)
 ```env
 ASPNETCORE_ENVIRONMENT=Production
 ConnectionStrings__MongoDB=mongodb://mongo-db:27017
@@ -215,7 +215,7 @@ Microservices__NotificationUrl=http://notification-service:5004
 
 ## 🧪 Testing
 
-Execute automated unit tests:
+Ejecutar las pruebas unitarias automatizadas:
 ```bash
 dotnet test tests/LifeBalance.OrganizationSaaS.UnitTests/LifeBalance.OrganizationSaaS.UnitTests.csproj
 ```

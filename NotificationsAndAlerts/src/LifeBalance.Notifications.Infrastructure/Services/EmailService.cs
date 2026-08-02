@@ -6,6 +6,7 @@ using LifeBalance.Notifications.Domain.Entities;
 using LifeBalance.Notifications.Domain.Enums;
 using LifeBalance.Notifications.Infrastructure.Configuration;
 using LifeBalance.Notifications.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -13,13 +14,17 @@ namespace LifeBalance.Notifications.Infrastructure.Services;
 
 public class EmailService : IEmailService
 {
+    private const string DeliveryFailedMessage = "Delivery failed";
+
     private readonly MongoDbContext _db;
     private readonly SmtpSettings _smtp;
+    private readonly ILogger<EmailService> _logger;
 
-    public EmailService(MongoDbContext db, IOptions<SmtpSettings> smtp)
+    public EmailService(MongoDbContext db, IOptions<SmtpSettings> smtp, ILogger<EmailService> logger)
     {
         _db = db;
         _smtp = smtp.Value;
+        _logger = logger;
     }
 
     public async Task<NotificationResponseDto> SendAsync(SendEmailDto dto)
@@ -46,7 +51,7 @@ public class EmailService : IEmailService
 
         try
         {
-            await SendSmtpAsync(dto.To, dto.Subject, body);
+            await SendSmtpAsync(dto.To, dto.Subject, body, dto.IsHtml);
             notification.Status = NotificationStatus.Sent;
             notification.SentAt = DateTime.UtcNow;
             notification.Attempts = 1;
@@ -55,11 +60,12 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "SMTP delivery failed for {To}", dto.To);
             notification.Status = NotificationStatus.Failed;
-            notification.ErrorMessage = ex.Message;
+            notification.ErrorMessage = DeliveryFailedMessage;
             notification.Attempts = 1;
             await _db.Notifications.ReplaceOneAsync(n => n.Id == notification.Id, notification);
-            await _db.DeliveryLogs.InsertOneAsync(new DeliveryLog { NotificationId = notification.Id, UserId = dto.To, Channel = NotificationChannel.Email, Status = NotificationStatus.Failed, Attempts = 1, Provider = "Smtp", ErrorMessage = ex.Message });
+            await _db.DeliveryLogs.InsertOneAsync(new DeliveryLog { NotificationId = notification.Id, UserId = dto.To, Channel = NotificationChannel.Email, Status = NotificationStatus.Failed, Attempts = 1, Provider = "Smtp", ErrorMessage = DeliveryFailedMessage });
 
             throw;
         }
@@ -86,8 +92,9 @@ public class EmailService : IEmailService
 
         try
         {
+            var isHtml = !string.IsNullOrEmpty(template.HtmlContent);
             foreach (var r in dto.To)
-                await SendSmtpAsync(r, template.Subject, body);
+                await SendSmtpAsync(r, template.Subject, body, isHtml);
 
             notification.Status = NotificationStatus.Sent;
             notification.SentAt = DateTime.UtcNow;
@@ -98,8 +105,9 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "SMTP template delivery failed for {TemplateId}", dto.TemplateId);
             notification.Status = NotificationStatus.Failed;
-            notification.ErrorMessage = ex.Message;
+            notification.ErrorMessage = DeliveryFailedMessage;
             await _db.Notifications.ReplaceOneAsync(n => n.Id == notification.Id, notification);
             throw;
         }
@@ -124,7 +132,7 @@ public class EmailService : IEmailService
 
             try
             {
-                await SendSmtpAsync(r, dto.Subject, dto.Body);
+                await SendSmtpAsync(r, dto.Subject, dto.Body, dto.IsHtml);
                 n.Status = NotificationStatus.Sent;
                 n.SentAt = DateTime.UtcNow;
                 n.Attempts = 1;
@@ -133,24 +141,25 @@ public class EmailService : IEmailService
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "SMTP bulk delivery failed for {Recipient}", r);
                 n.Status = NotificationStatus.Failed;
-                n.ErrorMessage = ex.Message;
+                n.ErrorMessage = DeliveryFailedMessage;
                 n.Attempts = 1;
                 await _db.Notifications.ReplaceOneAsync(x => x.Id == n.Id, n);
-                await _db.DeliveryLogs.InsertOneAsync(new DeliveryLog { NotificationId = n.Id, UserId = r, Channel = NotificationChannel.Email, Status = NotificationStatus.Failed, Attempts = 1, Provider = "Smtp", ErrorMessage = ex.Message });
-                errors.Add($"{r}: {ex.Message}");
+                await _db.DeliveryLogs.InsertOneAsync(new DeliveryLog { NotificationId = n.Id, UserId = r, Channel = NotificationChannel.Email, Status = NotificationStatus.Failed, Attempts = 1, Provider = "Smtp", ErrorMessage = DeliveryFailedMessage });
+                errors.Add(r);
             }
 
             results.Add(Map(n));
         }
 
         if (errors.Count > 0)
-            throw new InvalidOperationException($"SMTP errors: {string.Join("; ", errors)}");
+            throw new InvalidOperationException("SMTP delivery failed");
 
         return results;
     }
 
-    private async Task SendSmtpAsync(string to, string subject, string body)
+    private async Task SendSmtpAsync(string to, string subject, string body, bool isHtml)
     {
         using var client = new SmtpClient(_smtp.Host, _smtp.Port)
         {
@@ -163,7 +172,7 @@ public class EmailService : IEmailService
             From = new MailAddress(_smtp.FromEmail, _smtp.FromName),
             Subject = subject,
             Body = body,
-            IsBodyHtml = true
+            IsBodyHtml = isHtml
         };
         message.To.Add(to);
 

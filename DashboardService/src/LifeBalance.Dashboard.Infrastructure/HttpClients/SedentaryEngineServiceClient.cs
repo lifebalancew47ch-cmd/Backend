@@ -24,7 +24,7 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve sedentary activity for UserId: {UserId}", userId);
-            return new SedentaryActivityResponseDto(userId, 8500, 45, 6.5, 420, Enumerable.Repeat(2, 24).ToList());
+            return null;
         }
     }
 
@@ -37,7 +37,7 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve company adherence for CompanyId: {CompanyId}", companyId);
-            return new CompanyAdherenceResponseDto(companyId, 84.5, 120, 102, new List<string> { "Customer Care" });
+            return null;
         }
     }
 }

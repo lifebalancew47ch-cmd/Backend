@@ -15,23 +15,17 @@ public class NotificationServiceClient : INotificationServiceClient
         _logger = logger;
     }
 
-    public async Task<List<NotificationItemDto>> GetUserNotificationsAsync(string userId, int limit = 10, CancellationToken cancellationToken = default)
+    public async Task<List<NotificationItemDto>?> GetUserNotificationsAsync(string userId, int limit = 10, CancellationToken cancellationToken = default)
     {
+        var clampedLimit = Math.Clamp(limit, 1, 100);
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<List<NotificationItemDto>>($"/api/v1/notifications/user/{userId}?limit={limit}", cancellationToken);
-            return res ?? GetFallbackNotifications();
+            return await _httpClient.GetFromJsonAsync<List<NotificationItemDto>>($"/api/v1/notifications/user/{userId}?limit={clampedLimit}", cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve notifications for UserId: {UserId}", userId);
-            return GetFallbackNotifications();
+            return null;
         }
     }
-
-    private static List<NotificationItemDto> GetFallbackNotifications() => new()
-    {
-        new NotificationItemDto("notif_1", "Sedentary Alert", "Time to stand up and stretch!", "Warning", DateTime.UtcNow.AddMinutes(-30), false),
-        new NotificationItemDto("notif_2", "Goal Achieved", "You completed your daily step goal!", "Info", DateTime.UtcNow.AddHours(-2), true)
-    };
 }

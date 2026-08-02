@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Domain.Enums;
 using LifeBalance.Notifications.Presentation.Controllers;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -31,6 +34,22 @@ public class NotificationsControllerTests
             _preferenceService.Object,
             _scheduleService.Object,
             _templateService.Object);
+        SetUser(_controller, "user-1");
+        _notificationService.Setup(s => s.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(BuildResponse());
+    }
+
+    private static void SetUser(ControllerBase controller, string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
+
+    private static void SetNoUser(ControllerBase controller)
+    {
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static NotificationResponseDto BuildResponse(string id = "notif-1") => new()
@@ -241,7 +260,8 @@ public class NotificationsControllerTests
         var results = new List<NotificationResponseDto> { BuildResponse() };
         _notificationService.Setup(s => s.GetAllAsync("u1", "o1", "f1", "d1")).ReturnsAsync(results);
 
-        var result = await _controller.GetAll("u1", "o1", "f1", "d1");
+        SetUser(_controller, "u1");
+        var result = await _controller.GetAll("o1", "f1", "d1");
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -253,7 +273,8 @@ public class NotificationsControllerTests
         _notificationService.Setup(s => s.GetAllAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(results);
 
-        var ok = (OkObjectResult)await _controller.GetAll("u1", "o1", "f1", "d1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetAll("o1", "f1", "d1");
 
         var wrapper = ok.Value.Should().BeOfType<Response<List<NotificationResponseDto>>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -266,19 +287,22 @@ public class NotificationsControllerTests
         _notificationService.Setup(s => s.GetAllAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(new List<NotificationResponseDto>());
 
-        await _controller.GetAll("u1", "o1", "f1", "d1");
+        SetUser(_controller, "u1");
+        await _controller.GetAll("o1", "f1", "d1");
 
         _notificationService.Verify(s => s.GetAllAsync("u1", "o1", "f1", "d1"), Times.Once);
     }
 
     [Fact]
-    public async Task GetAll_WithoutFilters_CallsServiceWithNullArguments()
+    public async Task GetAll_WithoutFilters_CallsServiceWithClaimUserId()
     {
-        _notificationService.Setup(s => s.GetAllAsync(null, null, null, null)).ReturnsAsync(new List<NotificationResponseDto>());
+        _notificationService.Setup(s => s.GetAllAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .ReturnsAsync(new List<NotificationResponseDto>());
 
-        await _controller.GetAll(null, null, null, null);
+        SetUser(_controller, "u1");
+        await _controller.GetAll(null, null, null);
 
-        _notificationService.Verify(s => s.GetAllAsync(null, null, null, null), Times.Once);
+        _notificationService.Verify(s => s.GetAllAsync("u1", null, null, null), Times.Once);
     }
 
     [Fact]
@@ -287,9 +311,19 @@ public class NotificationsControllerTests
         _notificationService.Setup(s => s.GetAllAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(new List<NotificationResponseDto>());
 
-        var ok = (OkObjectResult)await _controller.GetAll(null, null, null, null);
+        var ok = (OkObjectResult)await _controller.GetAll(null, null, null);
 
         ok.StatusCode.Should().Be(200);
+    }
+
+    [Fact]
+    public async Task GetAll_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.GetAll(null, null, null);
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
     }
 
     [Fact]
@@ -519,7 +553,8 @@ public class NotificationsControllerTests
     {
         _notificationService.Setup(s => s.MarkAllAsReadAsync("u1")).ReturnsAsync(true);
 
-        var result = await _controller.MarkAllAsRead("u1");
+        SetUser(_controller, "u1");
+        var result = await _controller.MarkAllAsRead();
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -529,7 +564,8 @@ public class NotificationsControllerTests
     {
         _notificationService.Setup(s => s.MarkAllAsReadAsync("u1")).ReturnsAsync(true);
 
-        var ok = (OkObjectResult)await _controller.MarkAllAsRead("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.MarkAllAsRead();
 
         var wrapper = ok.Value.Should().BeOfType<Response<string>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -538,11 +574,12 @@ public class NotificationsControllerTests
     }
 
     [Fact]
-    public async Task MarkAllAsRead_CallsServiceWithUserId()
+    public async Task MarkAllAsRead_CallsServiceWithClaimUserId()
     {
         _notificationService.Setup(s => s.MarkAllAsReadAsync(It.IsAny<string>())).ReturnsAsync(true);
 
-        await _controller.MarkAllAsRead("user-42");
+        SetUser(_controller, "user-42");
+        await _controller.MarkAllAsRead();
 
         _notificationService.Verify(s => s.MarkAllAsReadAsync("user-42"), Times.Once);
     }
@@ -552,7 +589,8 @@ public class NotificationsControllerTests
     {
         _notificationService.Setup(s => s.MarkAllAsReadAsync("u1")).ReturnsAsync(false);
 
-        var ok = (OkObjectResult)await _controller.MarkAllAsRead("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.MarkAllAsRead();
 
         var wrapper = ok.Value.Should().BeOfType<Response<string>>().Subject;
         wrapper.Success.Should().BeTrue();
@@ -564,7 +602,8 @@ public class NotificationsControllerTests
     {
         _notificationService.Setup(s => s.MarkAllAsReadAsync("u1")).ReturnsAsync(true);
 
-        var ok = (OkObjectResult)await _controller.MarkAllAsRead("u1");
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.MarkAllAsRead();
 
         ok.StatusCode.Should().Be(200);
     }
@@ -684,7 +723,8 @@ public class NotificationsControllerTests
     {
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        var result = await _controller.GetUserNotifications("u1", 10);
+        SetUser(_controller, "u1");
+        var result = await _controller.GetUserNotifications(10);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeOfType<List<NotificationItemDto>>();
@@ -708,7 +748,8 @@ public class NotificationsControllerTests
         };
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(history);
 
-        var ok = (OkObjectResult)await _controller.GetUserNotifications("u1", 10);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetUserNotifications(10);
 
         var items = ok.Value.Should().BeOfType<List<NotificationItemDto>>().Subject;
         items.Should().ContainSingle();
@@ -716,11 +757,12 @@ public class NotificationsControllerTests
     }
 
     [Fact]
-    public async Task GetUserNotifications_CallsHistoryServiceWithUserId()
+    public async Task GetUserNotifications_CallsHistoryServiceWithClaimUserId()
     {
         _historyService.Setup(s => s.GetByUserAsync(It.IsAny<string>())).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        await _controller.GetUserNotifications("user-42", 10);
+        SetUser(_controller, "user-42");
+        await _controller.GetUserNotifications(10);
 
         _historyService.Verify(s => s.GetByUserAsync("user-42"), Times.Once);
     }
@@ -733,7 +775,8 @@ public class NotificationsControllerTests
             .ToList();
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(history);
 
-        var ok = (OkObjectResult)await _controller.GetUserNotifications("u1", 10);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetUserNotifications(10);
 
         var items = ok.Value.Should().BeOfType<List<NotificationItemDto>>().Subject;
         items.Should().HaveCount(10);
@@ -745,9 +788,32 @@ public class NotificationsControllerTests
     {
         _historyService.Setup(s => s.GetByUserAsync("u1")).ReturnsAsync(new List<NotificationHistoryDto>());
 
-        var ok = (OkObjectResult)await _controller.GetUserNotifications("u1", 10);
+        SetUser(_controller, "u1");
+        var ok = (OkObjectResult)await _controller.GetUserNotifications(10);
 
         var items = ok.Value.Should().BeOfType<List<NotificationItemDto>>().Subject;
         items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserNotifications_WithoutUserIdClaim_ThrowsApiException()
+    {
+        SetNoUser(_controller);
+
+        var act = () => _controller.GetUserNotifications(10);
+
+        await act.Should().ThrowAsync<ApiException>().Where(e => e.StatusCode == 401);
+    }
+
+    [Fact]
+    public async Task GetById_WhenNotificationBelongsToAnotherUser_ReturnsForbidResult()
+    {
+        var response = BuildResponse("notif-1");
+        response.UserId = "another-user";
+        _notificationService.Setup(s => s.GetByIdAsync("notif-1")).ReturnsAsync(response);
+
+        var result = await _controller.GetById("notif-1");
+
+        result.Should().BeOfType<ForbidResult>();
     }
 }

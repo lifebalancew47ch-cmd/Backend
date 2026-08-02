@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using LifeBalance.Notifications.Shared.Exceptions;
 using LifeBalance.Notifications.Shared.Wrappers;
 
 namespace LifeBalance.Notifications.Presentation.Middlewares;
@@ -21,12 +22,19 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (ApiException ex)
+        {
+            _logger.LogWarning(ex, "Api exception");
+            context.Response.StatusCode = ex.StatusCode;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(Response<string>.Fail(ex.Message)));
+        }
         catch (KeyNotFoundException ex)
         {
             _logger.LogWarning(ex, "Resource not found");
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(Response<string>.Fail(ex.Message)));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(Response<string>.Fail("Resource not found.")));
         }
         catch (Exception ex)
         {

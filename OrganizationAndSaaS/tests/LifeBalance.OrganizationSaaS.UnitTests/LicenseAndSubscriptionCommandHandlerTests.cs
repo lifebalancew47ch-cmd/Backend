@@ -7,6 +7,7 @@ using LifeBalance.OrganizationSaaS.Domain.Entities;
 using LifeBalance.OrganizationSaaS.Domain.Enums;
 using LifeBalance.OrganizationSaaS.Domain.Exceptions;
 using LifeBalance.OrganizationSaaS.Domain.Interfaces;
+using LifeBalance.OrganizationSaaS.Domain.ValueObjects;
 using License = LifeBalance.OrganizationSaaS.Domain.Entities.License;
 using Xunit;
 
@@ -17,6 +18,8 @@ public class LicenseAndSubscriptionCommandHandlerTests
     private readonly Mock<IRepository<License>> _mockLicenseRepo;
     private readonly Mock<IRepository<Subscription>> _mockSubscriptionRepo;
     private readonly Mock<IRepository<Invitation>> _mockInvitationRepo;
+    private readonly Mock<IRepository<Organization>> _mockOrgRepo;
+    private readonly Mock<IRepository<SaaSPlan>> _mockPlanRepo;
     private readonly Mock<ITenantContext> _mockTenantContext;
     private readonly Mock<INotificationServiceClient> _mockNotificationClient;
     private readonly LicenseAndSubscriptionCommandHandler _handler;
@@ -26,17 +29,28 @@ public class LicenseAndSubscriptionCommandHandlerTests
         _mockLicenseRepo = new Mock<IRepository<License>>();
         _mockSubscriptionRepo = new Mock<IRepository<Subscription>>();
         _mockInvitationRepo = new Mock<IRepository<Invitation>>();
+        _mockOrgRepo = new Mock<IRepository<Organization>>();
+        _mockPlanRepo = new Mock<IRepository<SaaSPlan>>();
         _mockTenantContext = new Mock<ITenantContext>();
         _mockNotificationClient = new Mock<INotificationServiceClient>();
 
         _mockTenantContext.Setup(x => x.TenantId).Returns("TENANT_TEST");
+
+        _mockOrgRepo.Setup(x => x.GetByIdAsync("ORG_1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Organization("Initech Corp", "TAX999", "PLAN_BUSINESS", "TENANT_TEST", new ContactInfo(), new Address()));
+        _mockPlanRepo.Setup(x => x.GetByIdAsync("PLAN_BUSINESS", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SaaSPlan("Business", PlanTier.Business, 49m, 490m, PlanLimits.DefaultFree()));
+        _mockLicenseRepo.Setup(x => x.CountAsync(It.IsAny<Expression<Func<License, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         _handler = new LicenseAndSubscriptionCommandHandler(
             _mockLicenseRepo.Object,
             _mockSubscriptionRepo.Object,
             _mockInvitationRepo.Object,
             _mockTenantContext.Object,
-            _mockNotificationClient.Object);
+            _mockNotificationClient.Object,
+            _mockOrgRepo.Object,
+            _mockPlanRepo.Object);
     }
 
     private static License CreateLicense(string id = "LIC_1", string type = "Standard", string? assignedUser = null)
@@ -117,6 +131,59 @@ public class LicenseAndSubscriptionCommandHandlerTests
         await _handler.Handle(new CreateLicenseCommand("ORG_1", "Pro", DateTime.UtcNow.AddYears(1)), cts.Token);
 
         _mockLicenseRepo.Verify(x => x.AddAsync(It.IsAny<License>(), cts.Token), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CreateLicense_WhenOrganizationNotFound_ShouldThrowResourceNotFoundException()
+    {
+        _mockOrgRepo.Setup(x => x.GetByIdAsync("ORG_1", It.IsAny<CancellationToken>())).ReturnsAsync((Organization?)null);
+
+        var act = async () => await _handler.Handle(new CreateLicenseCommand("ORG_1", "Standard", DateTime.UtcNow.AddYears(1)), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ResourceNotFoundException>().WithMessage("*Organization*ORG_1*");
+        _mockLicenseRepo.Verify(x => x.AddAsync(It.IsAny<License>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CreateLicense_WhenPlanNotFound_ShouldThrowResourceNotFoundException()
+    {
+        _mockPlanRepo.Setup(x => x.GetByIdAsync("PLAN_BUSINESS", It.IsAny<CancellationToken>())).ReturnsAsync((SaaSPlan?)null);
+
+        var act = async () => await _handler.Handle(new CreateLicenseCommand("ORG_1", "Standard", DateTime.UtcNow.AddYears(1)), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ResourceNotFoundException>().WithMessage("*SaaSPlan*PLAN_BUSINESS*");
+        _mockLicenseRepo.Verify(x => x.AddAsync(It.IsAny<License>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CreateLicense_WhenLimitReached_ShouldThrowLimitExceededException()
+    {
+        _mockLicenseRepo.Setup(x => x.CountAsync(It.IsAny<Expression<Func<License, bool>>>(), It.IsAny<CancellationToken>())).ReturnsAsync(5);
+
+        var act = async () => await _handler.Handle(new CreateLicenseCommand("ORG_1", "Standard", DateTime.UtcNow.AddYears(1)), CancellationToken.None);
+
+        await act.Should().ThrowAsync<LimitExceededException>().WithMessage("*5*");
+        _mockLicenseRepo.Verify(x => x.AddAsync(It.IsAny<License>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CreateLicense_WhenBelowLimit_ShouldCountNonRevokedLicensesOnly()
+    {
+        Expression<Func<License, bool>>? capturedPredicate = null;
+        _mockLicenseRepo.Setup(x => x.CountAsync(It.IsAny<Expression<Func<License, bool>>>(), It.IsAny<CancellationToken>()))
+            .Callback<Expression<Func<License, bool>>, CancellationToken>((p, _) => capturedPredicate = p)
+            .ReturnsAsync(4);
+
+        var result = await _handler.Handle(new CreateLicenseCommand("ORG_1", "Standard", DateTime.UtcNow.AddYears(1)), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        var active = new License("ORG_1", "Standard", DateTime.UtcNow.AddYears(1), "TENANT_TEST");
+        var revoked = new License("ORG_1", "Standard", DateTime.UtcNow.AddYears(1), "TENANT_TEST");
+        revoked.Revoke();
+        var other = new License("ORG_2", "Standard", DateTime.UtcNow.AddYears(1), "TENANT_TEST");
+        capturedPredicate!.Compile()(active).Should().BeTrue();
+        capturedPredicate!.Compile()(revoked).Should().BeFalse();
+        capturedPredicate!.Compile()(other).Should().BeFalse();
     }
 
     [Fact]

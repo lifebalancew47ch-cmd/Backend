@@ -4,5 +4,5 @@ public record NotificationItemDto(string Id, string Title, string Message, strin
 
 public interface INotificationServiceClient
 {
-    Task<List<NotificationItemDto>> GetUserNotificationsAsync(string userId, int limit = 10, CancellationToken cancellationToken = default);
+    Task<List<NotificationItemDto>?> GetUserNotificationsAsync(string userId, int limit = 10, CancellationToken cancellationToken = default);
 }

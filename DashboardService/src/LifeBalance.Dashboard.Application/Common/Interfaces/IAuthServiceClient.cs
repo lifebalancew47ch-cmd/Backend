@@ -5,6 +5,6 @@ public record AuthUserResponseDto(string UserId, string Email, string FirstName,
 public interface IAuthServiceClient
 {
     Task<AuthUserResponseDto?> GetUserProfileAsync(string userId, CancellationToken cancellationToken = default);
-    Task<List<AuthUserResponseDto>> GetFamilyMembersProfileAsync(string familyId, CancellationToken cancellationToken = default);
-    Task<List<AuthUserResponseDto>> GetCompanyUsersAsync(string companyId, CancellationToken cancellationToken = default);
+    Task<List<AuthUserResponseDto>?> GetFamilyMembersProfileAsync(string familyId, CancellationToken cancellationToken = default);
+    Task<List<AuthUserResponseDto>?> GetCompanyUsersAsync(string companyId, CancellationToken cancellationToken = default);
 }

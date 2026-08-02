@@ -5,5 +5,5 @@ public record MedicalDataResponseDto(string UserId, double HeartRate, double Sys
 public interface IMedicalDataServiceClient
 {
     Task<MedicalDataResponseDto?> GetUserBiometricsAsync(string userId, CancellationToken cancellationToken = default);
-    Task<List<MedicalDataResponseDto>> GetFamilyBiometricsAsync(string familyId, CancellationToken cancellationToken = default);
+    Task<List<MedicalDataResponseDto>?> GetFamilyBiometricsAsync(string familyId, CancellationToken cancellationToken = default);
 }

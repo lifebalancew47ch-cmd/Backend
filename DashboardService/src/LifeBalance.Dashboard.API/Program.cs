@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 // ============================================================
 // Bootstrap Serilog as early as possible (before Host builds)
@@ -40,7 +41,7 @@ try
     // Application & Infrastructure Services
     // --------------------------------------------------------
     builder.Services.AddApplicationServices();
-    builder.Services.AddInfrastructureServices(builder.Configuration);
+    builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 
     // --------------------------------------------------------
     // Current User
@@ -76,9 +77,12 @@ try
         });
 
     // --------------------------------------------------------
-    // Swagger / OpenAPI
+    // Swagger / OpenAPI (Development only)
     // --------------------------------------------------------
-    builder.Services.AddDashboardSwagger();
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddDashboardSwagger();
+    }
 
     // --------------------------------------------------------
     // Authorization Policies
@@ -115,15 +119,31 @@ try
             tags:  new[] { "ready", "db" });
 
     // --------------------------------------------------------
-    // CORS
+    // CORS — origins from configuration (Cors:AllowedOrigins)
     // --------------------------------------------------------
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("DashboardCorsPolicy", policy =>
         {
-            policy.AllowAnyOrigin()
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            if (allowedOrigins is { Length: > 0 })
+            {
+                policy.WithOrigins(allowedOrigins)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+            else if (builder.Environment.IsDevelopment())
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+            else
+            {
+                policy.WithOrigins(Array.Empty<string>())
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
         });
     });
 
@@ -140,19 +160,27 @@ try
     builder.Services.AddResponseCaching();
 
     // --------------------------------------------------------
-    // Rate Limiting
+    // Rate Limiting — fixed window partitioned per client IP
     // --------------------------------------------------------
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-        options.AddFixedWindowLimiter("fixed", limiterOptions =>
+        options.AddPolicy("fixed", context =>
         {
-            limiterOptions.Window            = TimeSpan.FromMinutes(1);
-            limiterOptions.PermitLimit       = 100;
-            limiterOptions.QueueLimit        = 0;
-            limiterOptions.QueueProcessingOrder =
-                System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+            var partitionKey = context.Connection.RemoteIpAddress?.ToString()
+                ?? context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "unknown";
+
+            return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
+                new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    Window            = TimeSpan.FromMinutes(1),
+                    PermitLimit       = 100,
+                    QueueLimit        = 0,
+                    QueueProcessingOrder =
+                        System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst
+                });
         });
     });
 
@@ -193,8 +221,11 @@ try
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
 
-    // 5. Swagger (all environments for now; restrict in production as needed)
-    app.UseDashboardSwagger();
+    // 5. Swagger (Development only)
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDashboardSwagger();
+    }
 
     // 6. Response compression & caching
     app.UseResponseCompression();

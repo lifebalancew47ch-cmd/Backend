@@ -55,16 +55,15 @@
         </member>
         <member name="M:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.#ctor(System.Int32,System.Int32)">
             <summary>
-            Standard paginated query parameters for list-based API requests.
+            Initializes a new instance of <see cref="T:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest"/> with the page
+            size clamped to the inclusive range [1, 100].
             </summary>
-            <param name="Page">The 1-based page number. Defaults to 1.</param>
-            <param name="PageSize">The number of items per page. Defaults to 20, max 100.</param>
         </member>
         <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.Page">
-            <summary>The 1-based page number. Defaults to 1.</summary>
+            <summary>Gets the 1-based page number.</summary>
         </member>
         <member name="P:LifeBalance.Dashboard.Contracts.Common.PaginatedRequest.PageSize">
-            <summary>The number of items per page. Defaults to 20, max 100.</summary>
+            <summary>Gets the number of items per page (1-100).</summary>
         </member>
         <member name="T:LifeBalance.Dashboard.Contracts.Common.PaginatedResponse`1">
             <summary>

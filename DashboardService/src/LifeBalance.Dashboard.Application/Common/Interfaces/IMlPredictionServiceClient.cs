@@ -5,6 +5,6 @@ public record HealthRiskTrendDto(string UserId, string RiskLevel, double Sedenta
 
 public interface IMlPredictionServiceClient
 {
-    Task<List<RecommendationDto>> GetRecommendationsAsync(string userId, CancellationToken cancellationToken = default);
+    Task<List<RecommendationDto>?> GetRecommendationsAsync(string userId, CancellationToken cancellationToken = default);
     Task<HealthRiskTrendDto?> GetHealthRiskTrendAsync(string userId, CancellationToken cancellationToken = default);
 }

@@ -1,54 +1,58 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 
 namespace LifeBalance.Notifications.Presentation.Configurations;
 
 public static class SwaggerConfiguration
 {
-    public static IServiceCollection AddNotificationsSwagger(this IServiceCollection services)
+    public static IServiceCollection AddNotificationsSwagger(this IServiceCollection services, IHostEnvironment environment)
     {
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options =>
+        if (environment.IsDevelopment())
         {
-            options.SwaggerDoc("v1", new OpenApiInfo
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen(options =>
             {
-                Title = "LifeBalance Notifications & Alerts Service API",
-                Version = "v1",
-                Description = "Microservicio de Notificaciones de LifeBalance. Gestiona el despacho centralizado de correos electrónicos, notificaciones push y alertas del sistema, incluyendo expiración de licencias y recordatorios personalizados.",
-                Contact = new OpenApiContact
+                options.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Name = "Equipo LifeBalance",
-                    Email = "dev@lifebalance.io"
-                }
-            });
-
-            var securityScheme = new OpenApiSecurityScheme
-            {
-                Name = "Authorization",
-                Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
-                BearerFormat = "JWT",
-                In = ParameterLocation.Header,
-                Description = "Ingrese su token JWT Bearer: **Bearer {token}**"
-            };
-
-            options.AddSecurityDefinition("Bearer", securityScheme);
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
+                    Title = "LifeBalance Notifications & Alerts Service API",
+                    Version = "v1",
+                    Description = "Microservicio de Notificaciones de LifeBalance. Gestiona el despacho centralizado de correos electrónicos, notificaciones push y alertas del sistema, incluyendo expiración de licencias y recordatorios personalizados.",
+                    Contact = new OpenApiContact
                     {
-                        Reference = new OpenApiReference
+                        Name = "Equipo LifeBalance",
+                        Email = "dev@lifebalance.io"
+                    }
+                });
+
+                var securityScheme = new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Ingrese su token JWT Bearer: **Bearer {token}**"
+                };
+
+                options.AddSecurityDefinition("Bearer", securityScheme);
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
                         {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
             });
-        });
+        }
 
         return services;
     }
