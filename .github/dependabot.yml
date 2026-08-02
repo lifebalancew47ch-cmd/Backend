@@ -32,6 +32,8 @@ updates:
         versions: [">=10.0.0"]
       - dependency-name: "Asp.Versioning.Mvc.ApiExplorer"
         versions: [">=10.0.0"]
+      - dependency-name: "Serilog.Extensions.Hosting"
+        versions: [">=9.0.0"]
 
   - package-ecosystem: "nuget"
     directory: "/DashboardService"
@@ -62,6 +64,8 @@ updates:
         versions: [">=10.0.0"]
       - dependency-name: "Asp.Versioning.Mvc.ApiExplorer"
         versions: [">=10.0.0"]
+      - dependency-name: "AutoMapper"
+        versions: [">=16.0.0"]
 
   - package-ecosystem: "nuget"
     directory: "/NotificationsAndAlerts"
