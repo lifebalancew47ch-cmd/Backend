@@ -13,8 +13,9 @@
 **/TestResults/
 **/coverage/
 
-# Logs
-logs/
+# Logs (runtime dirs only — NOT source folders like Features/Logs)
+/logs/
+*/logs/
 *.log
 
 # Local env files
