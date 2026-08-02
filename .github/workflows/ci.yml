@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: auth-unit-test-results
           path: Auth_Profile/TestResults/
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-unit-test-results
           path: DashboardService/TestResults/
@@ -147,7 +147,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: notifications-unit-test-results
           path: "NotificationsAndAlerts/TestResults/"
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: organization-saas-unit-test-results
           path: OrganizationAndSaaS/TestResults/
@@ -235,7 +235,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: administration-unit-test-results
           path: AdministrationService/TestResults/
