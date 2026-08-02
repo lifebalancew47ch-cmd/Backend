@@ -78,9 +78,12 @@ try
 
     // --------------------------------------------------------
     // --------------------------------------------------------
-    // Swagger / OpenAPI (Enabled for all environments as requested)
+    // Swagger / OpenAPI (Development only — Rule 7)
     // --------------------------------------------------------
-    builder.Services.AddDashboardSwagger();
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddDashboardSwagger();
+    }
 
     // --------------------------------------------------------
     // Authorization Policies
@@ -219,8 +222,11 @@ try
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
 
-    // 5. Swagger (Enabled for all environments as requested)
-    app.UseDashboardSwagger();
+    // 5. Swagger (Development only — Rule 7)
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDashboardSwagger();
+    }
 
     // 6. Response compression & caching
     app.UseResponseCompression();
