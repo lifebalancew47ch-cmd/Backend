@@ -15,7 +15,7 @@ render.yaml              → Defines los 4 servicios de Render
 .gitignore               → bin/obj ignorados (no subir nunca)
 ```
 
-- Carpetas legado que NO se tocan: `DashboardService/DashboardService/`, `OrganizationAndSaaS/Organization&SaaS/`, soluciones `*.sln` con `&` en el nombre (`Notifications&Alerts.sln`, `Organization&SaaS.sln`).
+- Carpetas legado que NO se tocan: `DashboardService/DashboardService/`, `OrganizationAndSaaS/Organization&SaaS/` y su solución `Organization&SaaS.sln` (referencian proyectos que sí existen; CodeQL solo compila las 4 soluciones oficiales en modo manual). `NotificationsAndAlerts/Notifications&Alerts.sln` fue **eliminada** porque referenciaba un proyecto inexistente y rompía el autobuild de CodeQL.
 - Soluciones oficiales: `Auth_Profile/Auth_Profile.sln`, `DashboardService/LifeBalance.DashboardService.sln`, `NotificationsAndAlerts/LifeBalance.Notifications.sln`, `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`.
 
 ## Reglas globales (NO romper — son remediaciones de seguridad aplicadas)
