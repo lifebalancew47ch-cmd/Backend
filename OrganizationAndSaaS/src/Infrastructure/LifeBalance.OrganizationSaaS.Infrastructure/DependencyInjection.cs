@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Extensions.Http;
 using LifeBalance.OrganizationSaaS.Application.Interfaces;
@@ -14,7 +15,7 @@ namespace LifeBalance.OrganizationSaaS.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         // 1. Mongo DB Setup
         var mongoConn = configuration.GetConnectionString("MongoDB") ?? "mongodb://localhost:27017";
@@ -41,13 +42,13 @@ public static class DependencyInjection
             .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
 
         // 5. External HTTP Clients Registration
-        RegisterHttpClient<IAuthProfileServiceClient, AuthProfileServiceClient>(services, configuration["Microservices:AuthProfileUrl"] ?? "http://localhost:5001", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<IDashboardServiceClient, DashboardServiceClient>(services, configuration["Microservices:DashboardUrl"] ?? "http://localhost:5002", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<IReportingServiceClient, ReportingServiceClient>(services, configuration["Microservices:ReportingUrl"] ?? "http://localhost:5003", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<INotificationServiceClient, NotificationServiceClient>(services, configuration["Microservices:NotificationUrl"] ?? "http://localhost:5004", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<IGamificationServiceClient, GamificationServiceClient>(services, configuration["Microservices:GamificationUrl"] ?? "http://localhost:5005", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<IMLPredictionServiceClient, MLPredictionServiceClient>(services, configuration["Microservices:MlPredictionUrl"] ?? "http://localhost:5006", retryPolicy, circuitBreakerPolicy);
-        RegisterHttpClient<IAdministrationServiceClient, AdministrationServiceClient>(services, configuration["Microservices:AdministrationUrl"] ?? "http://localhost:5007", retryPolicy, circuitBreakerPolicy);
+        RegisterHttpClient<IAuthProfileServiceClient, AuthProfileServiceClient>(services, configuration["Microservices:AuthProfileUrl"] ?? "http://localhost:5001", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<IDashboardServiceClient, DashboardServiceClient>(services, configuration["Microservices:DashboardUrl"] ?? "http://localhost:5002", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<IReportingServiceClient, ReportingServiceClient>(services, configuration["Microservices:ReportingUrl"] ?? "http://localhost:5003", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<INotificationServiceClient, NotificationServiceClient>(services, configuration["Microservices:NotificationUrl"] ?? "http://localhost:5004", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<IGamificationServiceClient, GamificationServiceClient>(services, configuration["Microservices:GamificationUrl"] ?? "http://localhost:5005", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<IMLPredictionServiceClient, MLPredictionServiceClient>(services, configuration["Microservices:MlPredictionUrl"] ?? "http://localhost:5006", retryPolicy, circuitBreakerPolicy, environment);
+        RegisterHttpClient<IAdministrationServiceClient, AdministrationServiceClient>(services, configuration["Microservices:AdministrationUrl"] ?? "http://localhost:5007", retryPolicy, circuitBreakerPolicy, environment);
 
         return services;
     }
@@ -56,13 +57,21 @@ public static class DependencyInjection
         IServiceCollection services,
         string baseUrl,
         IAsyncPolicy<HttpResponseMessage> retryPolicy,
-        IAsyncPolicy<HttpResponseMessage> circuitBreaker)
+        IAsyncPolicy<HttpResponseMessage> circuitBreaker,
+        IHostEnvironment environment)
         where TInterface : class
         where TImplementation : class, TInterface
     {
+        var uri = new Uri(baseUrl);
+        if (!environment.IsDevelopment() && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                $"Microservices URL '{baseUrl}' must use HTTPS outside the Development environment.");
+        }
+
         services.AddHttpClient<TInterface, TImplementation>(client =>
         {
-            client.BaseAddress = new Uri(baseUrl);
+            client.BaseAddress = uri;
             client.Timeout = TimeSpan.FromSeconds(30);
         })
         .AddPolicyHandler(retryPolicy)
