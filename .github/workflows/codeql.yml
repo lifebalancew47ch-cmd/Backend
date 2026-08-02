@@ -24,27 +24,56 @@ jobs:
       matrix:
         include:
           - language: csharp
-            build-mode: autobuild
+            build-mode: manual
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      # Relax global.json SDK constraint for CI runners (same as ci.yml)
+      - name: Patch global.json SDK constraint (DashboardService)
+        run: |
+          cat > DashboardService/global.json << 'EOF'
+          {
+            "sdk": {
+              "version": "9.0.100",
+              "rollForward": "latestMajor"
+            }
+          }
+          EOF
+
+      # Manual build mode: build only the 5 official solutions.
+      # The legacy solution Notifications&Alerts.sln was deleted because it
+      # referenced a non-existent project and broke autobuild.
+      - name: Build solutions (manual build mode)
+        run: |
+          dotnet restore Auth_Profile/Auth_Profile.sln
+          dotnet build Auth_Profile/Auth_Profile.sln --configuration Debug --no-restore
+
+          dotnet restore DashboardService/LifeBalance.DashboardService.sln
+          dotnet build DashboardService/LifeBalance.DashboardService.sln --configuration Debug --no-restore
+
+          dotnet restore NotificationsAndAlerts/LifeBalance.Notifications.sln
+          dotnet build NotificationsAndAlerts/LifeBalance.Notifications.sln --configuration Debug --no-restore
+
+          dotnet restore OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln
+          dotnet build OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln --configuration Debug --no-restore
+
+          dotnet restore AdministrationService/LifeBalance.Administration.sln
+          dotnet build AdministrationService/LifeBalance.Administration.sln --configuration Debug --no-restore
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{matrix.language}}"

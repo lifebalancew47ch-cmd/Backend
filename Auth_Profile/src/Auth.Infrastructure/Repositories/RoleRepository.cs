@@ -1,6 +1,7 @@
 using Auth.Application.Interfaces.Repositories;
 using Auth.Domain.Entities;
 using Auth.Infrastructure.Persistence;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Auth.Infrastructure.Repositories;
@@ -16,6 +17,9 @@ public class RoleRepository : IRoleRepository
 
     public async Task<Role?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(id) || !ObjectId.TryParse(id, out _))
+            return null;
+
         return await _context.GetCollection<Role>("roles")
             .Find(r => r.Id == id && !r.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
@@ -38,7 +42,11 @@ public class RoleRepository : IRoleRepository
 
     public async Task<IEnumerable<Role>> GetByIdsAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
-        var idList = ids?.ToList() ?? [];
+        // Descarta ids vacíos o que no sean ObjectIds válidos: el driver convierte
+        // cada elemento del filtro $in a ObjectId y lanza FormatException (500) si no lo es.
+        var idList = (ids ?? [])
+            .Where(id => !string.IsNullOrWhiteSpace(id) && ObjectId.TryParse(id, out _))
+            .ToList();
         if (idList.Count == 0)
             return [];
 

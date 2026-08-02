@@ -1,82 +1,68 @@
 # LifeBalance - Notifications & Alerts Microservice 🔔
 
 ![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)
-![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2B%20DDD%20%2B%20CQRS-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2B%20DDD-blue)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
 ![Firebase](https://img.shields.io/badge/Push-FirebaseAdmin-FFCA28?logo=firebase)
 
-El **Microservicio de Notificaciones y Alertas** forma parte central del ecosistema **LifeBalance**. Es responsable de la distribución, programación y gestión de todas las notificaciones (Push, Email, in-app) para los usuarios y organizaciones de la plataforma.
+Central notifications and alerts service for **LifeBalance**. Handles dispatch, scheduling, and management of Push, Email, and in-app notifications.
+
+> Details in [AGENTS.md](../AGENTS.md).
 
 ---
 
-## 🏛️ Arquitectura
+## 🏛️ Architecture
 
-El proyecto está diseñado bajo los principios de **Clean Architecture**, **Domain-Driven Design (DDD)** y **CQRS**:
+Clean Architecture + DDD. **NO MediatR used in this service.**
+Flow: Controller (Presentation) → Service Interface (Application) → Implementation (Infrastructure) → MongoDB.
 
-1. **LifeBalance.Notifications.Domain**: Entidades núcleo (Notificaciones, Alertas, Preferencias, Plantillas), Value Objects y reglas de negocio.
-2. **LifeBalance.Notifications.Application**: Casos de uso (Commands/Queries), manejadores, validaciones y mapeos de DTOs.
-3. **LifeBalance.Notifications.Infrastructure**: Integraciones externas (MongoDB, FirebaseAdmin para Push Notifications, servicios SMTP/Email).
-4. **LifeBalance.Notifications.Presentation**: Entry point de la API REST, configuración de Swagger/OpenAPI y middlewares.
-5. **LifeBalance.Notifications.Shared**: Elementos y utilidades transversales compartidos.
+### MongoDB Collections
+`notifications`, `notification_preferences`, `notification_templates`, `scheduled_notifications`, `delivery_logs`, `alerts`, `metrics_records`, `device_registrations`.
 
 ---
 
-## 🚀 Tecnologías Clave
+## 🔐 Security & Validation
 
-- **.NET 9.0**: Framework base para alto rendimiento.
-- **MongoDB Driver**: Persistencia de logs de notificaciones y configuración.
-- **FirebaseAdmin**: Envío de notificaciones Push a dispositivos móviles (FCM).
-- **Autenticación JWT Bearer**: Seguridad en los endpoints de la API.
-- **Swagger / OpenAPI**: Documentación y pruebas interactivas de la API.
+- **Anti-IDOR:** `userId` strictly from JWT `ClaimTypes.NameIdentifier`. Other users' resources → **403**.
+- **`ADMIN` Role Required:** `Templates`, `Metrics`, `History` (global & organization), `Push` (`broadcast`/`company`/`family`/`department`), and `Emails`.
+- **Validations:** Bulk ≤500 emails, email format checks, DTO DataAnnotations, IP rate limiting (429).
+- **Hardened JWT:** HS256, 1-min ClockSkew; invalid/short secret → fail-fast startup crash in Production.
+- **Generic Client Errors:** Details in logs only.
 
 ---
 
-## ⚙️ Configuración y Despliegue
+## ⚙️ Environment Variables
 
-### Requisitos Previos
-- .NET 9.0 SDK
-- MongoDB (local o Atlas)
-- Credenciales de Firebase Admin (archivo JSON de cuenta de servicio)
-- Docker & Docker Compose (opcional)
-
-### Variables de Entorno
-
-Asegúrate de configurar las siguientes variables (vía `appsettings.json`, variables de entorno o Secret Manager):
-
-| Variable | Descripción |
+| Variable | Description |
 |---|---|
-| `MongoDb__ConnectionString` | URL de conexión a MongoDB |
-| `MongoDb__DatabaseName` | Nombre de la base de datos (ej. `LifeBalance_Notifications`) |
-| `Firebase__ServiceAccountKeyPath` | Ruta o contenido del JSON de credenciales de Firebase |
-| `Jwt__SecretKey` | Clave secreta para la validación de tokens JWT |
+| `ConnectionStrings__MongoDb` | MongoDB connection URL |
+| `DatabaseName` | Database name (`LifeBalanceNotificationsDb`) |
+| `Jwt__SecretKey` | Shared JWT secret key |
+| `Jwt__Issuer` / `Jwt__Audience` | `LifeBalance` / `LifeBalance` |
+| `Firebase__ProjectId` | Firebase Project ID |
+| `Firebase__CredentialsPath` | Path to Firebase credentials JSON |
+| `Smtp__*` | SMTP host, port, credentials, sender |
+| `Cors__AllowedOrigins` | CORS Allowlist |
 
-### Ejecución Local
+---
 
-```bash
-# Restaurar y compilar
-dotnet build
+## 📚 API Endpoints (`api/v1/`)
 
-# Ejecutar el proyecto Presentation (API)
-dotnet run --project src/LifeBalance.Notifications.Presentation
-```
-
-### Ejecutar con Docker
-
-```bash
-docker-compose up -d --build
-```
-El servicio estará disponible en el puerto especificado en la configuración, y la documentación de Swagger en `/swagger`.
+- `notifications`: CRUD, schedule, bulk, read-all, patches (`read`, `archive`, `favorite`, `cancel`)
+- `alerts`: CRUD, read/dismiss patches
+- `devices`: `register`, `unregister`
+- `emails`: `send`, `bulk`, `template` (Admin)
+- `push`: `send`, `broadcast`, `company`, `family`, `department`, `wear` (Admin)
+- `history`: `user`, `organization/{organizationId}` (Admin)
+- `metrics`: global, channels, delivery, errors (Admin)
+- `preferences`: GET/PUT, patches (`email`, `push`, `wear`)
+- `templates`: CRUD (Admin)
 
 ---
 
 ## 🧪 Testing
 
-El proyecto cuenta con pruebas automatizadas que aseguran la fiabilidad del servicio:
-
 ```bash
-# Pruebas Unitarias
-dotnet test tests/LifeBalance.Notifications.UnitTests
-
-# Pruebas de Integración
-dotnet test tests/LifeBalance.Notifications.IntegrationTests
+dotnet test tests/LifeBalance.Notifications.UnitTests/LifeBalance.Notifications.UnitTests.csproj
 ```
+~249 green unit tests.
