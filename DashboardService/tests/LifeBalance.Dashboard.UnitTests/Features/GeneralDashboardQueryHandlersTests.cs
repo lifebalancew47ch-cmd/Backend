@@ -249,19 +249,25 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralHealthQuery_ThrowsWhenNoHealthData()
+    public async Task Handle_GetGeneralHealthQuery_ReturnsSimulatedHealth()
     {
+        // La simulación 200 OK es una instrucción explícita del usuario para no
+        // bloquear el despliegue en Render (ver AGENTS.md). NO revertir.
         // Act
-        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.OverallStatus.Should().Be("Healthy");
+        result.Value.ComponentHealth.Should().ContainKey("DashboardService");
+        result.Value.ComponentHealth.Should().ContainKey("UpstreamServices");
     }
 
     [Fact]
     public async Task Handle_GetGeneralHealthQuery_DoesNotCallReportingClient()
     {
         // Act
-        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
 
         // Assert
         await _reportingClient.DidNotReceive().GetSystemMetricsAsync(Arg.Any<CancellationToken>());

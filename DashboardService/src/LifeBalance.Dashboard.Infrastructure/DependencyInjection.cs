@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
 using Polly.Extensions.Http;
+using System.Security.Claims;
 using System.Text;
 
 namespace LifeBalance.Dashboard.Infrastructure;
@@ -55,6 +56,16 @@ public static class DependencyInjection
             .GetSection(JwtOptions.SectionName)
             .Get<JwtOptions>() ?? new JwtOptions();
 
+        // Fail-fast JWT: never start in Production with an empty, short or placeholder secret.
+        if (environment.IsProduction() &&
+            (string.IsNullOrEmpty(jwtOptions.SecretKey) ||
+             Encoding.UTF8.GetByteCount(jwtOptions.SecretKey) < 32 ||
+             jwtOptions.SecretKey == "CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!"))
+        {
+            throw new InvalidOperationException(
+                "Jwt:SecretKey must be configured with at least 32 bytes and cannot be the placeholder value in production.");
+        }
+
         services
             .AddAuthentication(options =>
             {
@@ -73,7 +84,14 @@ public static class DependencyInjection
                     ValidAudience            = jwtOptions.Audience,
                     IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
-                    ClockSkew = TimeSpan.FromMinutes(1)
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                    // Contrato de claims explícito: el token JWT de Auth emite
+                    // sub/email/name/role (nombres cortos estándar); se remapean a
+                    // ClaimTypes.NameIdentifier/Email/Name/Role para RequireRole y
+                    // CurrentUserService. (MapInboundClaims no se setea explícitamente:
+                    // el default es true y la propiedad no existe en IdentityModel <=8.0.1.)
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.Name
                 };
             });
 
