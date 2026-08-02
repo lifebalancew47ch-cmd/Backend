@@ -37,7 +37,7 @@ public class RevokeTokenHandlerTests
     public async Task Handle_ActiveToken_RevokesAndLogsAudit()
     {
         // Arrange
-        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"));
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"), "user-123");
         var token = CreateActiveToken();
 
         _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("refresh-token-123", It.IsAny<CancellationToken>()))
@@ -61,7 +61,7 @@ public class RevokeTokenHandlerTests
     public async Task Handle_NonexistentToken_ReturnsFailure()
     {
         // Arrange
-        var command = new RevokeTokenCommand(new TokenRevocationRequest("unknown-token"));
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("unknown-token"), "user-123");
 
         _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("unknown-token", It.IsAny<CancellationToken>()))
             .ReturnsAsync((RefreshToken?)null);
@@ -82,7 +82,7 @@ public class RevokeTokenHandlerTests
     public async Task Handle_AlreadyRevokedToken_ReturnsFailure()
     {
         // Arrange
-        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"));
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"), "user-123");
         var token = CreateActiveToken();
         token.IsActive = false;
         token.RevokedAt = DateTime.UtcNow.AddMinutes(-10);
@@ -105,7 +105,7 @@ public class RevokeTokenHandlerTests
     public async Task Handle_ExpiredToken_ReturnsFailure()
     {
         // Arrange
-        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"));
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"), "user-123");
         var token = CreateActiveToken();
         token.ExpiresAt = DateTime.UtcNow.AddMinutes(-5);
 
@@ -127,7 +127,7 @@ public class RevokeTokenHandlerTests
     public async Task Handle_ActiveToken_DoesNotRevokeOtherSessions()
     {
         // Arrange
-        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"));
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"), "user-123");
         var token = CreateActiveToken();
 
         _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("refresh-token-123", It.IsAny<CancellationToken>()))
@@ -141,5 +141,29 @@ public class RevokeTokenHandlerTests
         // Assert
         result.Success.Should().BeTrue();
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllByUserIdAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TokenOwnedByAnotherUser_ReturnsFailure()
+    {
+        // Arrange
+        var command = new RevokeTokenCommand(new TokenRevocationRequest("refresh-token-123"), "attacker-999");
+        var token = CreateActiveToken();
+
+        _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("refresh-token-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(403);
+        token.IsActive.Should().BeTrue();
+        _refreshTokenRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        _auditServiceMock.Verify(a => a.LogEventAsync(It.IsAny<string>(), AuthEventType.TokenRevocation,
+            It.IsAny<string>(), null, null, null, null, null, true, null, It.IsAny<CancellationToken>()), Times.Never);
     }
 }
