@@ -31,6 +31,12 @@ public class RevokeTokenHandler : IRequestHandler<RevokeTokenCommand, ApiRespons
         if (refreshToken is null)
             return ApiResponse<bool>.FailResponse("Refresh token not found.");
 
+        if (!string.Equals(refreshToken.UserId, request.UserId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning("Unauthorized revoke attempt: user {RequestedBy} tried to revoke a token belonging to user {TokenOwner}", request.UserId, refreshToken.UserId);
+            return ApiResponse<bool>.FailResponse("You can only revoke your own refresh tokens.", statusCode: 403);
+        }
+
         if (!refreshToken.IsActiveAndNotExpired)
             return ApiResponse<bool>.FailResponse("Refresh token is already revoked or expired.");
 

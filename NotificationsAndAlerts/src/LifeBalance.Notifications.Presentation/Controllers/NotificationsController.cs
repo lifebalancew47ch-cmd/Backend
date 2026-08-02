@@ -46,6 +46,7 @@ public class NotificationsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Send([FromBody] SendNotificationDto dto)
     {
+        dto.UserId = GetUserId();
         var result = await _notificationService.SendAsync(dto);
         return Ok(new Response<NotificationResponseDto>(result));
     }
@@ -53,6 +54,9 @@ public class NotificationsController : ControllerBase
     [HttpPost("bulk")]
     public async Task<IActionResult> SendBulk([FromBody] List<SendNotificationDto> dtos)
     {
+        var userId = GetUserId();
+        foreach (var dto in dtos)
+            dto.UserId = userId;
         var results = await _notificationService.SendBulkAsync(dtos);
         return Ok(new Response<List<NotificationResponseDto>>(results));
     }
@@ -60,6 +64,7 @@ public class NotificationsController : ControllerBase
     [HttpPost("schedule")]
     public async Task<IActionResult> Schedule([FromBody] ScheduleNotificationDto dto)
     {
+        dto.UserId = GetUserId();
         var result = await _notificationService.ScheduleAsync(dto);
         return Ok(new Response<NotificationResponseDto>(result));
     }
