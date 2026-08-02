@@ -60,7 +60,7 @@ services:
     plan: free
     rootDir: DashboardService
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/v1/dashboard/health
+    healthCheckPath: /health/live
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production

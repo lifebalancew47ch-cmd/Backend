@@ -66,12 +66,12 @@ Suites verificadas verdes (total ~824): Auth 164, Dashboard 163, Organization 24
 - **Clientes upstream** (config `ServiceUrls`): Auth, Organization, Notifications, MedicalData, SedentaryEngine, Gamification, ML Prediction, Reporting — **deben ser HTTPS** en producción (ver regla 6). Los 5 servicios "legado" (medical/sedentary/gamification/ml/reporting) NO están desplegados: sus endpoints devuelven 503 fail-closed.
 - **CORS**: solo `https://lifebalance-adv3.onrender.com` (frontend).
 - **Endpoints** (`api/v1/dashboard`, `api/v1/dashboard/individual`, `/family`, `/company`), todos GET, todos requieren JWT:
-  - General: `GET /api/v1/dashboard/health` (health de Render), `summary`, `kpis`, `indicators`, `system`, `version`
+  - General: `summary`, `kpis`, `indicators`, `system`, `version`, `health` (este último lanza 503 fail-closed: sin fuente de health indicadores — no fabrica "Simulated-OK")
   - Individual: `summary`, `kpis`, `activity`, `biometrics`, `goals`, `heatmap`, `notifications`, `progress`, `recommendations`, `rewards`, `statistics`
   - Family: `GET /api/v1/dashboard/family`, `members`, `goals`, `challenges`, `ranking`, `rewards`, `heatmap`, `statistics` — requieren `familyId` válido y membresía (403 si no)
   - Company: `GET /api/v1/dashboard/company`, `kpis`, `licenses`, `organization`, `departments`, `adherence`, `ranking`, `trends`, `statistics`, `heatmap` — requieren `companyId`/`organizationId` reales y membresía (403/503)
 - **Archivos clave**: `LifeBalance.Dashboard.Infrastructure/DependencyInjection.cs` (RegisterTypedClient + check HTTPS, línea ~102), `API/Middlewares/GlobalExceptionMiddleware.cs`, `Application/Features/**/*Queries.cs` (UpstreamServiceUnavailableException → 503), `Infrastructure/HttpClients/*.cs` (devuelven null ante fallo).
-- **Render**: `lifebalance-dashboard-service`, health `/api/v1/dashboard/health`.
+- **Render**: `lifebalance-dashboard-service`, health `/health/live` (ASP.NET Health Checks; el `/api/v1/dashboard/health` ya NO se usa como health de Render porque es fail-closed).
 
 ## 3. NotificationsAndAlerts (Notifications & Alerts)
 

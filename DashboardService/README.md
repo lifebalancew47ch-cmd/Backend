@@ -131,7 +131,7 @@ El microservicio está configurado en el `render.yaml` de la raíz (`lifebalance
    - `MongoDb__ConnectionString` / `ConnectionStrings__MongoDB`: connection string de MongoDB Atlas.
    - `Jwt__SecretKey`: **el mismo secreto compartido que los otros 3 servicios** (Issuer/Audience `LifeBalance`).
    - `ServiceUrls__*`: ya vienen definidas en `render.yaml` (todas `https://`).
-3. Health check de Render: `GET /api/v1/dashboard/health`. Puerto del contenedor: `10000`.
+3. Health check de Render: `GET /health/live` (ASP.NET Health Checks; sin dependencia de upstreams). Puerto del contenedor: `10000`.
 
 ---
 
@@ -174,7 +174,9 @@ Una vez ejecutado el proyecto:
 
 | Endpoint | Descripción |
 |---|---|
-| `GET /api/v1/dashboard/health` | Health check usado por Render |
+| `GET /health/live` | Liveness probe — health check de Render |
+| `GET /health/ready` | Readiness probe |
+| `GET /health` | Estado general |
 
 ---
 

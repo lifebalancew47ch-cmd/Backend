@@ -69,17 +69,8 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralHealthResponse>> Handle(GetGeneralHealthQuery request, CancellationToken cancellationToken)
     {
-        // TODO: Simulación de Health Check temporal para permitir el despliegue en Render 
-        // cuando los microservicios upstream aún no existen o están dormidos.
-        await Task.CompletedTask;
-        return Result.Success(new GeneralHealthResponse(
-            "Healthy",
-            new Dictionary<string, string>
-            {
-                { "DashboardService", "Healthy" },
-                { "UpstreamServices", "Simulated-OK" }
-            }
-        ));
+        throw new UpstreamServiceUnavailableException(
+            "General health is unavailable because no upstream health-indicators source is configured.");
     }
 
     public async Task<Result<GeneralVersionResponse>> Handle(GetGeneralVersionQuery request, CancellationToken cancellationToken)
