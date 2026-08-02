@@ -177,6 +177,7 @@ Una vez ejecutado el proyecto:
 | `GET /health/live` | Liveness probe — health check de Render |
 | `GET /health/ready` | Readiness probe |
 | `GET /health` | Estado general |
+| `GET /api/v1/dashboard/health` | **(SIMULADO)** Health check del ecosistema completo. Devuelve un `200 OK` simulado por instrucción manual del usuario para evitar bloqueos en el despliegue cuando los servicios upstream están dormidos o inexistentes. |
 
 ---
 
