@@ -21,7 +21,7 @@ render.yaml              → Defines los 4 servicios de Render
 ## Reglas globales (NO romper — son remediaciones de seguridad aplicadas)
 
 1. **userId SIEMPRE viene del claim `ClaimTypes.NameIdentifier` del token JWT**, nunca de query/body/route (anti-IDOR). Si falta el claim → 401.
-2. **Rol**: claim `ClaimTypes.Role` = `NormalizedName` del rol (MAYÚSCULAS, ej. `USER`, `ADMIN`). Auth hace fallback a `USER` en login/refresh si la cuenta no tiene `RoleIds` (fix del 403 de Dashboard).
+2. **Rol**: el token JWT viaja con nombres cortos estándar (`sub`, `email`, `name`, `role`); al validar se mapean a `ClaimTypes.NameIdentifier`/`Email`/`Name`/`Role`. El valor del rol = `NormalizedName` (MAYÚSCULAS, ej. `USER`, `ADMIN`). Auth hace fallback a `USER` en login/refresh si la cuenta no tiene `RoleIds` (fix del 403 de Dashboard). Los handlers de Auth filtran `NormalizedName` nulos/vacíos y los repositorios descartan ids no-ObjectId (evita 500 por `FormatException` del driver Mongo).
 3. **JWT**: `Issuer`/`Audience` = `"LifeBalance"` en los 4 servicios, algoritmo HS256, `ClockSkew` 1 minuto, mismo secreto compartido entre servicios.
 4. **Fail-fast JWT**: Organization y Notifications (en Production) lanzan `InvalidOperationException` al arrancar si el secreto está vacío, es placeholder o <32 bytes UTF-8. Auth NO tiene este check (hardening pendiente).
 5. **Fail-closed**: NO fabricar datos de ejemplo. Si un cliente HTTP upstream falla o devuelve null → `UpstreamServiceUnavailableException` → 503. Dashboard valida membresía familia/empresa contra Organization: no miembro → 403.

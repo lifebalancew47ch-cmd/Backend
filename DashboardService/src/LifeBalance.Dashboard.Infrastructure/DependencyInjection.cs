@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
 using Polly.Extensions.Http;
+using System.Security.Claims;
 using System.Text;
 
 namespace LifeBalance.Dashboard.Infrastructure;
@@ -73,7 +74,14 @@ public static class DependencyInjection
                     ValidAudience            = jwtOptions.Audience,
                     IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
-                    ClockSkew = TimeSpan.FromMinutes(1)
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                    // Contrato de claims explícito: el token JWT de Auth emite
+                    // sub/email/name/role (nombres cortos estándar); se remapean a
+                    // ClaimTypes.NameIdentifier/Email/Name/Role para RequireRole y
+                    // CurrentUserService.
+                    MapInboundClaims = true,
+                    RoleClaimType    = ClaimTypes.Role,
+                    NameClaimType    = ClaimTypes.Name
                 };
             });
 
