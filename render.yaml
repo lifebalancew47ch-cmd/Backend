@@ -71,9 +71,9 @@ services:
       - key: MongoDb__DatabaseName
         value: LifeBalanceDashboard
       - key: Jwt__Issuer
-        value: LifeBalance.AuthService
+        value: LifeBalance
       - key: Jwt__Audience
-        value: LifeBalance.Clients
+        value: LifeBalance
       - key: Jwt__SecretKey
         sync: false
       - key: ServiceUrls__AuthServiceUrl
@@ -111,8 +111,6 @@ services:
       - key: DatabaseName
         value: LifeBalanceNotificationsDb
       - key: ConnectionStrings__MongoDb
-        sync: false
-      - key: Jwt__Key
         sync: false
       - key: Jwt__SecretKey
         sync: false

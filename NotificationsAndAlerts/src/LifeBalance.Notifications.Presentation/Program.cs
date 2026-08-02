@@ -12,32 +12,44 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddNotificationsSwagger();
 
-var jwtKey = builder.Configuration["Jwt:Key"] 
-    ?? builder.Configuration["Jwt:SecretKey"] 
-    ?? "SUPER_SECRET_KEY_FOR_LOCAL_DEVELOPMENT_THAT_IS_LONG_ENOUGH_32_CHARS";
+var jwtOptions = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtOptions["SecretKey"]
+    ?? throw new InvalidOperationException("Jwt:SecretKey no esta configurada.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            ValidIssuer = jwtOptions["Issuer"],
+            ValidAudience = jwtOptions["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.FromMinutes(5)
         };
     });
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// CORS — allow any origin
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowedOrigins", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedOrigins is { Length: > 0 })
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
@@ -49,7 +61,7 @@ app.UseNotificationsSwagger();
 
 app.UseExceptionHandling();
 
-app.UseCors("AllowAll");
+app.UseCors("AllowedOrigins");
 
 app.UseHttpsRedirection();
 
