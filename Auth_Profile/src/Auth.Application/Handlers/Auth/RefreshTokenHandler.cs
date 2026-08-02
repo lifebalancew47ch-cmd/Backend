@@ -74,6 +74,16 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         var roles = await _roleRepository.GetByIdsAsync(user.RoleIds, cancellationToken);
         var roleNames = roles.Select(r => r.NormalizedName).ToList();
 
+        if (roleNames.Count == 0)
+        {
+            var defaultRole = await _roleRepository.GetByNameAsync("User", cancellationToken)
+                ?? await _roleRepository.GetByNameAsync("USER", cancellationToken);
+            if (defaultRole is not null)
+            {
+                roleNames.Add(defaultRole.NormalizedName);
+            }
+        }
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),

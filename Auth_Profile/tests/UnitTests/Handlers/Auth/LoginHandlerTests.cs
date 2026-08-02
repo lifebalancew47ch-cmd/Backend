@@ -266,7 +266,7 @@ public class LoginHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserWithNoRoles_LoginSucceeds()
+    public async Task Handle_UserWithNoRoles_AssignsDefaultUserRoleClaimAndSucceeds()
     {
         // Arrange
         var request = new LoginRequest("noroles@example.com", "Password123!");
@@ -279,6 +279,9 @@ public class LoginHandlerTests
             IsActive = true,
             RoleIds = new List<string>()
         };
+        var defaultRole = new Role { Id = "role-user", Name = "User", NormalizedName = "USER" };
+
+        IEnumerable<Claim>? issuedClaims = null;
 
         _userRepositoryMock.Setup(r => r.GetByEmailAsync("noroles@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
@@ -286,6 +289,49 @@ public class LoginHandlerTests
             .Returns(true);
         _roleRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Role>());
+        _roleRepositoryMock.Setup(r => r.GetByNameAsync("User", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(defaultRole);
+        _jwtServiceMock.Setup(j => j.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>()))
+            .Callback<IEnumerable<Claim>>(c => issuedClaims = c)
+            .Returns("fake_token");
+        _jwtServiceMock.Setup(j => j.GenerateRefreshToken())
+            .Returns("fake_refresh");
+        _mapperMock.Setup(m => m.Map<UserProfileDto>(It.IsAny<User>()))
+            .Returns(CreateDummyProfile());
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        issuedClaims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == "USER");
+    }
+
+    [Fact]
+    public async Task Handle_UserWithNoRolesAndNoDefaultRoleInRepo_LoginSucceedsWithoutRoleClaim()
+    {
+        // Arrange
+        var request = new LoginRequest("noroles2@example.com", "Password123!");
+        var command = new LoginCommand(request);
+        var user = new User
+        {
+            Id = "user-noroles2",
+            Email = "noroles2@example.com",
+            PasswordHash = "hashed_pass",
+            IsActive = true,
+            RoleIds = new List<string>()
+        };
+
+        _userRepositoryMock.Setup(r => r.GetByEmailAsync("noroles2@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordServiceMock.Setup(p => p.VerifyPassword("Password123!", "hashed_pass"))
+            .Returns(true);
+        _roleRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role>());
+        _roleRepositoryMock.Setup(r => r.GetByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Role?)null);
         _jwtServiceMock.Setup(j => j.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>()))
             .Returns("fake_token");
         _jwtServiceMock.Setup(j => j.GenerateRefreshToken())

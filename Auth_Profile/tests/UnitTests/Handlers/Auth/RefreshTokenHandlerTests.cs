@@ -224,4 +224,55 @@ public class RefreshTokenHandlerTests
         result.Message.Should().Contain("Invalid refresh token");
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllByUserIdAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_UserWithNoRoles_AssignsDefaultUserRoleClaimToNewAccessToken()
+    {
+        // Arrange
+        var request = new RefreshTokenRequest("expired_access_token", "valid_refresh_token");
+        var command = new RefreshTokenCommand(request);
+
+        var claims = new List<Claim> { new("jti", "jwt-id-123") };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var existingRefreshToken = new RefreshToken
+        {
+            Id = "rt-1",
+            Token = "valid_refresh_token",
+            JwtId = "jwt-id-123",
+            UserId = "user-noroles",
+            IsActive = true,
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        };
+
+        var user = new User { Id = "user-noroles", Email = "noroles@example.com", IsActive = true, RoleIds = new List<string>() };
+        var defaultRole = new Role { Id = "role-user", Name = "User", NormalizedName = "USER" };
+
+        IEnumerable<Claim>? issuedClaims = null;
+
+        _jwtServiceMock.Setup(j => j.GetPrincipalFromExpiredToken("expired_access_token"))
+            .Returns(principal);
+        _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("valid_refresh_token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingRefreshToken);
+        _userRepositoryMock.Setup(u => u.GetByIdAsync("user-noroles", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _roleRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role>());
+        _roleRepositoryMock.Setup(r => r.GetByNameAsync("User", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(defaultRole);
+        _jwtServiceMock.Setup(j => j.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>()))
+            .Callback<IEnumerable<Claim>>(c => issuedClaims = c)
+            .Returns("new_access_token");
+        _jwtServiceMock.Setup(j => j.GenerateRefreshToken())
+            .Returns("new_refresh_token");
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        issuedClaims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == "USER");
+    }
 }
