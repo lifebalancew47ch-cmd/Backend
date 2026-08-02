@@ -53,7 +53,7 @@ jobs:
           }
           EOF
 
-      # Manual build mode: build only the 4 official solutions.
+      # Manual build mode: build only the 5 official solutions.
       # The legacy solution Notifications&Alerts.sln was deleted because it
       # referenced a non-existent project and broke autobuild.
       - name: Build solutions (manual build mode)
@@ -69,6 +69,9 @@ jobs:
 
           dotnet restore OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln
           dotnet build OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln --configuration Debug --no-restore
+
+          dotnet restore AdministrationService/LifeBalance.Administration.sln
+          dotnet build AdministrationService/LifeBalance.Administration.sln --configuration Debug --no-restore
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
