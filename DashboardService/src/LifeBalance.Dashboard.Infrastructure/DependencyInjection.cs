@@ -78,10 +78,10 @@ public static class DependencyInjection
                     // Contrato de claims explícito: el token JWT de Auth emite
                     // sub/email/name/role (nombres cortos estándar); se remapean a
                     // ClaimTypes.NameIdentifier/Email/Name/Role para RequireRole y
-                    // CurrentUserService.
-                    MapInboundClaims = true,
-                    RoleClaimType    = ClaimTypes.Role,
-                    NameClaimType    = ClaimTypes.Name
+                    // CurrentUserService. (MapInboundClaims no se setea explícitamente:
+                    // el default es true y la propiedad no existe en IdentityModel <=8.0.1.)
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.Name
                 };
             });
 
