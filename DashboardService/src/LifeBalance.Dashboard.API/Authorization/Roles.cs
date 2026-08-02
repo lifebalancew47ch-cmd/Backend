@@ -5,12 +5,12 @@ namespace LifeBalance.Dashboard.API.Authorization;
 /// </summary>
 public static class Roles
 {
-    /// <summary>Administrator role with full access.</summary>
-    public const string Admin = "Admin";
+    /// <summary>Administrator role with full access. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
+    public const string Admin = "ADMIN";
 
-    /// <summary>Standard authenticated user.</summary>
-    public const string User = "User";
+    /// <summary>Standard authenticated user. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
+    public const string User = "USER";
 
-    /// <summary>Read-only access to dashboard data.</summary>
-    public const string Viewer = "Viewer";
+    /// <summary>Read-only access to dashboard data. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
+    public const string Viewer = "VIEWER";
 }

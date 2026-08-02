@@ -24,7 +24,7 @@ public class JwtService : IJwtService
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var jti = Guid.NewGuid().ToString();
-        var allClaims = claims.ToList();
+        var allClaims = claims.Select(c => MapOutboundClaimType(c)).ToList();
         allClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, jti));
         allClaims.Add(new Claim(JwtRegisteredClaimNames.Iat,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64));
@@ -37,6 +37,24 @@ public class JwtService : IJwtService
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Serializa los claims con los nombres estándar de JWT (sub, email, name, role)
+    /// en lugar de los URIs largos de ClaimTypes.*, para que los consumidores
+    /// (Dashboard, Notifications, Organization, frontend) los mapeen correctamente
+    /// y las políticas RequireRole funcionen (ej. "role": "USER").
+    /// </summary>
+    private static Claim MapOutboundClaimType(Claim claim)
+    {
+        return claim.Type switch
+        {
+            ClaimTypes.NameIdentifier => new Claim(JwtRegisteredClaimNames.Sub, claim.Value, claim.ValueType),
+            ClaimTypes.Email => new Claim(JwtRegisteredClaimNames.Email, claim.Value, claim.ValueType),
+            ClaimTypes.Name => new Claim(JwtRegisteredClaimNames.Name, claim.Value, claim.ValueType),
+            ClaimTypes.Role => new Claim("role", claim.Value, claim.ValueType),
+            _ => claim
+        };
     }
 
     public string GenerateRefreshToken()
