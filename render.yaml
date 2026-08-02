@@ -79,19 +79,19 @@ services:
       - key: ServiceUrls__AuthServiceUrl
         value: https://lifebalance-auth-service.onrender.com
       - key: ServiceUrls__MedicalDataServiceUrl
-        value: http://medical-service.onrender.com
+        value: https://medical-service.onrender.com
       - key: ServiceUrls__SedentaryEngineServiceUrl
-        value: http://sedentary-engine-service.onrender.com
+        value: https://sedentary-engine-service.onrender.com
       - key: ServiceUrls__GamificationServiceUrl
-        value: http://gamification-service.onrender.com
+        value: https://gamification-service.onrender.com
       - key: ServiceUrls__NotificationServiceUrl
         value: https://lifebalance-notifications-api.onrender.com
       - key: ServiceUrls__MlPredictionServiceUrl
-        value: http://ml-prediction-service.onrender.com
+        value: https://ml-prediction-service.onrender.com
       - key: ServiceUrls__OrganizationServiceUrl
         value: https://lifebalance-organization-saas.onrender.com
       - key: ServiceUrls__ReportingServiceUrl
-        value: http://reporting-service.onrender.com
+        value: https://reporting-service.onrender.com
 
   # ───────────────────────────────────────────────────
   # 3. Notifications & Alerts Service
