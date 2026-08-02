@@ -76,6 +76,8 @@ public class DepartmentAndTeamCommandHandler :
     public async Task<ApiResponse<DepartmentDto>> Handle(CreateDepartmentCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
+
         var dept = new Department(request.OrganizationId, request.Name, request.Description, tenantId, request.ManagerUserId, request.ParentDepartmentId);
         await _deptRepository.AddAsync(dept, cancellationToken);
         return ApiResponse<DepartmentDto>.Ok(Map(dept), "Department created.");
@@ -93,6 +95,9 @@ public class DepartmentAndTeamCommandHandler :
 
     public async Task<ApiResponse<bool>> Handle(DeleteDepartmentCommand request, CancellationToken cancellationToken)
     {
+        var dept = await _deptRepository.GetByIdAsync(request.Id, cancellationToken);
+        if (dept == null) throw new ResourceNotFoundException(nameof(Department), request.Id);
+
         await _deptRepository.SoftDeleteAsync(request.Id, cancellationToken);
         return ApiResponse<bool>.Ok(true, "Department deleted.");
     }
@@ -120,6 +125,8 @@ public class DepartmentAndTeamCommandHandler :
     public async Task<ApiResponse<TeamDto>> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
+
         var team = new Team(request.OrganizationId, request.Name, tenantId, request.DepartmentId, request.LeaderUserId);
         await _teamRepository.AddAsync(team, cancellationToken);
         return ApiResponse<TeamDto>.Ok(Map(team), "Team created.");
@@ -137,6 +144,9 @@ public class DepartmentAndTeamCommandHandler :
 
     public async Task<ApiResponse<bool>> Handle(DeleteTeamCommand request, CancellationToken cancellationToken)
     {
+        var team = await _teamRepository.GetByIdAsync(request.Id, cancellationToken);
+        if (team == null) throw new ResourceNotFoundException(nameof(Team), request.Id);
+
         await _teamRepository.SoftDeleteAsync(request.Id, cancellationToken);
         return ApiResponse<bool>.Ok(true, "Team deleted.");
     }

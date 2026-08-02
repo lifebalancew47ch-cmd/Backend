@@ -89,7 +89,7 @@ services:
       - key: ServiceUrls__MlPredictionServiceUrl
         value: http://ml-prediction-service.onrender.com
       - key: ServiceUrls__OrganizationServiceUrl
-        value: http://organization-service.onrender.com
+        value: https://lifebalance-organization-saas.onrender.com
       - key: ServiceUrls__ReportingServiceUrl
         value: http://reporting-service.onrender.com
 

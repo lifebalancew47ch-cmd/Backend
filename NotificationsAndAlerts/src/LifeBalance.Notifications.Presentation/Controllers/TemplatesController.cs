@@ -1,4 +1,4 @@
-using LifeBalance.Notifications.Application.DTOs;
+﻿using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
 using Microsoft.AspNetCore.Authorization;
@@ -32,7 +32,7 @@ public class TemplatesController : ControllerBase
     public async Task<IActionResult> GetById(string id)
     {
         var result = await _templateService.GetByIdAsync(id);
-        if (result is null) return NotFound(new Response<string>("Template not found"));
+        if (result is null) return NotFound(Response<string>.Fail("Template not found"));
         return Ok(new Response<TemplateDto>(result));
     }
 
@@ -40,7 +40,7 @@ public class TemplatesController : ControllerBase
     public async Task<IActionResult> Update(string id, [FromBody] CreateTemplateDto dto)
     {
         var result = await _templateService.UpdateAsync(id, dto);
-        if (result is null) return NotFound(new Response<string>("Template not found"));
+        if (result is null) return NotFound(Response<string>.Fail("Template not found"));
         return Ok(new Response<TemplateDto>(result));
     }
 
@@ -48,7 +48,7 @@ public class TemplatesController : ControllerBase
     public async Task<IActionResult> Delete(string id)
     {
         var result = await _templateService.DeleteAsync(id);
-        if (!result) return NotFound(new Response<string>("Template not found"));
+        if (!result) return NotFound(Response<string>.Fail("Template not found"));
         return Ok(new Response<string>("Template deleted"));
     }
 }

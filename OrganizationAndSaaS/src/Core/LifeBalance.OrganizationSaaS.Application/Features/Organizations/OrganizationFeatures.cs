@@ -163,6 +163,9 @@ public class OrganizationCommandHandler :
         var org = await _orgRepository.GetByIdAsync(request.Id, cancellationToken);
         if (org == null) throw new ResourceNotFoundException(nameof(Organization), request.Id);
 
+        var plan = await _planRepository.GetByIdAsync(request.NewPlanId, cancellationToken);
+        if (plan == null) throw new ResourceNotFoundException(nameof(SaaSPlan), request.NewPlanId);
+
         org.ChangePlan(request.NewPlanId);
         await _orgRepository.UpdateAsync(org, cancellationToken);
         return ApiResponse<bool>.Ok(true, "Organization plan updated.");

@@ -161,4 +161,67 @@ public class RefreshTokenHandlerTests
         result.Message.Should().Contain("Token reuse detected");
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllByUserIdAsync("user-123", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_RevokedRefreshToken_ReturnsFailResponse()
+    {
+        // Arrange
+        var request = new RefreshTokenRequest("expired_access_token", "revoked_refresh_token");
+        var command = new RefreshTokenCommand(request);
+
+        var claims = new List<Claim> { new("jti", "jwt-id-123") };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var revokedRefreshToken = new RefreshToken
+        {
+            Id = "rt-1",
+            Token = "revoked_refresh_token",
+            JwtId = "jwt-id-123",
+            UserId = "user-123",
+            IsActive = false,
+            RevokedAt = DateTime.UtcNow.AddMinutes(-30),
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        };
+
+        _jwtServiceMock.Setup(j => j.GetPrincipalFromExpiredToken("expired_access_token"))
+            .Returns(principal);
+        _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("revoked_refresh_token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(revokedRefreshToken);
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("no longer valid");
+        _refreshTokenRepositoryMock.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_NonexistentRefreshToken_ReturnsFailResponse()
+    {
+        // Arrange
+        var request = new RefreshTokenRequest("expired_access_token", "unknown_refresh_token");
+        var command = new RefreshTokenCommand(request);
+
+        var claims = new List<Claim> { new("jti", "jwt-id-123") };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _jwtServiceMock.Setup(j => j.GetPrincipalFromExpiredToken("expired_access_token"))
+            .Returns(principal);
+        _refreshTokenRepositoryMock.Setup(r => r.GetByTokenAsync("unknown_refresh_token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RefreshToken?)null);
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Invalid refresh token");
+        _refreshTokenRepositoryMock.Verify(r => r.RevokeAllByUserIdAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

@@ -36,6 +36,9 @@ public class Organization : AggregateRoot
 
     public void UpdateInfo(string name, string taxId, ContactInfo contactInfo, Address address)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Organization name is required.", nameof(name));
+
         Name = name;
         TaxId = taxId;
         ContactInfo = contactInfo;

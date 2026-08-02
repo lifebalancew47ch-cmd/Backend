@@ -1,4 +1,4 @@
-using LifeBalance.Notifications.Application.DTOs;
+﻿using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
 using Microsoft.AspNetCore.Authorization;
@@ -32,7 +32,7 @@ public class AlertsController : ControllerBase
     public async Task<IActionResult> GetById(string id)
     {
         var result = await _alertService.GetByIdAsync(id);
-        if (result is null) return NotFound(new Response<string>("Alert not found"));
+        if (result is null) return NotFound(Response<string>.Fail("Alert not found"));
         return Ok(new Response<AlertDto>(result));
     }
 
@@ -40,7 +40,7 @@ public class AlertsController : ControllerBase
     public async Task<IActionResult> MarkAsRead(string id)
     {
         var result = await _alertService.MarkAsReadAsync(id);
-        if (!result) return NotFound(new Response<string>("Alert not found"));
+        if (!result) return NotFound(Response<string>.Fail("Alert not found"));
         return Ok(new Response<string>("Alert marked as read"));
     }
 
@@ -48,7 +48,7 @@ public class AlertsController : ControllerBase
     public async Task<IActionResult> Dismiss(string id)
     {
         var result = await _alertService.DismissAsync(id);
-        if (!result) return NotFound(new Response<string>("Alert not found"));
+        if (!result) return NotFound(Response<string>.Fail("Alert not found"));
         return Ok(new Response<string>("Alert dismissed"));
     }
 }

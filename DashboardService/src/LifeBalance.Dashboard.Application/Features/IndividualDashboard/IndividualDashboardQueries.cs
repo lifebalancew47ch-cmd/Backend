@@ -136,7 +136,7 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualGoalsResponse>> Handle(GetIndividualGoalsQuery request, CancellationToken cancellationToken)
     {
         var challenges = await _gamificationClient.GetFamilyChallengesAsync("user_default_family", cancellationToken);
-        return Result.Success(new IndividualGoalsResponse(request.UserId, challenges));
+        return Result.Success(new IndividualGoalsResponse(request.UserId, challenges ?? new List<ChallengeProgressDto>()));
     }
 
     public async Task<Result<IndividualProgressResponse>> Handle(GetIndividualProgressQuery request, CancellationToken cancellationToken)

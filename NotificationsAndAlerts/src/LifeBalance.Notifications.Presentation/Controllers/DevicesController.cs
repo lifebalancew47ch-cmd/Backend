@@ -1,4 +1,4 @@
-using LifeBalance.Notifications.Application.DTOs;
+﻿using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
 using Microsoft.AspNetCore.Authorization;
@@ -25,7 +25,7 @@ public class DevicesController : ControllerBase
     public async Task<IActionResult> Unregister([FromQuery] string userId, [FromQuery] string deviceToken)
     {
         var result = await _deviceService.UnregisterAsync(userId, deviceToken);
-        if (!result) return NotFound(new Response<string>("Device not found"));
+        if (!result) return NotFound(Response<string>.Fail("Device not found"));
         return Ok(new Response<string>("Device unregistered"));
     }
 }

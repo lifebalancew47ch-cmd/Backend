@@ -17,9 +17,9 @@ public class Response<T>
         Data = data;
     }
 
-    public Response(string message)
+    public static Response<T> Fail(string message) => new()
     {
-        Success = false;
-        Message = message;
-    }
+        Success = false,
+        Message = message
+    };
 }

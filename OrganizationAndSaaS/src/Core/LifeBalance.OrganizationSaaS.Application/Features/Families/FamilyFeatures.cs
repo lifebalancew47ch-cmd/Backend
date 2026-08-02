@@ -81,6 +81,9 @@ public class FamilyCommandHandler :
 
     public async Task<ApiResponse<bool>> Handle(DeleteFamilyCommand request, CancellationToken cancellationToken)
     {
+        var family = await _familyRepository.GetByIdAsync(request.Id, cancellationToken);
+        if (family == null) throw new ResourceNotFoundException(nameof(Family), request.Id);
+
         await _familyRepository.SoftDeleteAsync(request.Id, cancellationToken);
         return ApiResponse<bool>.Ok(true, "Family dissolved/deleted.");
     }

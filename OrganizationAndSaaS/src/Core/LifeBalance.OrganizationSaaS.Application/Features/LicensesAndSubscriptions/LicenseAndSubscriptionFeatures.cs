@@ -106,7 +106,10 @@ public class LicenseAndSubscriptionCommandHandler :
 
     public async Task<ApiResponse<LicenseDto>> Handle(CreateLicenseCommand request, CancellationToken cancellationToken)
     {
-        var license = new License(request.OrganizationId, request.Type, request.ExpiresAt, _tenantContext.TenantId);
+        var tenantId = _tenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
+
+        var license = new License(request.OrganizationId, request.Type, request.ExpiresAt, tenantId);
         await _licenseRepo.AddAsync(license, cancellationToken);
         return ApiResponse<LicenseDto>.Ok(Map(license), "License issued successfully.");
     }
@@ -143,7 +146,10 @@ public class LicenseAndSubscriptionCommandHandler :
 
     public async Task<ApiResponse<SubscriptionDto>> Handle(CreateSubscriptionCommand request, CancellationToken cancellationToken)
     {
-        var sub = new Subscription(request.OrganizationId, request.PlanId, request.BillingCycle, _tenantContext.TenantId);
+        var tenantId = _tenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
+
+        var sub = new Subscription(request.OrganizationId, request.PlanId, request.BillingCycle, tenantId);
         await _subscriptionRepo.AddAsync(sub, cancellationToken);
         return ApiResponse<SubscriptionDto>.Ok(Map(sub), "Subscription created.");
     }
@@ -170,11 +176,14 @@ public class LicenseAndSubscriptionCommandHandler :
 
     public async Task<ApiResponse<InvitationDto>> Handle(CreateInvitationCommand request, CancellationToken cancellationToken)
     {
-        var inv = new Invitation(request.TargetEmail, _tenantContext.TenantId, request.OrganizationId, request.FamilyId);
-        await _invitationRepo.AddAsync(inv, cancellationToken);
+        var tenantId = _tenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId)) tenantId = Guid.NewGuid().ToString("N");
 
-        // Send email via notification microservice
-        await _notificationClient.SendInvitationNotificationAsync(inv.TargetEmail, $"https://lifebalance.app/invite/{inv.Token}", _tenantContext.TenantId, cancellationToken);
+        var inv = new Invitation(request.TargetEmail, tenantId, request.OrganizationId, request.FamilyId);
+
+        // Send email via notification microservice before persisting to avoid partial state
+        await _notificationClient.SendInvitationNotificationAsync(inv.TargetEmail, $"https://lifebalance.app/invite/{inv.Token}", tenantId, cancellationToken);
+        await _invitationRepo.AddAsync(inv, cancellationToken);
 
         return ApiResponse<InvitationDto>.Ok(Map(inv), "Invitation generated and notification dispatched.");
     }

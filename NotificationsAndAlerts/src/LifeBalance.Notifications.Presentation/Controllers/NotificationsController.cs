@@ -1,4 +1,4 @@
-using LifeBalance.Notifications.Application.DTOs;
+﻿using LifeBalance.Notifications.Application.DTOs;
 using LifeBalance.Notifications.Application.Interfaces;
 using LifeBalance.Notifications.Shared.Wrappers;
 using Microsoft.AspNetCore.Authorization;
@@ -64,7 +64,7 @@ public class NotificationsController : ControllerBase
     {
         var result = await _notificationService.GetByIdAsync(id);
         if (result is null)
-            return NotFound(new Response<string>("Notification not found"));
+            return NotFound(Response<string>.Fail("Notification not found"));
         return Ok(new Response<NotificationResponseDto>(result));
     }
 
@@ -72,7 +72,7 @@ public class NotificationsController : ControllerBase
     public async Task<IActionResult> Delete(string id)
     {
         var result = await _notificationService.DeleteAsync(id);
-        if (!result) return NotFound(new Response<string>("Notification not found"));
+        if (!result) return NotFound(Response<string>.Fail("Notification not found"));
         return Ok(new Response<string>("Notification deleted"));
     }
 
@@ -80,7 +80,7 @@ public class NotificationsController : ControllerBase
     public async Task<IActionResult> Cancel(string id)
     {
         var result = await _notificationService.CancelAsync(id);
-        if (!result) return NotFound(new Response<string>("Notification not found or already sent"));
+        if (!result) return NotFound(Response<string>.Fail("Notification not found or already sent"));
         return Ok(new Response<string>("Notification cancelled"));
     }
 
@@ -88,22 +88,22 @@ public class NotificationsController : ControllerBase
     public async Task<IActionResult> MarkAsRead(string id)
     {
         var result = await _notificationService.MarkAsReadAsync(id);
-        if (!result) return NotFound(new Response<string>("Notification not found"));
+        if (!result) return NotFound(Response<string>.Fail("Notification not found"));
         return Ok(new Response<string>("Notification marked as read"));
     }
 
     [HttpPatch("read-all")]
     public async Task<IActionResult> MarkAllAsRead([FromQuery] string userId)
     {
-        var result = await _notificationService.MarkAllAsReadAsync(userId);
-        return Ok(new Response<string>($"{result} notifications marked as read"));
+        await _notificationService.MarkAllAsReadAsync(userId);
+        return Ok(new Response<string>("Notifications marked as read"));
     }
 
     [HttpPatch("{id}/archive")]
     public async Task<IActionResult> Archive(string id)
     {
         var result = await _notificationService.ArchiveAsync(id);
-        if (!result) return NotFound(new Response<string>("Notification not found"));
+        if (!result) return NotFound(Response<string>.Fail("Notification not found"));
         return Ok(new Response<string>("Notification archived"));
     }
 
@@ -111,7 +111,7 @@ public class NotificationsController : ControllerBase
     public async Task<IActionResult> Favorite(string id)
     {
         var result = await _notificationService.FavoriteAsync(id);
-        if (!result) return NotFound(new Response<string>("Notification not found"));
+        if (!result) return NotFound(Response<string>.Fail("Notification not found"));
         return Ok(new Response<string>("Notification favorite toggled"));
     }
 

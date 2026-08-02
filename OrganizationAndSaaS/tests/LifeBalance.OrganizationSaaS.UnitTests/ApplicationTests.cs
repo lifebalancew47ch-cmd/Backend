@@ -9,7 +9,7 @@ using Xunit;
 
 namespace LifeBalance.OrganizationSaaS.UnitTests.Application;
 
-public class OrganizationCommandHandlerTests
+public partial class OrganizationCommandHandlerTests
 {
     private readonly Mock<IRepository<Organization>> _mockOrgRepo;
     private readonly Mock<IRepository<SaaSPlan>> _mockPlanRepo;
