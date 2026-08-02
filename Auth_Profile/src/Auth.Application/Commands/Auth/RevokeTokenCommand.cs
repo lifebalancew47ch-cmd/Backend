@@ -4,4 +4,4 @@ using MediatR;
 
 namespace Auth.Application.Commands.Auth;
 
-public record RevokeTokenCommand(TokenRevocationRequest Request) : IRequest<ApiResponse<bool>>;
+public record RevokeTokenCommand(TokenRevocationRequest Request, string UserId) : IRequest<ApiResponse<bool>>;
