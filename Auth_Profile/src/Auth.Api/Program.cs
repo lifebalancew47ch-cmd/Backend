@@ -43,6 +43,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseRouting();
 app.UseCors("AllowConfiguredOrigins");
 app.UseIpRateLimiting();
 app.UseAuthentication();

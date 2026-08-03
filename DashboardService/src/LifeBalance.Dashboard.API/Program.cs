@@ -128,15 +128,14 @@ try
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             }
-            else if (builder.Environment.IsDevelopment())
-            {
-                policy.AllowAnyOrigin()
-                      .AllowAnyHeader()
-                      .AllowAnyMethod();
-            }
             else
             {
-                policy.WithOrigins(Array.Empty<string>())
+                // Fallback to explicit hardcoded origins in case of environment variable parsing issues on Render
+                policy.WithOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:5173",
+                        "https://lifebalance-adv3.onrender.com"
+                      )
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             }
@@ -224,14 +223,14 @@ try
     app.UseResponseCompression();
     app.UseResponseCaching();
 
-    // 7. CORS
+    // 7. Routing
+    app.UseRouting();
+
+    // 8. CORS
     app.UseCors("DashboardCorsPolicy");
 
-    // 8. Rate limiting
+    // 9. Rate limiting
     app.UseRateLimiter();
-
-    // 9. Routing
-    app.UseRouting();
 
     // 10. Authentication & Authorization
     app.UseAuthentication();

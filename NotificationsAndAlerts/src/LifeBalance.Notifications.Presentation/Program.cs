@@ -62,7 +62,8 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowedOrigins", policy =>
@@ -73,9 +74,14 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         }
-        else if (builder.Environment.IsDevelopment())
+        else
         {
-            policy.AllowAnyOrigin()
+            // Fallback to explicit hardcoded origins in case of environment variable parsing issues on Render
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "http://localhost:5173",
+                    "https://lifebalance-adv3.onrender.com"
+                  )
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         }
@@ -89,6 +95,8 @@ FirebaseInit(app.Configuration);
 app.UseNotificationsSwagger();
 
 app.UseExceptionHandling();
+
+app.UseRouting();
 
 app.UseCors("AllowedOrigins");
 

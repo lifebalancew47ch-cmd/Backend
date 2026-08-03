@@ -66,7 +66,8 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
 
         services.AddCors(options =>
         {
@@ -78,9 +79,14 @@ public static class ServiceCollectionExtensions
                           .AllowAnyMethod()
                           .AllowAnyHeader();
                 }
-                else if (environment.IsDevelopment())
+                else
                 {
-                    policy.AllowAnyOrigin()
+                    // Fallback to explicit hardcoded origins in case of environment variable parsing issues on Render
+                    policy.WithOrigins(
+                            "http://localhost:3000",
+                            "http://localhost:5173",
+                            "https://lifebalance-adv3.onrender.com"
+                          )
                           .AllowAnyMethod()
                           .AllowAnyHeader();
                 }
