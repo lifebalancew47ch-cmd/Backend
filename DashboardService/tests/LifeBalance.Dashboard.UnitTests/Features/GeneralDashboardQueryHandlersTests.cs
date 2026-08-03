@@ -2,6 +2,7 @@ using FluentAssertions;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Application.Features.GeneralDashboard;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using Xunit;
 
@@ -10,11 +11,12 @@ namespace LifeBalance.Dashboard.UnitTests.Features;
 public class GeneralDashboardQueryHandlersTests
 {
     private readonly IReportingServiceClient _reportingClient = Substitute.For<IReportingServiceClient>();
+    private readonly HealthCheckService _healthCheckService = Substitute.For<HealthCheckService>();
     private readonly GeneralDashboardQueryHandlers _handler;
 
     public GeneralDashboardQueryHandlersTests()
     {
-        _handler = new GeneralDashboardQueryHandlers(_reportingClient);
+        _handler = new GeneralDashboardQueryHandlers(_reportingClient, _healthCheckService);
     }
 
     private static GeneralSystemMetricsDto CreateMetrics() =>
@@ -249,10 +251,17 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralHealthQuery_ReturnsSimulatedHealth()
+    public async Task Handle_GetGeneralHealthQuery_ReturnsActualHealth()
     {
-        // La simulación 200 OK es una instrucción explícita del usuario para no
-        // bloquear el despliegue en Render (ver AGENTS.md). NO revertir.
+        // Arrange
+        var entries = new Dictionary<string, HealthReportEntry>
+        {
+            { "DashboardService", new HealthReportEntry(HealthStatus.Healthy, "test", TimeSpan.Zero, null, null) },
+            { "UpstreamServices", new HealthReportEntry(HealthStatus.Healthy, "test", TimeSpan.Zero, null, null) }
+        };
+        var report = new HealthReport(entries, TimeSpan.Zero);
+        _healthCheckService.CheckHealthAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(report));
+
         // Act
         var result = await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
 

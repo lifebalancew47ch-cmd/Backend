@@ -2,6 +2,7 @@ using MediatR;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Shared.Results;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace LifeBalance.Dashboard.Application.Features.GeneralDashboard;
 
@@ -21,10 +22,12 @@ public class GeneralDashboardQueryHandlers :
     IRequestHandler<GetGeneralVersionQuery, Result<GeneralVersionResponse>>
 {
     private readonly IReportingServiceClient _reportingClient;
+    private readonly HealthCheckService _healthCheckService;
 
-    public GeneralDashboardQueryHandlers(IReportingServiceClient reportingClient)
+    public GeneralDashboardQueryHandlers(IReportingServiceClient reportingClient, HealthCheckService healthCheckService)
     {
         _reportingClient = reportingClient;
+        _healthCheckService = healthCheckService;
     }
 
     public async Task<Result<GeneralSummaryResponse>> Handle(GetGeneralSummaryQuery request, CancellationToken cancellationToken)
@@ -69,17 +72,15 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralHealthResponse>> Handle(GetGeneralHealthQuery request, CancellationToken cancellationToken)
     {
-        // TODO: Simulación de Health Check temporal para permitir el despliegue en Render
-        // Sobrescrito por instrucción directa del usuario.
-        await Task.CompletedTask;
-        return Result.Success(new GeneralHealthResponse(
-            "Healthy",
-            new Dictionary<string, string>
-            {
-                { "DashboardService", "Healthy" },
-                { "UpstreamServices", "Simulated-OK" }
-            }
-        ));
+        var report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+        
+        var status = report.Status == HealthStatus.Healthy ? "Healthy" : "Degraded";
+        var details = report.Entries.ToDictionary(
+            e => e.Key, 
+            e => e.Value.Status.ToString()
+        );
+
+        return Result.Success(new GeneralHealthResponse(status, details));
     }
 
     public async Task<Result<GeneralVersionResponse>> Handle(GetGeneralVersionQuery request, CancellationToken cancellationToken)

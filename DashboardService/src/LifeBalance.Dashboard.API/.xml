@@ -28,13 +28,13 @@
             </summary>
         </member>
         <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.Admin">
-            <summary>Administrator role with full access.</summary>
+            <summary>Administrator role with full access. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
         </member>
         <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.User">
-            <summary>Standard authenticated user.</summary>
+            <summary>Standard authenticated user. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
         </member>
         <member name="F:LifeBalance.Dashboard.API.Authorization.Roles.Viewer">
-            <summary>Read-only access to dashboard data.</summary>
+            <summary>Read-only access to dashboard data. NormalizedName (MAYUSCULAS) emitido por Auth.</summary>
         </member>
         <member name="T:LifeBalance.Dashboard.API.HealthChecks.HealthCheckExtensions">
             <summary>
