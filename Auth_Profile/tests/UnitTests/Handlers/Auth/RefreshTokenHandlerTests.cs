@@ -21,6 +21,7 @@ public class RefreshTokenHandlerTests
     private readonly Mock<IRoleRepository> _roleRepositoryMock = new();
     private readonly Mock<IJwtService> _jwtServiceMock = new();
     private readonly Mock<IAuditService> _auditServiceMock = new();
+    private readonly Mock<IOrganizationService> _organizationServiceMock = new();
     private readonly Mock<ILogger<RefreshTokenHandler>> _loggerMock = new();
     private readonly IOptions<JwtSettings> _jwtSettings;
 
@@ -39,6 +40,7 @@ public class RefreshTokenHandlerTests
         _roleRepositoryMock.Object,
         _jwtServiceMock.Object,
         _auditServiceMock.Object,
+        _organizationServiceMock.Object,
         _loggerMock.Object,
         _jwtSettings
     );

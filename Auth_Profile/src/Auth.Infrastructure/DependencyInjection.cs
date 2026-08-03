@@ -7,6 +7,7 @@ using Auth.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MongoDB.Driver;
@@ -15,7 +16,7 @@ namespace Auth.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDb"));
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
@@ -87,6 +88,21 @@ public static class DependencyInjection
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IEmailService, EmailService>();
+
+        // Organization Service client (tenant resolution for JWT claims)
+        var organizationUrl = configuration["ServiceUrls:OrganizationUrl"] ?? "http://localhost:5010";
+        var organizationUri = new Uri(organizationUrl);
+        if (!environment.IsDevelopment() && organizationUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                $"ServiceUrls:OrganizationUrl '{organizationUrl}' must use HTTPS outside the Development environment.");
+        }
+
+        services.AddHttpClient<IOrganizationService, OrganizationServiceClient>(client =>
+        {
+            client.BaseAddress = organizationUri;
+            client.Timeout = TimeSpan.FromSeconds(5);
+        });
 
         return services;
     }

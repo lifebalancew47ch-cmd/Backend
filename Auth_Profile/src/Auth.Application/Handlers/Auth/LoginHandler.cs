@@ -24,6 +24,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
     private readonly IPasswordService _passwordService;
     private readonly IAuditService _auditService;
     private readonly ILoginHistoryRepository _loginHistoryRepository;
+    private readonly IOrganizationService _organizationService;
     private readonly IMapper _mapper;
     private readonly ILogger<LoginHandler> _logger;
     private readonly SecuritySettings _securitySettings;
@@ -37,6 +38,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         IPasswordService passwordService,
         IAuditService auditService,
         ILoginHistoryRepository loginHistoryRepository,
+        IOrganizationService organizationService,
         IMapper mapper,
         ILogger<LoginHandler> logger,
         IOptions<SecuritySettings> securitySettings,
@@ -49,6 +51,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         _passwordService = passwordService;
         _auditService = auditService;
         _loginHistoryRepository = loginHistoryRepository;
+        _organizationService = organizationService;
         _mapper = mapper;
         _logger = logger;
         _securitySettings = securitySettings.Value;
@@ -130,6 +133,17 @@ public class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginRespo
         foreach (var roleName in roleNames)
         {
             claims.Add(new Claim(ClaimTypes.Role, roleName));
+        }
+
+        var preliminaryToken = _jwtService.GenerateAccessToken(claims);
+        var tenant = await _organizationService.GetTenantContextAsync(preliminaryToken, cancellationToken);
+        if (tenant?.TenantId is not null)
+        {
+            claims.Add(new Claim("tenant_id", tenant.TenantId));
+            if (!string.IsNullOrWhiteSpace(tenant.OrganizationId))
+            {
+                claims.Add(new Claim("organization_id", tenant.OrganizationId));
+            }
         }
 
         var accessToken = _jwtService.GenerateAccessToken(claims);

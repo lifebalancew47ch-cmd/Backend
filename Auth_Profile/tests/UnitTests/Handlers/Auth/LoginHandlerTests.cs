@@ -27,6 +27,7 @@ public class LoginHandlerTests
     private readonly Mock<IPasswordService> _passwordServiceMock = new();
     private readonly Mock<IAuditService> _auditServiceMock = new();
     private readonly Mock<ILoginHistoryRepository> _loginHistoryRepositoryMock = new();
+    private readonly Mock<IOrganizationService> _organizationServiceMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
     private readonly Mock<ILogger<LoginHandler>> _loggerMock = new();
     private readonly IOptions<SecuritySettings> _securitySettings;
@@ -58,6 +59,7 @@ public class LoginHandlerTests
         _passwordServiceMock.Object,
         _auditServiceMock.Object,
         _loginHistoryRepositoryMock.Object,
+        _organizationServiceMock.Object,
         _mapperMock.Object,
         _loggerMock.Object,
         _securitySettings,
@@ -112,6 +114,55 @@ public class LoginHandlerTests
         result.Data.RefreshToken.Should().Be("fake_refresh_token");
         _refreshTokenRepositoryMock.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
         _loginHistoryRepositoryMock.Verify(l => l.AddAsync(It.Is<LoginHistory>(h => h.Success), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_UserWithTenant_AddsTenantClaimsToToken()
+    {
+        // Arrange
+        var request = new LoginRequest("tenant@example.com", "Password123!");
+        var command = new LoginCommand(request);
+        var user = new User
+        {
+            Id = "user-tenant",
+            Email = "tenant@example.com",
+            PasswordHash = "hashed_pass",
+            IsActive = true,
+            RoleIds = new List<string> { "role-1" }
+        };
+        var role = new Role { Id = "role-1", Name = "Admin", NormalizedName = "ADMIN" };
+
+        _userRepositoryMock.Setup(r => r.GetByEmailAsync("tenant@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordServiceMock.Setup(p => p.VerifyPassword("Password123!", "hashed_pass"))
+            .Returns(true);
+        _roleRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role> { role });
+        _organizationServiceMock.Setup(o => o.GetTenantContextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantContextResult("tenant-abc", "org-123"));
+
+        IEnumerable<Claim>? issuedClaims = null;
+        _jwtServiceMock.Setup(j => j.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>()))
+            .Callback<IEnumerable<Claim>>(c => issuedClaims = c)
+            .Returns("fake_access_token");
+        _jwtServiceMock.Setup(j => j.GenerateRefreshToken())
+            .Returns("fake_refresh_token");
+        _jwtServiceMock.Setup(j => j.GetJwtId("fake_access_token"))
+            .Returns("jwt-id-123");
+        _jwtServiceMock.Setup(j => j.GetAccessTokenExpiration())
+            .Returns(DateTime.UtcNow.AddMinutes(30));
+        _mapperMock.Setup(m => m.Map<UserProfileDto>(It.IsAny<User>()))
+            .Returns(CreateDummyProfile());
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        issuedClaims.Should().Contain(c => c.Type == "tenant_id" && c.Value == "tenant-abc");
+        issuedClaims.Should().Contain(c => c.Type == "organization_id" && c.Value == "org-123");
     }
 
     [Fact]

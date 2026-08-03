@@ -24,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddCustomApiVersioning();
 builder.Services.AddRateLimiting(builder.Configuration);
 builder.Services.AddCorsConfiguration(builder.Configuration, builder.Environment);

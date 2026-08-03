@@ -20,6 +20,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
     private readonly IRoleRepository _roleRepository;
     private readonly IJwtService _jwtService;
     private readonly IAuditService _auditService;
+    private readonly IOrganizationService _organizationService;
     private readonly ILogger<RefreshTokenHandler> _logger;
     private readonly JwtSettings _jwtSettings;
 
@@ -29,6 +30,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         IRoleRepository roleRepository,
         IJwtService jwtService,
         IAuditService auditService,
+        IOrganizationService organizationService,
         ILogger<RefreshTokenHandler> logger,
         IOptions<JwtSettings> jwtSettings)
     {
@@ -37,6 +39,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
         _roleRepository = roleRepository;
         _jwtService = jwtService;
         _auditService = auditService;
+        _organizationService = organizationService;
         _logger = logger;
         _jwtSettings = jwtSettings.Value;
     }
@@ -99,6 +102,17 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
 
         foreach (var roleName in roleNames)
             claims.Add(new Claim(ClaimTypes.Role, roleName));
+
+        var preliminaryToken = _jwtService.GenerateAccessToken(claims);
+        var tenant = await _organizationService.GetTenantContextAsync(preliminaryToken, cancellationToken);
+        if (tenant?.TenantId is not null)
+        {
+            claims.Add(new Claim("tenant_id", tenant.TenantId));
+            if (!string.IsNullOrWhiteSpace(tenant.OrganizationId))
+            {
+                claims.Add(new Claim("organization_id", tenant.OrganizationId));
+            }
+        }
 
         var newAccessToken = _jwtService.GenerateAccessToken(claims);
         var newRefreshTokenValue = _jwtService.GenerateRefreshToken();

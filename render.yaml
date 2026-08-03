@@ -49,6 +49,8 @@ services:
         value: "true"
       - key: App__FrontendBaseUrl
         value: https://lifebalance-adv3.onrender.com
+      - key: ServiceUrls__OrganizationUrl
+        value: https://lifebalance-organization-saas.onrender.com
 
   # ───────────────────────────────────────────────────
   # 2. Dashboard Service
