@@ -49,9 +49,9 @@ public static class DependencyInjection
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = jwtSettings.Issuer,
+                ValidIssuer = string.IsNullOrWhiteSpace(jwtSettings.Issuer) ? "LifeBalance" : jwtSettings.Issuer,
                 ValidateAudience = true,
-                ValidAudience = jwtSettings.Audience,
+                ValidAudience = string.IsNullOrWhiteSpace(jwtSettings.Audience) ? "LifeBalance" : jwtSettings.Audience,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
                 ValidateLifetime = true,

@@ -23,6 +23,9 @@ public class JwtService : IJwtService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var issuer = string.IsNullOrWhiteSpace(_jwtSettings.Issuer) ? "LifeBalance" : _jwtSettings.Issuer;
+        var audience = string.IsNullOrWhiteSpace(_jwtSettings.Audience) ? "LifeBalance" : _jwtSettings.Audience;
+
         var jti = Guid.NewGuid().ToString();
         var allClaims = claims.Select(c => MapOutboundClaimType(c)).ToList();
         allClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, jti));
@@ -30,8 +33,8 @@ public class JwtService : IJwtService
             DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64));
 
         var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
+            issuer: issuer,
+            audience: audience,
             claims: allClaims,
             expires: DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
             signingCredentials: credentials);
@@ -70,9 +73,9 @@ public class JwtService : IJwtService
         var tokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = _jwtSettings.Issuer,
+            ValidIssuer = string.IsNullOrWhiteSpace(_jwtSettings.Issuer) ? "LifeBalance" : _jwtSettings.Issuer,
             ValidateAudience = true,
-            ValidAudience = _jwtSettings.Audience,
+            ValidAudience = string.IsNullOrWhiteSpace(_jwtSettings.Audience) ? "LifeBalance" : _jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey)),
             ValidateLifetime = false
