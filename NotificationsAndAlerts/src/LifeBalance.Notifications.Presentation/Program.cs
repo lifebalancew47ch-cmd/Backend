@@ -86,8 +86,7 @@ var app = builder.Build();
 
 FirebaseInit(app.Configuration);
 
-if (app.Environment.IsDevelopment())
-    app.UseNotificationsSwagger();
+app.UseNotificationsSwagger();
 
 app.UseExceptionHandling();
 

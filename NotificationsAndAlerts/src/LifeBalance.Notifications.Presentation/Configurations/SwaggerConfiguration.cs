@@ -9,50 +9,47 @@ public static class SwaggerConfiguration
 {
     public static IServiceCollection AddNotificationsSwagger(this IServiceCollection services, IHostEnvironment environment)
     {
-        if (environment.IsDevelopment())
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(options =>
         {
-            services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen(options =>
+            options.SwaggerDoc("v1", new OpenApiInfo
             {
-                options.SwaggerDoc("v1", new OpenApiInfo
+                Title = "LifeBalance Notifications & Alerts Service API",
+                Version = "v1",
+                Description = "Microservicio de Notificaciones de LifeBalance. Gestiona el despacho centralizado de correos electrónicos, notificaciones push y alertas del sistema, incluyendo expiración de licencias y recordatorios personalizados.",
+                Contact = new OpenApiContact
                 {
-                    Title = "LifeBalance Notifications & Alerts Service API",
-                    Version = "v1",
-                    Description = "Microservicio de Notificaciones de LifeBalance. Gestiona el despacho centralizado de correos electrónicos, notificaciones push y alertas del sistema, incluyendo expiración de licencias y recordatorios personalizados.",
-                    Contact = new OpenApiContact
-                    {
-                        Name = "Equipo LifeBalance",
-                        Email = "dev@lifebalance.io"
-                    }
-                });
-
-                var securityScheme = new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
-                    In = ParameterLocation.Header,
-                    Description = "Ingrese su token JWT Bearer: **Bearer {token}**"
-                };
-
-                options.AddSecurityDefinition("Bearer", securityScheme);
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
-                    }
-                });
+                    Name = "Equipo LifeBalance",
+                    Email = "dev@lifebalance.io"
+                }
             });
-        }
+
+            var securityScheme = new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Ingrese su token JWT Bearer: **Bearer {token}**"
+            };
+
+            options.AddSecurityDefinition("Bearer", securityScheme);
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
+        });
 
         return services;
     }

@@ -77,13 +77,7 @@ try
         });
 
     // --------------------------------------------------------
-    // --------------------------------------------------------
-    // Swagger / OpenAPI (Development only — Rule 7)
-    // --------------------------------------------------------
-    if (builder.Environment.IsDevelopment())
-    {
-        builder.Services.AddDashboardSwagger();
-    }
+    builder.Services.AddDashboardSwagger();
 
     // --------------------------------------------------------
     // Authorization Policies
@@ -223,10 +217,7 @@ try
     });
 
     // 5. Swagger (Development only — Rule 7)
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseDashboardSwagger();
-    }
+    app.UseDashboardSwagger();
 
     // 6. Response compression & caching
     app.UseResponseCompression();

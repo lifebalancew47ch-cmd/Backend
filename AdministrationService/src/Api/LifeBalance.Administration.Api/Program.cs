@@ -51,41 +51,38 @@ builder.Services.AddApiVersioning(options =>
 });
 
 // 4. Swagger — Development only
-if (builder.Environment.IsDevelopment())
+builder.Services.AddSwaggerGen(c =>
 {
-    builder.Services.AddSwaggerGen(c =>
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
-        c.SwaggerDoc("v1", new OpenApiInfo
-        {
-            Title = "LifeBalance - Administration Service API",
-            Version = "v1",
-            Description = "Microservicio de Administración de LifeBalance. Gestiona configuración global, catálogos, parámetros del sistema, feature flags, auditoría, logs centralizados, supervisión de microservicios y modo mantenimiento. Acceso exclusivo para SUPERADMIN y SYSTEMADMINISTRATOR.",
-            Contact = new OpenApiContact { Name = "LifeBalance Architecture Team", Email = "architecture@lifebalance.app" }
-        });
-
-        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-        {
-            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-            Name = "Authorization",
-            In = ParameterLocation.Header,
-            Type = SecuritySchemeType.ApiKey,
-            Scheme = "Bearer"
-        });
-
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                },
-                Array.Empty<string>()
-            }
-        });
-
-        c.EnableAnnotations();
+        Title = "LifeBalance - Administration Service API",
+        Version = "v1",
+        Description = "Microservicio de Administración de LifeBalance. Gestiona configuración global, catálogos, parámetros del sistema, feature flags, auditoría, logs centralizados, supervisión de microservicios y modo mantenimiento. Acceso exclusivo para SUPERADMIN y SYSTEMADMINISTRATOR.",
+        Contact = new OpenApiContact { Name = "LifeBalance Architecture Team", Email = "architecture@lifebalance.app" }
     });
-}
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    c.EnableAnnotations();
+});
 
 // 5. JWT validation — fail-fast on missing / placeholder / short secret
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -203,15 +200,12 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Administration Service API v1");
-        c.RoutePrefix = string.Empty;
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Administration Service API v1");
+    c.RoutePrefix = string.Empty;
+});
 
 app.UseResponseCompression();
 app.UseRouting();
