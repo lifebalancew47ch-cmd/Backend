@@ -1,6 +1,5 @@
 using AspNetCoreRateLimit;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
@@ -68,6 +67,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
         services.AddCors(options =>
         {
             options.AddPolicy("AllowConfiguredOrigins", policy =>
