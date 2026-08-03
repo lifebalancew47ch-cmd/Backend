@@ -13,6 +13,7 @@ COPY ["src/LifeBalance.Reporting.Infrastructure/LifeBalance.Reporting.Infrastruc
 COPY ["src/LifeBalance.Reporting.Contracts/LifeBalance.Reporting.Contracts.csproj", "src/LifeBalance.Reporting.Contracts/"]
 COPY ["src/LifeBalance.Reporting.Shared/LifeBalance.Reporting.Shared.csproj",     "src/LifeBalance.Reporting.Shared/"]
 COPY ["tests/LifeBalance.Reporting.UnitTests/LifeBalance.Reporting.UnitTests.csproj", "tests/LifeBalance.Reporting.UnitTests/"]
+COPY ["tests/LifeBalance.Reporting.IntegrationTests/LifeBalance.Reporting.IntegrationTests.csproj", "tests/LifeBalance.Reporting.IntegrationTests/"]
 COPY ["Directory.Build.props", "./"]
 
 # Restore NuGet packages
