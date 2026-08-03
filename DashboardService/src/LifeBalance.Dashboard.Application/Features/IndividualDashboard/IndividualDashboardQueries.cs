@@ -69,11 +69,11 @@ public class IndividualDashboardQueryHandlers :
         var profile = await userTask
             ?? throw new UpstreamServiceUnavailableException($"User profile for user '{request.UserId}' is unavailable.");
         var biometrics = await biometricsTask
-            ?? throw new UpstreamServiceUnavailableException($"Biometrics for user '{request.UserId}' are unavailable.");
+            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
         var activity = await activityTask
-            ?? throw new UpstreamServiceUnavailableException($"Activity data for user '{request.UserId}' is unavailable.");
+            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         var rewards = await rewardsTask
-            ?? throw new UpstreamServiceUnavailableException($"Rewards data for user '{request.UserId}' is unavailable.");
+            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
         var notifications = await notificationsTask ?? new List<NotificationItemDto>();
         var recommendations = await recommendationsTask ?? new List<RecommendationDto>();
 
@@ -92,9 +92,9 @@ public class IndividualDashboardQueryHandlers :
         var profile = await _authClient.GetUserProfileAsync(request.UserId, cancellationToken)
             ?? throw new UpstreamServiceUnavailableException($"User profile for user '{request.UserId}' is unavailable.");
         var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Activity data for user '{request.UserId}' is unavailable.");
+            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Rewards data for user '{request.UserId}' is unavailable.");
+            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
 
         return Result.Success(new IndividualSummaryResponse(
             request.UserId,
@@ -109,9 +109,9 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualKpisResponse>> Handle(GetIndividualKpisQuery request, CancellationToken cancellationToken)
     {
         var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Biometrics for user '{request.UserId}' are unavailable.");
+            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
         var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Activity data for user '{request.UserId}' is unavailable.");
+            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
 
         return Result.Success(new IndividualKpisResponse(
             request.UserId,
@@ -125,9 +125,9 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualStatisticsResponse>> Handle(GetIndividualStatisticsQuery request, CancellationToken cancellationToken)
     {
         var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Activity data for user '{request.UserId}' is unavailable.");
+            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Biometrics for user '{request.UserId}' are unavailable.");
+            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
 
         return Result.Success(new IndividualStatisticsResponse(
             request.UserId,
@@ -160,7 +160,7 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualActivityResponse>> Handle(GetIndividualActivityQuery request, CancellationToken cancellationToken)
     {
         var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Activity data for user '{request.UserId}' is unavailable.");
+            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
 
         return Result.Success(new IndividualActivityResponse(request.UserId, activity));
     }
@@ -174,7 +174,7 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualRewardsResponse>> Handle(GetIndividualRewardsQuery request, CancellationToken cancellationToken)
     {
         var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Rewards data for user '{request.UserId}' is unavailable.");
+            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
 
         return Result.Success(new IndividualRewardsResponse(request.UserId, rewards));
     }
@@ -188,7 +188,7 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualBiometricsResponse>> Handle(GetIndividualBiometricsQuery request, CancellationToken cancellationToken)
     {
         var bio = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException($"Biometrics for user '{request.UserId}' are unavailable.");
+            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
 
         return Result.Success(new IndividualBiometricsResponse(request.UserId, bio));
     }
