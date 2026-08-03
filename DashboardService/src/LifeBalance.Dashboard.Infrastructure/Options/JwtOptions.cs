@@ -10,10 +10,10 @@ public sealed class JwtOptions
     public const string SectionName = "Jwt";
 
     /// <summary>Gets or sets the token issuer (iss claim).</summary>
-    public string Issuer { get; set; } = string.Empty;
+    public string Issuer { get; set; } = "LifeBalance";
 
     /// <summary>Gets or sets the token audience (aud claim).</summary>
-    public string Audience { get; set; } = string.Empty;
+    public string Audience { get; set; } = "LifeBalance";
 
     /// <summary>Gets or sets the HMAC-SHA256 secret key (minimum 32 characters).</summary>
     public string SecretKey { get; set; } = string.Empty;

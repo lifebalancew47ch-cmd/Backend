@@ -38,8 +38,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtOptions["Issuer"],
-            ValidAudience = jwtOptions["Audience"],
+            ValidIssuer = string.IsNullOrWhiteSpace(jwtOptions["Issuer"]) ? "LifeBalance" : jwtOptions["Issuer"],
+            ValidAudience = string.IsNullOrWhiteSpace(jwtOptions["Audience"]) ? "LifeBalance" : jwtOptions["Audience"],
             ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.FromMinutes(1)

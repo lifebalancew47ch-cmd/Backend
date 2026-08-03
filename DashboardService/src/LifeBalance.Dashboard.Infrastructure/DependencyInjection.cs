@@ -80,8 +80,8 @@ public static class DependencyInjection
                     ValidateAudience         = true,
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer              = jwtOptions.Issuer,
-                    ValidAudience            = jwtOptions.Audience,
+                    ValidIssuer              = string.IsNullOrWhiteSpace(jwtOptions.Issuer) ? "LifeBalance" : jwtOptions.Issuer,
+                    ValidAudience            = string.IsNullOrWhiteSpace(jwtOptions.Audience) ? "LifeBalance" : jwtOptions.Audience,
                     IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
                     ClockSkew = TimeSpan.FromMinutes(1),

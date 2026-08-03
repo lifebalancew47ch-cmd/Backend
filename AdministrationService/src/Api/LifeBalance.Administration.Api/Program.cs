@@ -96,8 +96,8 @@ if (Encoding.UTF8.GetByteCount(secret) < 32)
     throw new InvalidOperationException($"JwtSettings:Secret must be at least 32 bytes long (current length: {Encoding.UTF8.GetByteCount(secret)} bytes).");
 }
 
-var issuer = jwtSettings["Issuer"] ?? string.Empty;
-var audience = jwtSettings["Audience"] ?? string.Empty;
+var issuer = string.IsNullOrWhiteSpace(jwtSettings["Issuer"]) ? "LifeBalance" : jwtSettings["Issuer"];
+var audience = string.IsNullOrWhiteSpace(jwtSettings["Audience"]) ? "LifeBalance" : jwtSettings["Audience"];
 var key = Encoding.UTF8.GetBytes(secret);
 
 builder.Services.AddAuthentication(options =>
