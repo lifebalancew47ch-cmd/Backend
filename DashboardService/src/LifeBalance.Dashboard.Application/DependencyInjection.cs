@@ -30,7 +30,7 @@ public static class DependencyInjection
         });
 
         // AutoMapper — scans assembly for Profile classes
-        services.AddAutoMapper(assembly);
+        services.AddAutoMapper(_ => { }, assembly);
 
         // FluentValidation — scans assembly for all AbstractValidator<T> classes
         services.AddValidatorsFromAssembly(assembly);
