@@ -79,19 +79,19 @@ services:
       - key: ServiceUrls__AuthServiceUrl
         value: https://lifebalance-auth-service.onrender.com
       - key: ServiceUrls__MedicalDataServiceUrl
-        value: https://medical-service.onrender.com
+        value: https://medical-service-hb0v.onrender.com
       - key: ServiceUrls__SedentaryEngineServiceUrl
         value: https://sedentary-engine-service.onrender.com
       - key: ServiceUrls__GamificationServiceUrl
-        value: https://gamification-service.onrender.com
+        value: https://gamification-service-9o3z.onrender.com
       - key: ServiceUrls__NotificationServiceUrl
         value: https://lifebalance-notifications-api.onrender.com
       - key: ServiceUrls__MlPredictionServiceUrl
-        value: https://ml-prediction-service.onrender.com
+        value: https://ml-prediction-service-0sqa.onrender.com
       - key: ServiceUrls__OrganizationServiceUrl
         value: https://lifebalance-organization-saas.onrender.com
       - key: ServiceUrls__ReportingServiceUrl
-        value: https://reporting-service.onrender.com
+        value: https://reporting-service.invalid
 
   # ───────────────────────────────────────────────────
   # 3. Notifications & Alerts Service
@@ -118,6 +118,18 @@ services:
         value: LifeBalance
       - key: Jwt__Audience
         value: LifeBalance
+      - key: ExternalServices__AuthService
+        value: https://lifebalance-auth-service.onrender.com
+      - key: ExternalServices__OrganizationService
+        value: https://lifebalance-organization-saas.onrender.com
+      - key: ExternalServices__SedentaryService
+        value: https://sedentary-engine-service.onrender.com
+      - key: ExternalServices__MLService
+        value: https://ml-prediction-service-0sqa.onrender.com
+      - key: ExternalServices__AdminService
+        value: https://lifebalance-administration-service.onrender.com
+      - key: ExternalServices__DashboardService
+        value: https://lifebalance-dashboard-service.onrender.com
 
   # ───────────────────────────────────────────────────
   # 4. Organization & SaaS Service
@@ -151,6 +163,14 @@ services:
         value: https://lifebalance-dashboard-service.onrender.com
       - key: Microservices__NotificationUrl
         value: https://lifebalance-notifications-api.onrender.com
+      - key: Microservices__ReportingUrl
+        value: https://reporting-service.invalid
+      - key: Microservices__GamificationUrl
+        value: https://gamification-service-9o3z.onrender.com
+      - key: Microservices__MlPredictionUrl
+        value: https://ml-prediction-service-0sqa.onrender.com
+      - key: Microservices__AdministrationUrl
+        value: https://lifebalance-administration-service.onrender.com
 
   # ───────────────────────────────────────────────────
   # 5. Administration & Configuration Service
@@ -187,10 +207,10 @@ services:
       - key: Microservices__NotificationUrl
         value: https://lifebalance-notifications-api.onrender.com
       - key: Microservices__MedicalDataUrl
-        value: https://medical-service.onrender.com
+        value: https://medical-service-hb0v.onrender.com
       - key: Microservices__SedentaryEngineUrl
         value: https://sedentary-engine-service.onrender.com
       - key: Microservices__MlPredictionUrl
-        value: https://ml-prediction-service.onrender.com
+        value: https://ml-prediction-service-0sqa.onrender.com
       - key: Microservices__ReportingUrl
-        value: https://reporting-service.onrender.com
+        value: https://reporting-service.invalid
