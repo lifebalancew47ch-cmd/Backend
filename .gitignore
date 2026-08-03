@@ -2,6 +2,10 @@
 **/bin/
 **/obj/
 
+# Generated XML documentation (root-level project docs, e.g. src/App/.xml)
+**/src/*/.xml
+**/tests/*/.xml
+
 # IDE
 .vs/
 .vscode/

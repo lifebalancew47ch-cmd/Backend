@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeBalance.Reporting.Domain\LifeBalance.Reporting.Domain.csproj" />
+    <ProjectReference Include="..\LifeBalance.Reporting.Contracts\LifeBalance.Reporting.Contracts.csproj" />
+    <ProjectReference Include="..\LifeBalance.Reporting.Shared\LifeBalance.Reporting.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- AutoMapper 16.x has built-in DI support - no separate Extensions package needed -->
+    <PackageReference Include="AutoMapper" Version="16.2.0" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="MediatR" Version="14.2.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <NoWarn>CS1591;CS1998</NoWarn>
+  </PropertyGroup>
+
+</Project>

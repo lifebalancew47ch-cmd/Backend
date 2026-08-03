@@ -155,6 +155,36 @@ updates:
       - dependency-name: "Asp.Versioning.Mvc.ApiExplorer"
         versions: [">=10.0.0"]
 
+  - package-ecosystem: "nuget"
+    directory: "/ReportingService"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        versions: [">=10.0.0"]
+      - dependency-name: "Microsoft.Extensions.*"
+        versions: [">=10.0.0"]
+      - dependency-name: "Microsoft.NET.Test.Sdk"
+        versions: [">=18.0.0"]
+      - dependency-name: "xunit"
+        versions: [">=3.0.0"]
+      - dependency-name: "xunit.runner.visualstudio"
+        versions: [">=3.0.0"]
+      - dependency-name: "coverlet.collector"
+        versions: [">=10.0.0"]
+      - dependency-name: "Swashbuckle.AspNetCore"
+        versions: [">=10.0.0"]
+      - dependency-name: "Swashbuckle.AspNetCore.Annotations"
+        versions: [">=10.0.0"]
+      - dependency-name: "Asp.Versioning.Mvc"
+        versions: [">=10.0.0"]
+      - dependency-name: "Asp.Versioning.Mvc.ApiExplorer"
+        versions: [">=10.0.0"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

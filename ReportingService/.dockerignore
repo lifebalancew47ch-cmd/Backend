@@ -1,0 +1,17 @@
+**/.vs
+**/.idea
+**/.git
+**/*.user
+**/[Bb]in
+**/[Oo]bj
+**/[Ll]ogs
+**/TestResults
+**/coverage
+**/.nuget
+**/node_modules
+**/*.md
+**/.gitignore
+**/.editorconfig
+**/*.sln.docstates
+**/docker-compose*.yml
+**/Dockerfile*

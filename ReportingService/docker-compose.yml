@@ -1,0 +1,94 @@
+version: "3.9"
+
+# ============================================================
+# LifeBalance · Reporting Service — Docker Compose
+# ============================================================
+
+networks:
+  lifebalance-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+
+services:
+
+  # ----------------------------------------------------------
+  # MongoDB
+  # ----------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: lifebalance-reporting-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: lifebalance_reporting
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - lifebalance-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Reporting API
+  # ----------------------------------------------------------
+  reporting-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    container_name: lifebalance-reporting-api
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "5006:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      MongoDb__ConnectionString: "mongodb://mongodb:27017"
+      MongoDb__DatabaseName: lifebalance_reporting
+      Jwt__Issuer: "LifeBalance"
+      Jwt__Audience: "LifeBalance"
+      Jwt__SecretKey: "${JWT_SECRET_KEY:-CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!}"
+      ServiceUrls__AuthServiceUrl: "http://localhost:5001"
+      ServiceUrls__MedicalDataServiceUrl: "http://localhost:5002"
+      ServiceUrls__SedentaryEngineServiceUrl: "http://localhost:5003"
+      ServiceUrls__DashboardServiceUrl: "http://localhost:5004"
+      ServiceUrls__OrganizationServiceUrl: "http://localhost:5005"
+      Serilog__MinimumLevel__Default: "Information"
+      Cors__AllowedOrigins__0: "http://localhost:3000"
+    networks:
+      - lifebalance-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+  # ----------------------------------------------------------
+  # Mongo Express (Dev UI) — basic auth enabled, loopback only
+  # ----------------------------------------------------------
+  mongo-express:
+    image: mongo-express:1.0
+    container_name: lifebalance-reporting-mongo-express
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: "mongodb://mongodb:27017/"
+      ME_CONFIG_BASICAUTH: "true"
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-admin}
+    networks:
+      - lifebalance-net
+    profiles:
+      - dev-tools

@@ -91,7 +91,7 @@ services:
       - key: ServiceUrls__OrganizationServiceUrl
         value: https://lifebalance-organization-saas.onrender.com
       - key: ServiceUrls__ReportingServiceUrl
-        value: https://reporting-service.onrender.com
+        value: https://lifebalance-reporting-service.onrender.com
 
   # ───────────────────────────────────────────────────
   # 3. Notifications & Alerts Service
@@ -193,4 +193,43 @@ services:
       - key: Microservices__MlPredictionUrl
         value: https://ml-prediction-service.onrender.com
       - key: Microservices__ReportingUrl
-        value: https://reporting-service.onrender.com
+        value: https://lifebalance-reporting-service.onrender.com
+
+  # ───────────────────────────────────────────────────
+  # 6. Reporting Service
+  # ───────────────────────────────────────────────────
+  - type: web
+    name: lifebalance-reporting-service
+    env: docker
+    region: oregon
+    plan: free
+    rootDir: ReportingService
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_HTTP_PORTS
+        value: 8080
+      - key: MongoDb__ConnectionString
+        sync: false
+      - key: MongoDb__DatabaseName
+        value: lifebalance_reporting
+      - key: Jwt__Issuer
+        value: LifeBalance
+      - key: Jwt__Audience
+        value: LifeBalance
+      - key: Jwt__SecretKey
+        sync: false
+      - key: ServiceUrls__AuthServiceUrl
+        value: https://lifebalance-auth-service.onrender.com
+      - key: ServiceUrls__MedicalDataServiceUrl
+        value: https://medical-service.onrender.com
+      - key: ServiceUrls__SedentaryEngineServiceUrl
+        value: https://sedentary-engine-service.onrender.com
+      - key: ServiceUrls__DashboardServiceUrl
+        value: https://lifebalance-dashboard-service.onrender.com
+      - key: ServiceUrls__OrganizationServiceUrl
+        value: https://lifebalance-organization-saas.onrender.com
+      - key: Cors__AllowedOrigins__0
+        value: https://lifebalance-adv3.onrender.com

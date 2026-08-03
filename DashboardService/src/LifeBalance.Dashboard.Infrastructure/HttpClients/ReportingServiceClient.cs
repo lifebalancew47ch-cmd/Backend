@@ -19,12 +19,19 @@ public class ReportingServiceClient : IReportingServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<GeneralSystemMetricsDto>("/api/v1/reports/system-metrics", cancellationToken);
+            var res = await _httpClient.GetFromJsonAsync<ReportingApiResponse<GeneralSystemMetricsDto>>("/api/v1/reports/system-metrics", cancellationToken);
+            return res?.Data;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve global system metrics");
             return new GeneralSystemMetricsDto(10000, 3200, 99.9, "v1.0.0");
         }
+    }
+
+    private sealed class ReportingApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public T? Data { get; set; }
     }
 }

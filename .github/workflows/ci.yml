@@ -244,7 +244,51 @@ jobs:
         run: docker build -t lifebalance-administration:ci .
 
   # ─────────────────────────────────────────
-  # JOB 6: Contract & Inter-Service Tests
+  # JOB 6: Reporting Service
+  # ─────────────────────────────────────────
+  reporting:
+    name: Reporting Service — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ReportingService
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore solution
+        run: dotnet restore LifeBalance.Reporting.sln
+
+      - name: Build solution
+        run: dotnet build LifeBalance.Reporting.sln --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: >
+          dotnet test tests/LifeBalance.Reporting.UnitTests/LifeBalance.Reporting.UnitTests.csproj
+          --no-build
+          --configuration Release
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: reporting-unit-test-results
+          path: ReportingService/TestResults/
+
+      - name: Build Docker image (dry run)
+        run: docker build -t lifebalance-reporting:ci .
+
+  # ─────────────────────────────────────────
+  # JOB 7: Contract & Inter-Service Tests
   # ─────────────────────────────────────────
   contract-tests:
     name: Contract & Inter-Service — Test
@@ -273,12 +317,12 @@ jobs:
           --logger "trx;LogFileName=contract-test-results.trx"
 
   # ─────────────────────────────────────────
-  # JOB 7: All-green gate (required for merge)
+  # JOB 8: All-green gate (required for merge)
   # ─────────────────────────────────────────
   ci-success:
     name: CI — All services passed
     runs-on: ubuntu-latest
-    needs: [auth-profile, dashboard, notifications, organization-saas, administration, contract-tests]
+    needs: [auth-profile, dashboard, notifications, organization-saas, administration, reporting, contract-tests]
     if: always()
     steps:
       - name: Check all jobs succeeded
@@ -288,6 +332,7 @@ jobs:
                 "${{ needs.notifications.result }}" != "success" || \
                 "${{ needs.organization-saas.result }}" != "success" || \
                 "${{ needs.administration.result }}" != "success" || \
+                "${{ needs.reporting.result }}" != "success" || \
                 "${{ needs.contract-tests.result }}" != "success" ]]; then
             echo "One or more service jobs failed."
             exit 1
