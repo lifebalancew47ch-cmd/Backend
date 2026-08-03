@@ -116,7 +116,8 @@ try
     // --------------------------------------------------------
     // CORS — origins from configuration (Cors:AllowedOrigins)
     // --------------------------------------------------------
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("DashboardCorsPolicy", policy =>

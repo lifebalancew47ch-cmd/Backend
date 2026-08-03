@@ -135,7 +135,8 @@ builder.Services.AddResponseCompression(options =>
 builder.Services.AddHealthChecks();
 
 // 8. CORS — only configured origins; AllowAnyOrigin fallback limited to Development
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
