@@ -21,9 +21,14 @@ public sealed class MongoDbContext
         var client = new MongoClient(settings);
         Client = client;
         _database = client.GetDatabase(options.Value.DatabaseName);
-
-        Indexes.EnsureIndexes(_database);
     }
+
+    /// <summary>
+    /// Ensures the required indexes exist. Runs in the background at startup so index
+    /// creation never blocks request processing or the health checks.
+    /// </summary>
+    public Task EnsureIndexesAsync(CancellationToken cancellationToken = default)
+        => Indexes.EnsureIndexesAsync(_database, cancellationToken);
 
     /// <summary>Gets the underlying <see cref="IMongoClient"/> for advanced operations.</summary>
     public IMongoClient Client { get; }

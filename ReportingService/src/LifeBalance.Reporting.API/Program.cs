@@ -113,9 +113,8 @@ try
     // --------------------------------------------------------
     builder.Services
         .AddHealthChecks()
-        .AddMongoDb(
-            sp => sp.GetRequiredService<LifeBalance.Reporting.Infrastructure.Persistence.Mongo.MongoDbContext>().Client,
-            name: "mongodb",
+        .AddCheck<MongoDbHealthCheck>(
+            "mongodb",
             tags: new[] { "ready", "db" });
 
     // --------------------------------------------------------

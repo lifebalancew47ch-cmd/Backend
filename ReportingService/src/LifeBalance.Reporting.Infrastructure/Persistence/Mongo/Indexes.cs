@@ -10,21 +10,23 @@ namespace LifeBalance.Reporting.Infrastructure.Persistence.Mongo;
 internal static class Indexes
 {
     /// <summary>Ensures all required indexes exist. Idempotent.</summary>
-    public static void EnsureIndexes(IMongoDatabase database)
+    public static async Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken)
     {
         var logs = database.GetCollection<ReportGenerationLog>(DomainConstants.ReportLogsCollection);
 
-        logs.Indexes.CreateOne(
+        await logs.Indexes.CreateOneAsync(
             new CreateIndexModel<ReportGenerationLog>(
                 Builders<ReportGenerationLog>.IndexKeys
                     .Ascending(x => x.UserId)
-                    .Descending(x => x.TimestampUtc)));
+                    .Descending(x => x.TimestampUtc)),
+            cancellationToken: cancellationToken);
 
-        logs.Indexes.CreateOne(
+        await logs.Indexes.CreateOneAsync(
             new CreateIndexModel<ReportGenerationLog>(
                 Builders<ReportGenerationLog>.IndexKeys
                     .Ascending(x => x.Scope)
                     .Ascending(x => x.ScopeId),
-                new CreateIndexOptions { Name = "scope_scopeid" }));
+                new CreateIndexOptions { Name = "scope_scopeid" }),
+            cancellationToken: cancellationToken);
     }
 }

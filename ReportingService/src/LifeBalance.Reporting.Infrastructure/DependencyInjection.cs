@@ -43,6 +43,7 @@ public static class DependencyInjection
         // ------ MongoDB Context & Repositories ------
         services.AddSingleton<MongoDbContext>();
         services.AddScoped<IReportGenerationLogRepository, ReportGenerationLogRepository>();
+        services.AddHostedService<MongoIndexInitializer>();
 
         // ------ Services ------
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
