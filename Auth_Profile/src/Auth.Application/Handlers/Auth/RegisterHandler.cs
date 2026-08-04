@@ -21,6 +21,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, ApiResponse<Regi
     private readonly IAuditService _auditService;
     private readonly IEmailConfirmationTokenRepository _emailConfirmationTokenRepository;
     private readonly IEmailService _emailService;
+    private readonly IOrganizationService _organizationService;
     private readonly IMapper _mapper;
     private readonly ILogger<RegisterHandler> _logger;
     private readonly SecuritySettings _securitySettings;
@@ -32,6 +33,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, ApiResponse<Regi
         IAuditService auditService,
         IEmailConfirmationTokenRepository emailConfirmationTokenRepository,
         IEmailService emailService,
+        IOrganizationService organizationService,
         IMapper mapper,
         ILogger<RegisterHandler> logger,
         IOptions<SecuritySettings> securitySettings)
@@ -42,6 +44,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, ApiResponse<Regi
         _auditService = auditService;
         _emailConfirmationTokenRepository = emailConfirmationTokenRepository;
         _emailService = emailService;
+        _organizationService = organizationService;
         _mapper = mapper;
         _logger = logger;
         _securitySettings = securitySettings.Value;
@@ -74,6 +77,24 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, ApiResponse<Regi
         };
 
         await _userRepository.AddAsync(user, cancellationToken);
+
+        try
+        {
+            var membership = await _organizationService.ProvisionMembershipAsync(user.Id, cancellationToken);
+            if (membership?.TenantId is not null)
+            {
+                _logger.LogInformation("Provisioned tenant membership for newly registered user {Email} (tenant {TenantId}).",
+                    user.Email, membership.TenantId);
+            }
+            else
+            {
+                _logger.LogWarning("Membership provisioning for newly registered user {Email} returned no tenant. Will self-heal on next login.", user.Email);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to provision membership for newly registered user {Email}. Will self-heal on next login.", user.Email);
+        }
 
         await _auditService.LogEventAsync(
             user.Id, Domain.Enums.AuthEventType.Register,

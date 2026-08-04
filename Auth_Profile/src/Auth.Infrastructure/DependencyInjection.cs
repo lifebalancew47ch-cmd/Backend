@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<SecuritySettings>(configuration.GetSection("Security"));
         services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
+        services.Configure<InternalSettings>(configuration.GetSection(InternalSettings.SectionName));
 
         var mongoSettings = new MongoDbSettings();
         configuration.GetSection("MongoDb").Bind(mongoSettings);

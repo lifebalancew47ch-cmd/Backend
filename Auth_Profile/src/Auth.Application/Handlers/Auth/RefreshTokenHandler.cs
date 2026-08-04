@@ -105,6 +105,17 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, ApiRespo
 
         var preliminaryToken = _jwtService.GenerateAccessToken(claims);
         var tenant = await _organizationService.GetTenantContextAsync(preliminaryToken, cancellationToken);
+
+        if (tenant?.TenantId is null)
+        {
+            tenant = await _organizationService.ProvisionMembershipAsync(user.Id, cancellationToken);
+            if (tenant?.TenantId is not null)
+            {
+                _logger.LogInformation("Auto-provisioned tenant membership for user {UserId} on token refresh (tenant {TenantId}).",
+                    user.Id, tenant.TenantId);
+            }
+        }
+
         if (tenant?.TenantId is not null)
         {
             claims.Add(new Claim("tenant_id", tenant.TenantId));

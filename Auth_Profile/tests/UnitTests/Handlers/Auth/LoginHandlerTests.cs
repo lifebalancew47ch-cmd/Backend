@@ -166,6 +166,58 @@ public class LoginHandlerTests
     }
 
     [Fact]
+    public async Task Handle_UserWithoutMembership_AutoProvisionsAndAddsTenantClaims()
+    {
+        // Arrange
+        var request = new LoginRequest("demo@example.com", "Password123!");
+        var command = new LoginCommand(request);
+        var user = new User
+        {
+            Id = "user-nomembership",
+            Email = "demo@example.com",
+            PasswordHash = "hashed_pass",
+            IsActive = true,
+            RoleIds = new List<string> { "role-1" }
+        };
+        var role = new Role { Id = "role-1", Name = "User", NormalizedName = "USER" };
+
+        _userRepositoryMock.Setup(r => r.GetByEmailAsync("demo@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordServiceMock.Setup(p => p.VerifyPassword("Password123!", "hashed_pass"))
+            .Returns(true);
+        _roleRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role> { role });
+        _organizationServiceMock.Setup(o => o.GetTenantContextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TenantContextResult?)null);
+        _organizationServiceMock.Setup(o => o.ProvisionMembershipAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantContextResult("provisioned-tenant", "provisioned-org"));
+
+        IEnumerable<Claim>? issuedClaims = null;
+        _jwtServiceMock.Setup(j => j.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>()))
+            .Callback<IEnumerable<Claim>>(c => issuedClaims = c)
+            .Returns("fake_access_token");
+        _jwtServiceMock.Setup(j => j.GenerateRefreshToken())
+            .Returns("fake_refresh_token");
+        _jwtServiceMock.Setup(j => j.GetJwtId("fake_access_token"))
+            .Returns("jwt-id-123");
+        _jwtServiceMock.Setup(j => j.GetAccessTokenExpiration())
+            .Returns(DateTime.UtcNow.AddMinutes(30));
+        _mapperMock.Setup(m => m.Map<UserProfileDto>(It.IsAny<User>()))
+            .Returns(CreateDummyProfile());
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        _organizationServiceMock.Verify(o => o.ProvisionMembershipAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        issuedClaims.Should().Contain(c => c.Type == "tenant_id" && c.Value == "provisioned-tenant");
+        issuedClaims.Should().Contain(c => c.Type == "organization_id" && c.Value == "provisioned-org");
+    }
+
+    [Fact]
     public async Task Handle_UserNotFound_Returns401()
     {
         // Arrange

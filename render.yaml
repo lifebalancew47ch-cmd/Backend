@@ -51,6 +51,8 @@ services:
         value: https://lifebalance-adv3.onrender.com
       - key: ServiceUrls__OrganizationUrl
         value: https://lifebalance-organization-saas.onrender.com
+      - key: Internal__ProvisioningKey
+        sync: false
 
   # ───────────────────────────────────────────────────
   # 2. Dashboard Service
@@ -173,6 +175,8 @@ services:
         value: https://ml-prediction-service-0sqa.onrender.com
       - key: Microservices__AdministrationUrl
         value: https://lifebalance-administration-service.onrender.com
+      - key: Internal__ProvisioningKey
+        sync: false
 
   # ───────────────────────────────────────────────────
   # 5. Administration & Configuration Service
