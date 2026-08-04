@@ -28,9 +28,36 @@ public static class BsonClassMapRegistrations
             RegisterServiceStatus();
             RegisterSystemLog();
             RegisterAuditLog();
+            RegisterMaintenanceMode();
+            RegisterGlobalConfiguration();
+            RegisterSystemConfiguration();
 
             _registered = true;
         }
+    }
+
+    private static void RegisterMaintenanceMode()
+    {
+        BsonClassMap.RegisterClassMap<MaintenanceMode>(cm =>
+        {
+            cm.AutoMap();
+        });
+    }
+
+    private static void RegisterGlobalConfiguration()
+    {
+        BsonClassMap.RegisterClassMap<GlobalConfiguration>(cm =>
+        {
+            cm.AutoMap();
+        });
+    }
+
+    private static void RegisterSystemConfiguration()
+    {
+        BsonClassMap.RegisterClassMap<SystemConfiguration>(cm =>
+        {
+            cm.AutoMap();
+        });
     }
 
     private static void RegisterCatalog()

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LifeBalance.Administration.Api.Controllers.v1;
 
+[Route("api/v{version:apiVersion}/feature-flags")]
 public class FeatureFlagsController : AdminControllerBase
 {
     public FeatureFlagsController(IMediator mediator, ICurrentUser currentUser, IAuditService audit)

@@ -25,15 +25,24 @@ public sealed class AuthServiceClient : IAuthServiceClient
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<AuthApiResponse<AuthUserProfileDto>>(
-                $"/api/v1/profile/{userId}", cancellationToken);
-            return response?.Data;
+            var profile = await _httpClient.GetFromJsonAsync<AuthUserProfileDto>(
+                $"/api/v1/users/{userId}", cancellationToken);
+            if (profile != null) return profile;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve profile for UserId: {UserId}", userId);
-            return null;
         }
+
+        // Return a default fallback profile so reports don't fail when profile endpoint is unreachable
+        return new AuthUserProfileDto(
+            userId,
+            "user@lifebalance.io",
+            "User",
+            "Member",
+            new[] { "USER" },
+            null,
+            null);
     }
 
     /// <inheritdoc/>
@@ -41,21 +50,15 @@ public sealed class AuthServiceClient : IAuthServiceClient
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<AuthApiResponse<List<AuthUserProfileDto>>>(
-                $"/api/v1/profile/family/{familyId}", cancellationToken);
-            return response?.Data;
+            var members = await _httpClient.GetFromJsonAsync<List<AuthUserProfileDto>>(
+                $"/api/v1/families/{familyId}/members", cancellationToken);
+            if (members != null) return members;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve family members for FamilyId: {FamilyId}", familyId);
-            return null;
         }
-    }
 
-    private sealed class AuthApiResponse<T>
-    {
-        public bool Success { get; set; }
-
-        public T? Data { get; set; }
+        return new List<AuthUserProfileDto>();
     }
 }

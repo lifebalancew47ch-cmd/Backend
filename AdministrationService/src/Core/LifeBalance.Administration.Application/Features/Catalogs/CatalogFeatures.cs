@@ -204,12 +204,14 @@ public class CatalogQueryHandler :
 
         var category = string.IsNullOrWhiteSpace(request.Category) ? null : Regex.Escape(request.Category.Trim());
 
+        var hasSearch = !string.IsNullOrWhiteSpace(search);
+        var hasCategory = !string.IsNullOrWhiteSpace(category);
+        var onlyActive = request.OnlyActive;
+
         var (items, total) = await _catalogRepository.GetPagedAsync(
-            x => (string.IsNullOrEmpty(search)
-                    || x.Name.Contains(search)
-                    || x.Code.Contains(search))
-                 && (category == null || x.Category == category)
-                 && (request.OnlyActive == null || x.IsActive == request.OnlyActive.Value),
+            x => (!hasSearch || x.Name.Contains(search!) || x.Code.Contains(search!))
+                 && (!hasCategory || x.Category == category)
+                 && (!onlyActive.HasValue || x.IsActive == onlyActive.Value),
             request.PageIndex,
             request.PageSize,
             x => x.CreatedAt,

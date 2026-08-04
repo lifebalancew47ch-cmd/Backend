@@ -32,10 +32,13 @@ public abstract class BaseServiceClient
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            using var response = await _httpClient.GetAsync(HealthPath, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(4));
+
+            using var response = await _httpClient.GetAsync(HealthPath, cts.Token);
             stopwatch.Stop();
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cts.Token);
             object? payload = string.IsNullOrWhiteSpace(body) || body.Length > 2000 ? null : TryParse(body);
 
             var healthy = response.IsSuccessStatusCode;
