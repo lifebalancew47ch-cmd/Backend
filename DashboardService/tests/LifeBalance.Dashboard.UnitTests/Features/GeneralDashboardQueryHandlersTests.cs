@@ -275,6 +275,14 @@ public class GeneralDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetGeneralHealthQuery_DoesNotCallReportingClient()
     {
+        // Arrange
+        var entries = new Dictionary<string, HealthReportEntry>
+        {
+            { "DashboardService", new HealthReportEntry(HealthStatus.Healthy, "test", TimeSpan.Zero, null, null) }
+        };
+        var report = new HealthReport(entries, TimeSpan.Zero);
+        _healthCheckService.CheckHealthAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(report));
+
         // Act
         await _handler.Handle(new GetGeneralHealthQuery(), CancellationToken.None);
 
