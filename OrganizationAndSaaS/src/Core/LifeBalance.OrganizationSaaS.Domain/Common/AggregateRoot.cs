@@ -1,3 +1,5 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace LifeBalance.OrganizationSaaS.Domain.Common;
 
 public interface IDomainEvent
@@ -7,8 +9,10 @@ public interface IDomainEvent
 
 public abstract class AggregateRoot : BaseEntity
 {
+    [BsonIgnore]
     private readonly List<IDomainEvent> _domainEvents = new();
 
+    [BsonIgnore]
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected void AddDomainEvent(IDomainEvent domainEvent)

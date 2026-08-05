@@ -9,6 +9,8 @@ public class MongoDbContext
 
     public MongoDbContext(string connectionString, string databaseName)
     {
+        BsonClassMapRegistrations.Register();
+
         var client = new MongoClient(connectionString);
         _database = client.GetDatabase(databaseName);
 
