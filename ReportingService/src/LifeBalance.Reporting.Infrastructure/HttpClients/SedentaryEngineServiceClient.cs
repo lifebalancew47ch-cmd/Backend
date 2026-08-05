@@ -21,6 +21,23 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     }
 
     /// <inheritdoc/>
+    public async Task<SedentaryScoreDto?> GetUserScoreAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var res = await _httpClient.GetFromJsonAsync<SedentaryScoreResponseDto>(
+                $"/api/v1/sedentary/score/{userId}", cancellationToken);
+            if (res == null) return null;
+            return new SedentaryScoreDto(userId, res.DailySteps, res.ActiveMinutes, res.SedentaryHours, res.CaloriesBurned);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sedentary score for UserId: {UserId}", userId);
+            return null;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<SedentaryDailyDto>?> GetUserHistoryAsync(
         string userId, DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
@@ -41,8 +58,19 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<GoalDto>>(
-                $"/api/v1/sedentary/users/{userId}/goals", cancellationToken);
+            var goal = await _httpClient.GetFromJsonAsync<GoalResponseDto>(
+                "/api/v1/sedentary/goals", cancellationToken);
+            if (goal == null) return [];
+            return [
+                new GoalDto(
+                    goal.Id ?? Guid.NewGuid().ToString(),
+                    "Daily Steps Target",
+                    "Steps",
+                    goal.DailyStepsTarget,
+                    0,
+                    false,
+                    null)
+            ];
         }
         catch (Exception ex)
         {
@@ -50,6 +78,12 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
             return null;
         }
     }
+
+    private sealed record SedentaryScoreResponseDto(
+        double DailySteps, double ActiveMinutes, double SedentaryHours, double CaloriesBurned);
+
+    private sealed record GoalResponseDto(
+        string? Id, string? UserId, double DailyStepsTarget, double ActiveMinutesTarget, DateTime? UpdatedAtUtc);
 
     /// <inheritdoc/>
     public async Task<FamilyComplianceDto?> GetFamilyComplianceAsync(

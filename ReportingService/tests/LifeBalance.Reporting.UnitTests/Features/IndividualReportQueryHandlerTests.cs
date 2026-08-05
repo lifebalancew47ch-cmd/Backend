@@ -73,16 +73,8 @@ public class IndividualReportQueryHandlerTests
                 Arg.Is(ReportScope.Individual), Arg.Any<string?>(), Arg.Is<string?>(userId), Arg.Any<IReadOnlyList<string>>(), Arg.Any<DateRange>(), Arg.Any<CancellationToken>())
             .Returns(CreateDataset(userId, reading));
 
-        _sedentaryClient.GetUserHistoryAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
-            .Returns([
-                new SedentaryDailyDto(
-                    Date: new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
-                    SedentaryScore: 40,
-                    SedentaryHours: 6,
-                    ActiveMinutes: 45,
-                    Steps: 1000,
-                    BreakCount: 4)
-            ]);
+        _sedentaryClient.GetUserScoreAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new SedentaryScoreDto(userId, 1000, 45, 6, 200));
 
         _sedentaryClient.GetUserGoalsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([]);
@@ -100,7 +92,7 @@ public class IndividualReportQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_MissingSedentaryHistory_ThrowsUpstreamUnavailable()
+    public async Task Handle_MissingSedentaryScore_ThrowsUpstreamUnavailable()
     {
         var userId = "user-1";
         var reading = CreateReading(userId, new DateTime(2026, 8, 2, 10, 0, 0, DateTimeKind.Utc), 1000, 72);
@@ -109,8 +101,8 @@ public class IndividualReportQueryHandlerTests
                 Arg.Is(ReportScope.Individual), Arg.Any<string?>(), Arg.Is<string?>(userId), Arg.Any<IReadOnlyList<string>>(), Arg.Any<DateRange>(), Arg.Any<CancellationToken>())
             .Returns(CreateDataset(userId, reading));
 
-        _sedentaryClient.GetUserHistoryAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
-            .Returns((IReadOnlyList<SedentaryDailyDto>?)null);
+        _sedentaryClient.GetUserScoreAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((SedentaryScoreDto?)null);
 
         await FluentActions.Awaiting(() => _handler.Handle(
                 new GetIndividualReportQuery(userId, null, null),

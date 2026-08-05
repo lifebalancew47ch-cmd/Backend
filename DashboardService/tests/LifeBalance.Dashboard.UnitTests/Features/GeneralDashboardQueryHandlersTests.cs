@@ -110,22 +110,72 @@ public class GeneralDashboardQueryHandlersTests
     }
 
     [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_ThrowsWhenNoIndicatorsSource()
+    public async Task Handle_GetGeneralIndicatorsQuery_ReportingDown_ThrowsUpstreamUnavailable()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns((GeneralSystemMetricsDto?)null);
+
         // Act
         await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None))
             .Should().ThrowAsync<UpstreamServiceUnavailableException>();
     }
 
     [Fact]
-    public async Task Handle_GetGeneralIndicatorsQuery_DoesNotCallReportingClient()
+    public async Task Handle_GetGeneralIndicatorsQuery_CallsReportingClient()
     {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
         // Act
-        await FluentActions.Awaiting(() => _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
 
         // Assert
-        await _reportingClient.DidNotReceive().GetSystemMetricsAsync(Arg.Any<CancellationToken>());
+        await _reportingClient.Received(1).GetSystemMetricsAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_GetGeneralIndicatorsQuery_ReturnsSuccess()
+    {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
+        // Act
+        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_GetGeneralIndicatorsQuery_PropagatesPlatformAdherenceRate()
+    {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(new GeneralSystemMetricsDto(5000, 1500, 87.3, "1.0.0"));
+
+        // Act
+        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
+
+        // Assert
+        result.Value.PlatformAdherenceRate.Should().Be(87.3);
+    }
+
+    [Fact]
+    public async Task Handle_GetGeneralIndicatorsQuery_StepsAndSedentaryAreStructuralZeros()
+    {
+        // Arrange
+        _reportingClient.GetSystemMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(CreateMetrics());
+
+        // Act
+        var result = await _handler.Handle(new GetGeneralIndicatorsQuery(), CancellationToken.None);
+
+        // Assert
+        result.Value.AverageDailySteps.Should().Be(0);
+        result.Value.AverageSedentaryTime.Should().Be(0);
     }
 
     [Fact]

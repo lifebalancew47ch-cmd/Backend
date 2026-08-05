@@ -45,8 +45,13 @@ public class GeneralDashboardQueryHandlers :
 
     public async Task<Result<GeneralIndicatorsResponse>> Handle(GetGeneralIndicatorsQuery request, CancellationToken cancellationToken)
     {
-        throw new UpstreamServiceUnavailableException(
-            "General indicators are unavailable because no upstream platform indicators source is configured.");
+        var metrics = await _reportingClient.GetSystemMetricsAsync(cancellationToken)
+            ?? throw new UpstreamServiceUnavailableException("General indicators are unavailable from the Reporting service.");
+
+        return Result.Success(new GeneralIndicatorsResponse(
+            AverageDailySteps: 0,              // No platform-wide aggregate source yet; structural zero
+            AverageSedentaryTime: 0,           // No platform-wide aggregate source yet; structural zero
+            PlatformAdherenceRate: metrics.PlatformHealthPercentage));
     }
 
     public async Task<Result<GeneralKpisResponse>> Handle(GetGeneralKpisQuery request, CancellationToken cancellationToken)

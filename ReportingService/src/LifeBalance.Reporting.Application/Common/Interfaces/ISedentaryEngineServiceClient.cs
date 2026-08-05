@@ -59,11 +59,24 @@ public sealed record CompanyAdherenceDto(
     IReadOnlyList<DepartmentAdherenceDto> Departments);
 
 /// <summary>
+/// Latest sedentary score snapshot for a user.
+/// </summary>
+public sealed record SedentaryScoreDto(
+    string UserId,
+    double DailySteps,
+    double ActiveMinutes,
+    double SedentaryHours,
+    double CaloriesBurned);
+
+/// <summary>
 /// Contract for the Sedentary Engine microservice client.
 /// All methods return <c>null</c> when the upstream call fails (fail-closed callers).
 /// </summary>
 public interface ISedentaryEngineServiceClient
 {
+    /// <summary>Retrieves the latest sedentary score snapshot for a user.</summary>
+    Task<SedentaryScoreDto?> GetUserScoreAsync(string userId, CancellationToken cancellationToken = default);
+
     /// <summary>Retrieves the daily sedentary history of a user within a date range.</summary>
     Task<IReadOnlyList<SedentaryDailyDto>?> GetUserHistoryAsync(
         string userId, DateTime from, DateTime to, CancellationToken cancellationToken = default);
