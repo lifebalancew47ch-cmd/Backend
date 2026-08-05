@@ -109,6 +109,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Service = "LifeBalance.Notifications", Timestamp = DateTime.UtcNow }));
+
 app.Run();
 
 static void FirebaseInit(IConfiguration configuration)
