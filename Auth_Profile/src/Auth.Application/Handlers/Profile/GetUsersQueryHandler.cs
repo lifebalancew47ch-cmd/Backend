@@ -31,7 +31,13 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, ApiResponse<P
         
         var userDtos = _mapper.Map<IEnumerable<UserProfileDto>>(users).ToList();
 
-        var pagedResult = new PagedResult<UserProfileDto>(userDtos, totalCount, request.Page, request.PageSize);
+        var pagedResult = new PagedResult<UserProfileDto>
+        {
+            Items = userDtos,
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
         return ApiResponse<PagedResult<UserProfileDto>>.SuccessResponse(pagedResult);
     }
 }

@@ -1,3 +1,4 @@
+using Auth.Application.DTOs.Profile;
 using Auth.Application.Queries.Profile;
 using Auth.Shared.Common;
 using Microsoft.AspNetCore.Authorization;
