@@ -24,7 +24,7 @@ Documento generado que describe **recibe** (inputs) y **retorna** (outputs) de c
 
 ---
 
-## 1. Auth_Profile (Auth & Profile)
+## 1. Auth_Profile (Auth & Profile) - [https://lifebalance-auth-service.onrender.com](https://lifebalance-auth-service.onrender.com)
 
 ### AuthController — `api/v1/auth`
 
@@ -77,7 +77,7 @@ Documento generado que describe **recibe** (inputs) y **retorna** (outputs) de c
 
 ---
 
-## 2. DashboardService (Dashboard)
+## 2. DashboardService (Dashboard) - [https://lifebalance-dashboard-service.onrender.com](https://lifebalance-dashboard-service.onrender.com)
 
 Base: `api/v1/dashboard*`. Todos los GET sin body (salvo query). Rate-limited.
 
@@ -139,7 +139,7 @@ Base: `api/v1/dashboard*`. Todos los GET sin body (salvo query). Rate-limited.
 
 ---
 
-## 3. OrganizationAndSaaS (Organization & SaaS)
+## 3. OrganizationAndSaaS (Organization & SaaS) - [https://lifebalance-organization-saas.onrender.com](https://lifebalance-organization-saas.onrender.com)
 
 Base hard-coded `api/v1/...`. Tenant desde `TenantContext` (`tenant_id` claim / `X-Tenant-Id`). Paginación clamp 1–100.
 
@@ -227,7 +227,7 @@ Base hard-coded `api/v1/...`. Tenant desde `TenantContext` (`tenant_id` claim / 
 
 ---
 
-## 4. AdministrationService (Administration & Configuration)
+## 4. AdministrationService (Administration & Configuration) - [https://lifebalance-administration-service.onrender.com](https://lifebalance-administration-service.onrender.com)
 
 Base `api/v{version}/[controller]`, v1, `[Authorize(Policy=AdministratorOnlyPolicy)]` (SUPERADMIN/SYSTEMADMINISTRATOR). Cada mutación registra auditoría.
 
@@ -323,7 +323,7 @@ Base `api/v{version}/[controller]`, v1, `[Authorize(Policy=AdministratorOnlyPoli
 
 ---
 
-## 5. NotificationsAndAlerts (Notifications & Alerts)
+## 5. NotificationsAndAlerts (Notifications & Alerts) - [https://lifebalance-notifications-api.onrender.com](https://lifebalance-notifications-api.onrender.com)
 
 Base `api/v1/...`, rate limited. `userId` del claim `ClaimTypes.NameIdentifier` (401 si falta). Ownership → 404/403.
 
@@ -419,7 +419,7 @@ Base `api/v1/...`, rate limited. `userId` del claim `ClaimTypes.NameIdentifier` 
 
 ---
 
-## 6. ReportingService (Reporting)
+## 6. ReportingService (Reporting) - [https://lifebalance-reporting-service.onrender.com](https://lifebalance-reporting-service.onrender.com)
 
 Base `api/v1/reports/...`, rate limited, `ApiResponse<T>`. Identidad de `ICurrentUserService` (401 si falta). Políticas: `ReportRead`, `ReportExport`, `AuthenticatedUser`, `Admin`.
 
@@ -447,7 +447,7 @@ Base `api/v1/reports/...`, rate limited, `ApiResponse<T>`. Identidad de `ICurren
 
 ---
 
-## 1. ApiGateway
+## 1. ApiGateway - [https://lifebalance-api-gateway.onrender.com](https://lifebalance-api-gateway.onrender.com)
 
 No tiene controllers; es un reverse proxy catch-all (`MapFallback`) + endpoints propios.
 
@@ -463,7 +463,7 @@ Middleware global: `X-Correlation-Id`, headers de seguridad, CORS, rate limiter 
 
 ---
 
-## 2. MedicalDataService — `api/v1/medical`
+## 2. MedicalDataService — `api/v1/medical` - [https://medical-service-hb0v.onrender.com](https://medical-service-hb0v.onrender.com)
 
 ### MedicalController
 
@@ -484,7 +484,7 @@ Middleware global: `X-Correlation-Id`, headers de seguridad, CORS, rate limiter 
 
 ---
 
-## 3. MLPredictionService — `api/v1/ml`
+## 3. MLPredictionService — `api/v1/ml` - [https://ml-prediction-service-0sqa.onrender.com](https://ml-prediction-service-0sqa.onrender.com)
 
 ### MLController
 
@@ -507,7 +507,7 @@ Middleware global: `X-Correlation-Id`, headers de seguridad, CORS, rate limiter 
 
 ---
 
-## 4. SedentaryEngineService — `api/v1/sedentary`
+## 4. SedentaryEngineService — `api/v1/sedentary` - [https://sedentary-engine-service.onrender.com](https://sedentary-engine-service.onrender.com)
 
 ### SedentaryController
 
@@ -537,7 +537,7 @@ Middleware global: `X-Correlation-Id`, headers de seguridad, CORS, rate limiter 
 
 ---
 
-## 5. GamificationService — `api/v1/gamification`
+## 5. GamificationService — `api/v1/gamification` - [https://gamification-service-9o3z.onrender.com](https://gamification-service-9o3z.onrender.com)
 
 ### GamificationController
 
@@ -559,7 +559,7 @@ Middleware global: `X-Correlation-Id`, headers de seguridad, CORS, rate limiter 
 
 ---
 
-## 6. IngestionService — `api/v1/ingestion`
+## 6. IngestionService — `api/v1/ingestion` - [https://ingestion-service-fouo.onrender.com](https://ingestion-service-fouo.onrender.com)
 
 ### IngestionController
 

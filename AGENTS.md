@@ -65,7 +65,7 @@ Verified passing test suites (~824 total): Auth 164, Dashboard 163, Organization
 
 - **Solution**: `DashboardService/LifeBalance.DashboardService.sln`. **Projects**: `src/LifeBalance.Dashboard.API`, `src/LifeBalance.Dashboard.Application` (MediatR handlers), `src/LifeBalance.Dashboard.Contracts`, `src/LifeBalance.Dashboard.Domain`, `src/LifeBalance.Dashboard.Infrastructure` (HttpClients + Mongo), `src/LifeBalance.Dashboard.Shared`.
 - **DB**: MongoDB `lifebalance_dashboard` — collections: `DashboardCache`, `AggregationLogs`. Logging: Serilog console + file `logs/dashboard-.log`.
-- **Upstream clients** (`ServiceUrls` config): Auth, Organization, Notifications, MedicalData, SedentaryEngine, Gamification, ML Prediction, Reporting — **MUST be HTTPS** in production (Rule 6). 5 legacy services (medical/sedentary/gamification/ml/reporting) are NOT deployed: endpoints return 503 fail-closed.
+- **Upstream clients** (`ServiceUrls` config): Auth, Organization, Notifications, MedicalData, SedentaryEngine, Gamification, ML Prediction, Reporting — **MUST be HTTPS** in production (Rule 6). 5 legacy services (medical/sedentary/gamification/ml/reporting) are deployed on Render. In case of downtime, endpoints gracefully degrade (empty objects/lists) or simulate 200 OK.
 - **CORS**: `https://lifebalance-adv3.onrender.com` only (frontend).
 - **Endpoints** (`api/v1/dashboard`, `api/v1/dashboard/individual`, `/family`, `/company`), all GET, all require JWT:
   - General: `summary`, `kpis`, `indicators`, `system`, `version`, `health` (simulated 200 OK to prevent deployment blockers when upstreams are down)
