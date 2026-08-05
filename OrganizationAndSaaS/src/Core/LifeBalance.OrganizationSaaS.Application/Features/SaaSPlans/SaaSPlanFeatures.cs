@@ -180,6 +180,26 @@ public class SaaSPlanQueryHandler :
         var limit = Math.Clamp(request.Limit, 1, 100);
         var (plans, _) = await _planRepository.GetPagedAsync(
             plan => plan.IsActive, 1, limit, plan => plan.Name, cancellationToken: cancellationToken);
+
+        if (!plans.Any())
+        {
+            var seedPlans = new List<SaaSPlan>
+            {
+                new("Basic", PlanTier.Personal, 0, 0, PlanLimits.DefaultFree(), "MXN", false, false, new[] { "Up to 5 family members" }),
+                new("Premium", PlanTier.Personal, 99, 990, new PlanLimits { MaxUsers = 10, MaxFamilies = 2, MaxCompanies = 1, MaxDepartments = 5, MaxTeams = 5, MaxLicenses = 10, DataRetentionDays = 365, DashboardsAvailable = true, ReportsAvailable = true, IaEnabled = true, GamificationEnabled = true, NotificationsEnabled = true, ApiAccess = false }, "MXN", false, true, new[] { "Up to 10 family members", "Advanced analytics" }),
+                new("Corporate", PlanTier.Business, 999, 9990, PlanLimits.DefaultEnterprise(), "MXN", false, false, new[] { "Up to 50 licenses", "API access", "Priority support" })
+            };
+
+            foreach (var plan in seedPlans)
+            {
+                await _planRepository.AddAsync(plan, cancellationToken);
+            }
+
+            var pagedResult = await _planRepository.GetPagedAsync(
+                plan => plan.IsActive, 1, limit, plan => plan.Name, cancellationToken: cancellationToken);
+            plans = pagedResult.Items;
+        }
+
         return ApiResponse<IReadOnlyList<SaaSPlanDto>>.Ok(plans.Select(SaaSPlanMapper.Map).ToList());
     }
 
