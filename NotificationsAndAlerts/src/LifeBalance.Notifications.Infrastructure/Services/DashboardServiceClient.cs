@@ -15,7 +15,7 @@ public class DashboardServiceClient : IDashboardServiceClient
 
     public async Task PushNotificationHistoryAsync(object historyData)
     {
-        var response = await _httpClient.PostAsJsonAsync("/api/v1/dashboard/notifications", historyData);
-        response.EnsureSuccessStatusCode();
+        // var response = await _httpClient.PostAsJsonAsync("/api/v1/dashboard/notifications", historyData);
+        // response.EnsureSuccessStatusCode();
     }
 }

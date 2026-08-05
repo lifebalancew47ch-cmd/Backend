@@ -8,7 +8,7 @@ namespace Auth.Api.Controllers.V1;
 public class AuditController : BaseController
 {
     [HttpGet("login-history", Name = "GetLoginHistory")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<Auth.Shared.Common.PagedResult<Auth.Application.DTOs.Audit.LoginHistoryDto>>), 200)]
     [SwaggerOperation(Summary = "Get login history", Description = "Returns paginated login history. Requires Admin role.")]
     public async Task<IActionResult> GetLoginHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
@@ -18,7 +18,7 @@ public class AuditController : BaseController
     }
 
     [HttpGet("security-events", Name = "GetSecurityEvents")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<Auth.Shared.Common.PagedResult<Auth.Application.DTOs.Audit.AuditLogDto>>), 200)]
     [SwaggerOperation(Summary = "Get security events", Description = "Returns paginated security audit events. Requires Admin role.")]
     public async Task<IActionResult> GetSecurityEvents([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)

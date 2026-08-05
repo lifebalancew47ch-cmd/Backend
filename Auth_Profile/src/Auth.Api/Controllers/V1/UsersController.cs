@@ -10,6 +10,21 @@ namespace Auth.Api.Controllers.V1;
 public class UsersController : BaseController
 {
     /// <summary>
+    /// Gets all users with pagination. Requires Admin role.
+    /// </summary>
+    [HttpGet(Name = "GetUsers")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<UserProfileDto>>), 200)]
+    [SwaggerOperation(Summary = "Get all users", Description = "Returns paginated list of all users. Requires Admin, Superadmin or SystemAdministrator role.")]
+    public async Task<IActionResult> GetAllUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? role = null, CancellationToken ct = default)
+    {
+        // For now, role filtering is ignored in the DB level for simplicity as per requirements, 
+        // but we receive the query to prevent 404 from external services trying to pass it.
+        var result = await Mediator.Send(new GetUsersQuery(page, pageSize), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Gets a user's profile by ID. Used internally by other microservices (like DashboardService).
     /// </summary>
     [HttpGet("{id}", Name = "GetUserById")]

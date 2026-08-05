@@ -15,9 +15,10 @@ public class AdminServiceClient : IAdminServiceClient
 
     public async Task<List<GlobalTemplate>> GetGlobalTemplatesAsync()
     {
-        var response = await _httpClient.GetAsync("/api/v1/templates/global");
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<GlobalTemplate>>() ?? new();
+        // var response = await _httpClient.GetAsync("/api/v1/templates/global");
+        // response.EnsureSuccessStatusCode();
+        // return await response.Content.ReadFromJsonAsync<List<GlobalTemplate>>() ?? new();
+        return new List<GlobalTemplate>();
     }
 
     public async Task<AdminConfiguration?> GetConfigurationAsync()

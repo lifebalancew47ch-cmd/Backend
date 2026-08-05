@@ -9,7 +9,7 @@ namespace Auth.Api.Controllers.V1;
 public class RolesController : BaseController
 {
     [HttpGet(Name = "GetRoles")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<IEnumerable<Auth.Application.DTOs.Roles.RoleDto>>), 200)]
     [SwaggerOperation(Summary = "Get all roles", Description = "Returns all roles. Requires Admin role.")]
     public async Task<IActionResult> GetAll(CancellationToken ct)
@@ -19,7 +19,7 @@ public class RolesController : BaseController
     }
 
     [HttpPost(Name = "CreateRole")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<Auth.Application.DTOs.Roles.RoleDto>), 201)]
     [SwaggerOperation(Summary = "Create a role", Description = "Creates a new role. Requires Admin role.")]
     public async Task<IActionResult> Create([FromBody] Auth.Application.DTOs.Roles.CreateRoleRequest request, CancellationToken ct)
@@ -29,7 +29,7 @@ public class RolesController : BaseController
     }
 
     [HttpPut("{id}", Name = "UpdateRole")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<Auth.Application.DTOs.Roles.RoleDto>), 200)]
     [SwaggerOperation(Summary = "Update a role", Description = "Updates an existing role. Requires Admin role.")]
     public async Task<IActionResult> Update(string id, [FromBody] Auth.Application.DTOs.Roles.UpdateRoleRequest request, CancellationToken ct)
@@ -39,7 +39,7 @@ public class RolesController : BaseController
     }
 
     [HttpDelete("{id}", Name = "DeleteRole")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,SYSTEMADMINISTRATOR")]
     [ProducesResponseType(typeof(Auth.Shared.Common.ApiResponse<bool>), 200)]
     [SwaggerOperation(Summary = "Delete a role", Description = "Deletes a role. Requires Admin role.")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)

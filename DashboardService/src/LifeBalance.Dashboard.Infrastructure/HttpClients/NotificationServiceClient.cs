@@ -20,7 +20,7 @@ public class NotificationServiceClient : INotificationServiceClient
         var clampedLimit = Math.Clamp(limit, 1, 100);
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<NotificationItemDto>>($"/api/v1/notifications/user/{userId}?limit={clampedLimit}", cancellationToken);
+            return await _httpClient.GetFromJsonAsync<List<NotificationItemDto>>($"/api/v1/notifications/user?limit={clampedLimit}", cancellationToken);
         }
         catch (Exception ex)
         {

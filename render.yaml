@@ -107,6 +107,7 @@ services:
     plan: free
     rootDir: NotificationsAndAlerts
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -168,7 +169,7 @@ services:
       - key: Microservices__NotificationUrl
         value: https://lifebalance-notifications-api.onrender.com
       - key: Microservices__ReportingUrl
-        value: https://reporting-service.invalid
+        value: https://lifebalance-reporting-service.onrender.com
       - key: Microservices__GamificationUrl
         value: https://gamification-service-9o3z.onrender.com
       - key: Microservices__MlPredictionUrl
