@@ -19,7 +19,7 @@ render.yaml              → Defines 5 Render services
 - Legacy directories NOT touched: `DashboardService/DashboardService/`, `OrganizationAndSaaS/Organization&SaaS/` and solution `Organization&SaaS.sln` (reference existing projects; CodeQL manually builds only 5 official solutions). `NotificationsAndAlerts/Notifications&Alerts.sln` was **removed** (referenced nonexistent project breaking CodeQL autobuild).
 - Official solutions: `Auth_Profile/Auth_Profile.sln`, `DashboardService/LifeBalance.DashboardService.sln`, `NotificationsAndAlerts/LifeBalance.Notifications.sln`, `OrganizationAndSaaS/LifeBalance.OrganizationSaaS.sln`, `AdministrationService/LifeBalance.Administration.sln`.
 
-## Global Security Rules (DO NOT BREAK — Applied Security Remediation)
+## Global Architecture & Security Rules (DO NOT BREAK — Applied Security Remediation)
 
 1. **userId MUST ALWAYS come from claim `ClaimTypes.NameIdentifier` in JWT token**, never from query/body/route (anti-IDOR). Missing claim → 401.
 2. **Role**: JWT token uses standard short names (`sub`, `email`, `name`, `role`), mapped on validation to `ClaimTypes.NameIdentifier`/`Email`/`Name`/`Role`. Role value = `NormalizedName` (UPPERCASE, e.g., `USER`, `ADMIN`). Auth falls back to `USER` in login/refresh if account lacks `RoleIds` (fixes Dashboard 403). Auth handlers filter null/empty `NormalizedName`; repos discard non-ObjectId strings (prevents 500 from Mongo driver `FormatException`).
@@ -31,6 +31,8 @@ render.yaml              → Defines 5 Render services
 8. **Never commit real secrets** (Organization JWT secret was previously leaked in git history; use placeholders like `CHANGE_THIS_TO_A_32_CHARACTER_SECRET_KEY_IN_PRODUCTION!!`). `appsettings.Development.json` can have local dev secrets.
 9. **Common Response Contract**: `Response<T> { bool Success; string Message; T Data; }`.
 10. **Multi-tenant (Organization)**: Tenant resolved from `tenant_id` claim (priority) or `X-Tenant-Id` header; unconditional tenant filter in repos via `IGlobalTenantEntity` (exempts `SaaSPlan`).
+11. **MongoDB BSON Serialization (500 Error Prevention)**: When creating Domain Entities that inherit from `AggregateRoot`, their `DomainEvents` must be ignored with `[BsonIgnore]` to prevent `BsonSerializationException`. If entities use parameterized constructors and private setters, they **MUST** be explicitly mapped using a `BsonClassMapRegistrations` static class called at `MongoDbContext` instantiation to avoid `Creator map has N arguments` runtime exceptions during BSON deserialization.
+
 
 ## Commands
 
