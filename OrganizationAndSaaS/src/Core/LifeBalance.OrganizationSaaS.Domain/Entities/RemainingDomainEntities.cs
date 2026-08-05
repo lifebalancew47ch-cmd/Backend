@@ -131,9 +131,12 @@ public class Subscription : AggregateRoot
 
     public void Cancel()
     {
-        Status = SubscriptionStatus.Canceled;
-        PaymentHistoryLog.Add($"Canceled on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-        Touch();
+        if (Status != SubscriptionStatus.Canceled)
+        {
+            Status = SubscriptionStatus.Canceled;
+            PaymentHistoryLog.Add($"Canceled on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            Touch();
+        }
     }
 }
 

@@ -104,6 +104,13 @@ public class SubscriptionsController : ControllerBase
         var result = await _mediator.Send(new ChangeSubscriptionPlanCommand(id, request.NewPlanId));
         return Ok(result);
     }
+
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> Cancel(string id)
+    {
+        var result = await _mediator.Send(new CancelSubscriptionCommand(id));
+        return Ok(result);
+    }
 }
 
 [ApiController]

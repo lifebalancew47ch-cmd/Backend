@@ -58,6 +58,7 @@ public record GetLicensesPagedQuery(string OrganizationId, int PageIndex = 1, in
 public record CreateSubscriptionCommand(string OrganizationId, string PlanId, string BillingCycle = "Monthly") : IRequest<ApiResponse<SubscriptionDto>>;
 public record RenewSubscriptionCommand(string SubscriptionId) : IRequest<ApiResponse<bool>>;
 public record ChangeSubscriptionPlanCommand(string SubscriptionId, string NewPlanId) : IRequest<ApiResponse<bool>>;
+public record CancelSubscriptionCommand(string SubscriptionId) : IRequest<ApiResponse<SubscriptionDto>>;
 public record GetSubscriptionByIdQuery(string Id) : IRequest<ApiResponse<SubscriptionDto>>;
 public record GetSubscriptionsPagedQuery(int PageIndex = 1, int PageSize = 10) : IRequest<ApiResponse<PagedResult<SubscriptionDto>>>;
 
@@ -79,6 +80,7 @@ public class LicenseAndSubscriptionCommandHandler :
     IRequestHandler<CreateSubscriptionCommand, ApiResponse<SubscriptionDto>>,
     IRequestHandler<RenewSubscriptionCommand, ApiResponse<bool>>,
     IRequestHandler<ChangeSubscriptionPlanCommand, ApiResponse<bool>>,
+    IRequestHandler<CancelSubscriptionCommand, ApiResponse<SubscriptionDto>>,
     IRequestHandler<CreateInvitationCommand, ApiResponse<InvitationDto>>,
     IRequestHandler<AcceptInvitationCommand, ApiResponse<bool>>,
     IRequestHandler<RejectInvitationCommand, ApiResponse<bool>>,
@@ -193,6 +195,23 @@ public class LicenseAndSubscriptionCommandHandler :
         sub.ChangePlan(request.NewPlanId);
         await _subscriptionRepo.UpdateAsync(sub, cancellationToken);
         return ApiResponse<bool>.Ok(true, "Subscription plan changed.");
+    }
+
+    public async Task<ApiResponse<SubscriptionDto>> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
+    {
+        // Unconditional tenant filter might apply, but we explicitly check to return 403 on IDOR attempts if it bypassed it
+        var sub = await _subscriptionRepo.GetByIdAsync(request.SubscriptionId, cancellationToken);
+        if (sub == null) throw new ResourceNotFoundException(nameof(Subscription), request.SubscriptionId);
+
+        if (!string.IsNullOrWhiteSpace(_tenantContext.TenantId) && sub.TenantId != _tenantContext.TenantId)
+        {
+            throw new MultiTenantViolationException("You do not have permission to cancel this subscription.");
+        }
+
+        sub.Cancel();
+        await _subscriptionRepo.UpdateAsync(sub, cancellationToken);
+        
+        return ApiResponse<SubscriptionDto>.Ok(Map(sub), "Subscription canceled successfully.");
     }
 
     public async Task<ApiResponse<InvitationDto>> Handle(CreateInvitationCommand request, CancellationToken cancellationToken)
