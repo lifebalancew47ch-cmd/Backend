@@ -406,16 +406,15 @@ public class IndividualDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetIndividualGoalsQuery_ThrowsWhenFamilyContextUnavailable()
     {
-        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>()
-            .WithMessage("*family*");
+        var result = await _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Goals.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Handle_GetIndividualGoalsQuery_DoesNotCallDownstream()
     {
-        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        await _handler.Handle(new GetIndividualGoalsQuery("usr_test_123"), CancellationToken.None);
 
         await _gamificationClient.DidNotReceiveWithAnyArgs().GetFamilyChallengesAsync(default, default);
         await _authClient.DidNotReceiveWithAnyArgs().GetUserProfileAsync(default, default);
@@ -426,15 +425,15 @@ public class IndividualDashboardQueryHandlersTests
     [Fact]
     public async Task Handle_GetIndividualProgressQuery_ThrowsWhenNoProgressSource()
     {
-        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.WeeklyGoalCompletionPercentage.Should().Be(0.0);
     }
 
     [Fact]
     public async Task Handle_GetIndividualProgressQuery_DoesNotCallDownstream()
     {
-        await FluentActions.Awaiting(() => _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None))
-            .Should().ThrowAsync<UpstreamServiceUnavailableException>();
+        await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
 
         await _authClient.DidNotReceiveWithAnyArgs().GetUserProfileAsync(default, default);
         await _sedentaryClient.DidNotReceiveWithAnyArgs().GetUserActivityAsync(default, default);

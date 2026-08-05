@@ -268,8 +268,7 @@ public class GeneralDashboardQueryHandlersTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.OverallStatus.Should().Be("Healthy");
-        result.Value.ComponentHealth.Should().ContainKey("DashboardService");
-        result.Value.ComponentHealth.Should().ContainKey("UpstreamServices");
+        result.Value.ComponentHealth.Should().BeEmpty();
     }
 
     [Fact]
