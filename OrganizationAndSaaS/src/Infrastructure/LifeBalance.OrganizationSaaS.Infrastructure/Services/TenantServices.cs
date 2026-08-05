@@ -43,8 +43,9 @@ public class TenantContextAccessor : ITenantContext
 
     public string? OrganizationId => _httpContextAccessor.HttpContext?.User?.FindFirst("organization_id")?.Value;
 
-    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
+    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    public string CorrelationId => _httpContextAccessor.HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 }

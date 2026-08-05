@@ -228,4 +228,17 @@ public class AuditLog : BaseEntity
     public string ChangesJson { get; set; } = string.Empty;
     public string CorrelationId { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    public AuditLog() { }
+
+    public AuditLog(string userId, string action, string entityName, string entityId, string changesJson, string correlationId)
+    {
+        UserId = userId;
+        Action = action;
+        EntityName = entityName;
+        EntityId = entityId;
+        ChangesJson = changesJson;
+        CorrelationId = correlationId;
+        TenantId = "GLOBAL";
+    }
 }

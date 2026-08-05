@@ -45,6 +45,13 @@ public class ExceptionHandlingMiddleware
 
         switch (exception)
         {
+            case UnauthorizedAccessException:
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                problemDetails.Status = (int)HttpStatusCode.Unauthorized;
+                problemDetails.Title = "Unauthorized";
+                problemDetails.Detail = "Authentication is required.";
+                break;
+
             case ValidationException valEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;

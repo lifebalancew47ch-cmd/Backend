@@ -5,6 +5,7 @@ public interface ITenantContext
     string TenantId { get; }
     string? OrganizationId { get; }
     string? UserId { get; }
+    string CorrelationId { get; }
     bool IsAuthenticated { get; }
 }
 
