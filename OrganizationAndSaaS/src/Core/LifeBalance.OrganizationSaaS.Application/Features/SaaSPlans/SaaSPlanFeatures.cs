@@ -185,9 +185,9 @@ public class SaaSPlanQueryHandler :
         {
             var seedPlans = new List<SaaSPlan>
             {
-                new("Basic", PlanTier.Personal, 0, 0, PlanLimits.DefaultFree(), "MXN", false, false, new[] { "Up to 5 family members" }),
-                new("Premium", PlanTier.Personal, 99, 990, new PlanLimits { MaxUsers = 10, MaxFamilies = 2, MaxCompanies = 1, MaxDepartments = 5, MaxTeams = 5, MaxLicenses = 10, DataRetentionDays = 365, DashboardsAvailable = true, ReportsAvailable = true, IaEnabled = true, GamificationEnabled = true, NotificationsEnabled = true, ApiAccess = false }, "MXN", false, true, new[] { "Up to 10 family members", "Advanced analytics" }),
-                new("Corporate", PlanTier.Business, 999, 9990, PlanLimits.DefaultEnterprise(), "MXN", false, false, new[] { "Up to 50 licenses", "API access", "Priority support" })
+                new("Individual", PlanTier.Personal, 29, 348, new PlanLimits { MaxUsers = 1, MaxFamilies = 1, MaxCompanies = 1, MaxDepartments = 1, MaxTeams = 1, MaxLicenses = 1, DataRetentionDays = 30, DashboardsAvailable = false, ReportsAvailable = false, IaEnabled = false, GamificationEnabled = false, NotificationsEnabled = true, ApiAccess = false }, "USD", false, false, new[] { "1 dispositivo LifeBalance Watch", "Métricas biométricas básicas", "Historial de 30 días", "Soporte por correo" }),
+                new("Corporativo", PlanTier.Business, 199, 2388, new PlanLimits { MaxUsers = 25, MaxFamilies = 1, MaxCompanies = 1, MaxDepartments = 10, MaxTeams = 25, MaxLicenses = 25, DataRetentionDays = 365, DashboardsAvailable = true, ReportsAvailable = true, IaEnabled = true, GamificationEnabled = true, NotificationsEnabled = true, ApiAccess = true }, "USD", false, true, new[] { "Hasta 25 licencias de equipo", "Dashboard ejecutivo en tiempo real", "Integraciones API ilimitadas", "Soporte prioritario 24/7" }),
+                new("Enterprise", PlanTier.Enterprise, 0, 0, PlanLimits.DefaultEnterprise(), "USD", true, false, new[] { "Licencias ilimitadas", "Infraestructura dedicada y SLA personalizado", "Onboarding y consultoría in-house", "Gerente de cuenta dedicado" })
             };
 
             foreach (var plan in seedPlans)
