@@ -32,7 +32,7 @@ public class CatalogTests
         var catalog = new Catalog("code", "name", "desc", "cat");
         var versionBefore = catalog.Version;
 
-        catalog.Update("new name", "new desc", "new cat", new[]
+        catalog.Update("new name", "new desc", "new cat", new List<CatalogItem>
         {
             new CatalogItem { Code = "A", Name = "Alpha" }
         });

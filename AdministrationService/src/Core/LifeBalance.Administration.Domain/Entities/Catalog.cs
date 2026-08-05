@@ -42,7 +42,7 @@ public class Catalog : AggregateRoot
 
     private Catalog() { }
 
-    public Catalog(string code, string name, string description, string category, IEnumerable<CatalogItem>? items = null)
+    public Catalog(string code, string name, string description, string category, List<CatalogItem>? items = null)
     {
         if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Catalog code is required.", nameof(code));
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Catalog name is required.", nameof(name));
@@ -55,7 +55,7 @@ public class Catalog : AggregateRoot
         IsActive = true;
     }
 
-    public void Update(string name, string description, string category, IEnumerable<CatalogItem>? items)
+    public void Update(string name, string description, string category, List<CatalogItem>? items)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Catalog name is required.", nameof(name));
 

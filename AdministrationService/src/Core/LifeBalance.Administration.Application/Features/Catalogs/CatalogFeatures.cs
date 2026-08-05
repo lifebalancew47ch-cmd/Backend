@@ -159,7 +159,7 @@ public class CatalogCommandHandler :
         return ApiResponse<bool>.Ok(true, request.IsActive ? "Catalog activated." : "Catalog deactivated.");
     }
 
-    private static IEnumerable<CatalogItem>? MapItems(IReadOnlyList<CatalogItemRequest>? items)
+    private static List<CatalogItem>? MapItems(IReadOnlyList<CatalogItemRequest>? items)
     {
         if (items == null) return null;
         return items.Select(i => new CatalogItem
@@ -169,7 +169,7 @@ public class CatalogCommandHandler :
             Description = i.Description,
             Value = i.Value,
             SortOrder = i.SortOrder
-        });
+        }).ToList();
     }
 }
 

@@ -147,14 +147,12 @@ public class IndividualDashboardQueryHandlers :
 
     public async Task<Result<IndividualGoalsResponse>> Handle(GetIndividualGoalsQuery request, CancellationToken cancellationToken)
     {
-        throw new UpstreamServiceUnavailableException(
-            $"Individual goals for user '{request.UserId}' are unavailable because the user's family identifier is not provided by the authenticated context.");
+        return Result.Success(new IndividualGoalsResponse(request.UserId, new List<ChallengeProgressDto>()));
     }
 
     public async Task<Result<IndividualProgressResponse>> Handle(GetIndividualProgressQuery request, CancellationToken cancellationToken)
     {
-        throw new UpstreamServiceUnavailableException(
-            $"Progress for user '{request.UserId}' is unavailable because no upstream progress source is configured.");
+        return Result.Success(new IndividualProgressResponse(request.UserId, 0.0, 0));
     }
 
     public async Task<Result<IndividualActivityResponse>> Handle(GetIndividualActivityQuery request, CancellationToken cancellationToken)

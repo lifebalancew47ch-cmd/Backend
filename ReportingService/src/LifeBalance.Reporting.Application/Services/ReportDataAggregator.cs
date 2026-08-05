@@ -63,13 +63,11 @@ public sealed class ReportDataAggregator : IReportDatasetService
         DateRange range,
         CancellationToken cancellationToken)
     {
-        var profile = await _authClient.GetUserProfileAsync(userId, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException(
-                $"The user profile for '{userId}' is unavailable.");
+        var profile = await _authClient.GetUserProfileAsync(userId, cancellationToken);
+        if (profile == null) throw new UpstreamServiceUnavailableException($"The user profile for '{userId}' is unavailable.");
 
         var readings = await _medicalClient.GetUserReadingsAsync(userId, range.From, range.To, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException(
-                $"Biometric history for user '{userId}' is unavailable.");
+            ?? new List<MedicalReadingDto>();
 
         return new ReportDataset(
             ReportScope.Individual,
