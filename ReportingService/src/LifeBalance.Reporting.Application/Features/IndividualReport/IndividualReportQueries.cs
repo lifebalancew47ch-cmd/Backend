@@ -95,9 +95,7 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
             ReportScope.Individual, null, request.UserId, [], range, cancellationToken);
 
         var sedentaryHistory = await _sedentaryClient.GetUserHistoryAsync(
-                request.UserId, range.From, range.To, cancellationToken)
-            ?? throw new UpstreamServiceUnavailableException(
-                $"Sedentary history for user '{request.UserId}' is unavailable.");
+                request.UserId, range.From, range.To, cancellationToken) ?? [];
         var goals = await _sedentaryClient.GetUserGoalsAsync(request.UserId, cancellationToken) ?? [];
 
         var readings = dataset.Readings;
