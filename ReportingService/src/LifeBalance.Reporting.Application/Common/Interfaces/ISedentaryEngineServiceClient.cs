@@ -9,7 +9,8 @@ public sealed record SedentaryDailyDto(
     double SedentaryHours,
     double ActiveMinutes,
     int Steps,
-    int BreakCount);
+    int BreakCount,
+    double CaloriesBurned);
 
 /// <summary>
 /// A user goal as tracked by the sedentary engine.

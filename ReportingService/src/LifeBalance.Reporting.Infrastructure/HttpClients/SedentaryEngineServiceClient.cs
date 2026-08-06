@@ -107,7 +107,8 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
                         SedentaryHours: item.SedentaryHours,
                         ActiveMinutes: item.ActiveMinutes,
                         Steps: item.Steps != 0 ? item.Steps : item.DailySteps,
-                        BreakCount: item.BreakCount
+                        BreakCount: item.BreakCount,
+                        CaloriesBurned: item.CaloriesBurned
                     )).ToList();
                 }
             }
@@ -273,6 +274,7 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         double ActiveMinutes,
         int Steps,
         int DailySteps,
-        int BreakCount);
+        int BreakCount,
+        double CaloriesBurned);
 }
 

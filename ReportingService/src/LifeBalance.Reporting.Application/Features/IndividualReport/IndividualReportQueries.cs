@@ -111,7 +111,8 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
                     SedentaryHours: score.SedentaryHours,
                     ActiveMinutes: score.ActiveMinutes,
                     Steps: (int)score.DailySteps,
-                    BreakCount: 0)
+                    BreakCount: 0,
+                    CaloriesBurned: score.CaloriesBurned)
             };
 
         var goals = await _sedentaryClient.GetUserGoalsAsync(request.UserId, cancellationToken) ?? [];
@@ -133,7 +134,7 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
         var steps = medicalSteps.Sum() > 0 ? medicalSteps : sedentarySteps;
 
         var activeMinutes = sedentaryHistory.Select(s => (double)s.ActiveMinutes).ToList();
-        var calories = sedentaryHistory.Select(s => 0.0).ToList();
+        var calories = sedentaryHistory.Select(s => s.CaloriesBurned).ToList();
 
         var measurementDays = readings.Select(r => r.RecordedAtUtc.Date)
             .Union(sedentaryHistory.Select(s => s.Date.Date))
@@ -198,10 +199,16 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
         IReadOnlyList<MedicalReadingDto> readings,
         IReadOnlyList<SedentaryDailyDto> sedentaryHistory)
     {
-        var dailySteps = _analyzer.DailyAverages(readings
+        var medicalDailySteps = _analyzer.DailyAverages(readings
                 .Where(r => r.Steps > 0)
                 .Select(r => (Timestamp: r.RecordedAtUtc, Value: (double)r.Steps)))
             .ToDictionary(p => p.Timestamp.Date, p => p.Value);
+
+        var dailySteps = medicalDailySteps.Values.Sum() > 0
+            ? medicalDailySteps
+            : sedentaryHistory
+                .GroupBy(s => s.Date.Date)
+                .ToDictionary(g => g.Key, g => (double)g.Max(s => s.Steps));
 
         var dailyHeartRate = _analyzer.DailyAverages(readings
                 .Where(r => r.HeartRate.HasValue)
