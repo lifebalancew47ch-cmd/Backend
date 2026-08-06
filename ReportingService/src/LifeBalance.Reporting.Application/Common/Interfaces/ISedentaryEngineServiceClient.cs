@@ -66,7 +66,8 @@ public sealed record SedentaryScoreDto(
     double DailySteps,
     double ActiveMinutes,
     double SedentaryHours,
-    double CaloriesBurned);
+    double CaloriesBurned,
+    double Score);
 
 /// <summary>
 /// Contract for the Sedentary Engine microservice client.

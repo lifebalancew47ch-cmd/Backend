@@ -98,16 +98,21 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
             ?? throw new UpstreamServiceUnavailableException(
                 $"Sedentary score for user '{request.UserId}' is unavailable.");
 
-        var sedentaryHistory = new List<SedentaryDailyDto>
-        {
-            new(
-                Date: _dateTime.UtcNow.Date,
-                SedentaryScore: 0,
-                SedentaryHours: score.SedentaryHours,
-                ActiveMinutes: score.ActiveMinutes,
-                Steps: (int)score.DailySteps,
-                BreakCount: 0)
-        };
+        var history = await _sedentaryClient.GetUserHistoryAsync(
+            request.UserId, range.From, range.To, cancellationToken);
+
+        var sedentaryHistory = history is { Count: > 0 }
+            ? history
+            : new List<SedentaryDailyDto>
+            {
+                new(
+                    Date: _dateTime.UtcNow.Date,
+                    SedentaryScore: score.Score,
+                    SedentaryHours: score.SedentaryHours,
+                    ActiveMinutes: score.ActiveMinutes,
+                    Steps: (int)score.DailySteps,
+                    BreakCount: 0)
+            };
 
         var goals = await _sedentaryClient.GetUserGoalsAsync(request.UserId, cancellationToken) ?? [];
 

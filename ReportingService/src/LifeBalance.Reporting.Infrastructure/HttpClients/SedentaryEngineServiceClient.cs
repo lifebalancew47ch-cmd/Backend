@@ -28,36 +28,50 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     /// <inheritdoc/>
     public async Task<SedentaryScoreDto?> GetUserScoreAsync(string userId, CancellationToken cancellationToken = default)
     {
+        var progressTask = GetProgressAsync(userId, cancellationToken);
+        var scoreTask = GetScoreAsync(userId, cancellationToken);
+
+        var progress = await progressTask;
+        var score = await scoreTask;
+
+        if (progress is null && score is null)
+        {
+            return null;
+        }
+
+        return new SedentaryScoreDto(
+            userId,
+            progress?.DailySteps ?? 0,
+            progress?.ActiveMinutes ?? 0,
+            0,
+            0,
+            score?.Score ?? 0);
+    }
+
+    private async Task<SedentaryProgressResponseDto?> GetProgressAsync(string userId, CancellationToken cancellationToken)
+    {
         try
         {
-            var endpoints = new[]
-            {
-                $"/api/v1/sedentary/score/{userId}",
-                "/api/v1/sedentary/score",
-                $"/api/v1/sedentary/user/{userId}"
-            };
+            using var response = await _httpClient.GetAsync("/api/v1/sedentary/progress", cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
 
-            foreach (var endpoint in endpoints)
-            {
-                using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
-                if (response.IsSuccessStatusCode)
-                {
-                    var res = await ReadJsonWithEnvelopeAsync<SedentaryScoreResponseDto>(response, cancellationToken);
-                    if (res != null)
-                    {
-                        var steps = res.DailySteps ?? res.Steps ?? 0;
-                        return new SedentaryScoreDto(
-                            userId,
-                            steps,
-                            res.ActiveMinutes ?? 0,
-                            res.SedentaryHours ?? 0,
-                            res.CaloriesBurned ?? 0);
-                    }
-                }
-            }
-
-            _logger.LogWarning("Failed to retrieve sedentary score for UserId: {UserId} from all endpoints", userId);
+            return await ReadJsonWithEnvelopeAsync<SedentaryProgressResponseDto>(response, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sedentary progress for UserId: {UserId}", userId);
             return null;
+        }
+    }
+
+    private async Task<SedentaryScoreResponseDto?> GetScoreAsync(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync("/api/v1/sedentary/score", cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await ReadJsonWithEnvelopeAsync<SedentaryScoreResponseDto>(response, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -212,12 +226,18 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     }
 
     private sealed record SedentaryScoreResponseDto(
+        string? UserId,
+        double? Score,
+        string? RiskLevel,
+        DateTime? RecordedAtUtc);
+
+    private sealed record SedentaryProgressResponseDto(
         double? DailySteps,
-        double? Steps,
+        double? DailyStepsTarget,
         double? ActiveMinutes,
-        double? SedentaryHours,
-        double? CaloriesBurned,
-        double? Score);
+        double? ActiveMinutesTarget,
+        double? StepsProgress,
+        double? ActiveProgress);
 
     private sealed record GoalResponseDto(
         string? Id, string? UserId, double? DailyStepsTarget, double? ActiveMinutesTarget, DateTime? UpdatedAtUtc);

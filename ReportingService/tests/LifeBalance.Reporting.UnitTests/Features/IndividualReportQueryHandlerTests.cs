@@ -74,7 +74,7 @@ public class IndividualReportQueryHandlerTests
             .Returns(CreateDataset(userId, reading));
 
         _sedentaryClient.GetUserScoreAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new SedentaryScoreDto(userId, 1000, 45, 6, 200));
+            .Returns(new SedentaryScoreDto(userId, 1000, 45, 6, 200, 79.75));
 
         _sedentaryClient.GetUserGoalsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([]);
@@ -88,7 +88,9 @@ public class IndividualReportQueryHandlerTests
         result.Value.FullName.Should().Be("John Doe");
         result.Value.Activity.TotalSteps.Should().Be(1000);
         result.Value.Activity.AverageDailySteps.Should().Be(1000);
+        result.Value.Activity.AverageActiveMinutes.Should().Be(45);
         result.Value.Sedentary.AverageSedentaryHours.Should().Be(6);
+        result.Value.Sedentary.AverageSedentaryScore.Should().Be(79.75);
     }
 
     [Fact]
