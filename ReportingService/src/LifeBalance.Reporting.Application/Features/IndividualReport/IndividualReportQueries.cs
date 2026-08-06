@@ -128,16 +128,24 @@ public sealed class GetIndividualReportQueryHandler : IRequestHandler<GetIndivid
             BuildMetric("Weight", readings, r => r.Weight),
             BuildMetric("Height", readings, r => r.Height));
 
-        var steps = readings.Select(r => (double)r.Steps).ToList();
+        var medicalSteps = readings.Select(r => (double)r.Steps).ToList();
+        var sedentarySteps = sedentaryHistory.Select(s => (double)s.Steps).ToList();
+        var steps = medicalSteps.Sum() > 0 ? medicalSteps : sedentarySteps;
+
         var activeMinutes = sedentaryHistory.Select(s => (double)s.ActiveMinutes).ToList();
         var calories = sedentaryHistory.Select(s => 0.0).ToList();
+
+        var measurementDays = readings.Select(r => r.RecordedAtUtc.Date)
+            .Union(sedentaryHistory.Select(s => s.Date.Date))
+            .Distinct()
+            .Count();
 
         var activity = new ActivitySummaryDto(
             TotalSteps: (int)steps.Sum(),
             AverageDailySteps: _analyzer.Mean(steps),
             AverageActiveMinutes: _analyzer.Mean(activeMinutes),
             AverageCaloriesBurned: _analyzer.Mean(calories),
-            MeasurementDays: readings.Select(r => r.RecordedAtUtc.Date).Distinct().Count());
+            MeasurementDays: measurementDays);
 
         var sedentary = new SedentarySummaryDto(
             AverageSedentaryHours: _analyzer.Mean(sedentaryHistory.Select(s => s.SedentaryHours)),

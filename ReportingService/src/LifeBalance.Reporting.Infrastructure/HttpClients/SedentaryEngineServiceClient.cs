@@ -86,11 +86,33 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     {
         try
         {
-            using var response = await _httpClient.GetAsync(
-                $"/api/v1/sedentary/users/{userId}/history?from={from:O}&to={to:O}", cancellationToken);
-            if (!response.IsSuccessStatusCode) return null;
+            var endpoints = new[]
+            {
+                $"/api/v1/sedentary/users/{userId}/history?from={from:O}&to={to:O}",
+                $"/api/v1/sedentary/user/{userId}/history?from={from:O}&to={to:O}",
+                $"/api/v1/sedentary/history?from={from:O}&to={to:O}"
+            };
 
-            return await ReadJsonWithEnvelopeAsync<List<SedentaryDailyDto>>(response, cancellationToken);
+            foreach (var endpoint in endpoints)
+            {
+                using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
+                if (!response.IsSuccessStatusCode) continue;
+
+                var list = await ReadJsonWithEnvelopeAsync<List<SedentaryHistoryItemDto>>(response, cancellationToken);
+                if (list is { Count: > 0 })
+                {
+                    return list.Select(item => new SedentaryDailyDto(
+                        Date: item.Date != default ? item.Date : item.RecordedAtUtc,
+                        SedentaryScore: item.SedentaryScore != 0 ? item.SedentaryScore : item.Score,
+                        SedentaryHours: item.SedentaryHours,
+                        ActiveMinutes: item.ActiveMinutes,
+                        Steps: item.Steps != 0 ? item.Steps : item.DailySteps,
+                        BreakCount: item.BreakCount
+                    )).ToList();
+                }
+            }
+
+            return null;
         }
         catch (Exception ex)
         {
@@ -241,5 +263,16 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
 
     private sealed record GoalResponseDto(
         string? Id, string? UserId, double? DailyStepsTarget, double? ActiveMinutesTarget, DateTime? UpdatedAtUtc);
+
+    private sealed record SedentaryHistoryItemDto(
+        DateTime Date,
+        DateTime RecordedAtUtc,
+        double SedentaryScore,
+        double Score,
+        double SedentaryHours,
+        double ActiveMinutes,
+        int Steps,
+        int DailySteps,
+        int BreakCount);
 }
 
