@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using MongoDB.Driver;
 using LifeBalance.OrganizationSaaS.Application.Interfaces;
 using LifeBalance.OrganizationSaaS.Domain.Common;
+using LifeBalance.OrganizationSaaS.Domain.Exceptions;
 using LifeBalance.OrganizationSaaS.Domain.Interfaces;
 
 namespace LifeBalance.OrganizationSaaS.Infrastructure.Persistence;
@@ -22,12 +23,23 @@ public class MongoRepository<TEntity> : IRepository<TEntity> where TEntity : Bas
         var builder = Builders<TEntity>.Filter;
         var filters = new List<FilterDefinition<TEntity>> { baseFilter, builder.Eq(x => x.IsDeleted, false) };
 
-        // Apply tenant isolation whenever a TenantId is known, regardless of authentication state.
         // Global catalog entities (e.g. SaaSPlan) are exempt from the tenant filter.
-        if (!typeof(IGlobalTenantEntity).IsAssignableFrom(typeof(TEntity))
-            && !string.IsNullOrWhiteSpace(_tenantContext.TenantId))
+        if (!typeof(IGlobalTenantEntity).IsAssignableFrom(typeof(TEntity)))
         {
-            filters.Add(builder.Eq(x => x.TenantId, _tenantContext.TenantId));
+            // Fail-closed: an authenticated caller MUST resolve a tenant, otherwise queries would
+            // silently cross tenant boundaries. Anonymous flows (e.g. invitation accept/reject,
+            // internal provisioning) keep the previous unfiltered behavior.
+            if (string.IsNullOrWhiteSpace(_tenantContext.TenantId))
+            {
+                if (_tenantContext.IsAuthenticated)
+                {
+                    throw new MultiTenantViolationException("A tenant context is required to access tenant-scoped resources.");
+                }
+            }
+            else
+            {
+                filters.Add(builder.Eq(x => x.TenantId, _tenantContext.TenantId));
+            }
         }
 
         return builder.And(filters);
