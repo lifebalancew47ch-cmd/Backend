@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Auth.Application.DTOs.Profile;
 using Auth.Application.Queries.Profile;
 using Auth.Shared.Common;
@@ -35,6 +36,15 @@ public class UsersController : BaseController
     {
         if (string.IsNullOrEmpty(id))
             return BadRequest(ApiResponse<object>.FailResponse("User ID is required."));
+
+        // Anti-IDOR: a caller may only fetch their own profile (internal microservices pass the
+        // caller's own userId) unless they hold an administrator role.
+        var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var isSelf = !string.IsNullOrEmpty(callerId) && string.Equals(callerId, id, StringComparison.OrdinalIgnoreCase);
+        var isAdmin = User.IsInRole("ADMIN") || User.IsInRole("SUPERADMIN") || User.IsInRole("SYSTEMADMINISTRATOR");
+
+        if (!isSelf && !isAdmin)
+            return NotFound(ApiResponse<object>.FailResponse("User not found."));
 
         // Get the profile from the database
         var result = await Mediator.Send(new GetProfileQuery(id), ct);
