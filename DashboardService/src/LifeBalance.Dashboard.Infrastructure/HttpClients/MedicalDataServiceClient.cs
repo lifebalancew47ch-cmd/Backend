@@ -19,7 +19,7 @@ public class MedicalDataServiceClient : IMedicalDataServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<MedicalDataResponseDto>($"/api/v1/medical/biometrics/{userId}", cancellationToken);
+            return await _httpClient.GetWrappedAsync<MedicalDataResponseDto>($"/api/v1/medical/biometrics/{userId}", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -32,7 +32,7 @@ public class MedicalDataServiceClient : IMedicalDataServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<MedicalDataResponseDto>>($"/api/v1/medical/family/{familyId}", cancellationToken);
+            return await _httpClient.GetWrappedAsync<List<MedicalDataResponseDto>>($"/api/v1/medical/family/{familyId}", cancellationToken);
         }
         catch (Exception ex)
         {

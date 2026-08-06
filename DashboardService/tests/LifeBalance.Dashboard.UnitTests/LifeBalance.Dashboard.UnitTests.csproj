@@ -11,6 +11,7 @@
     <PackageReference Include="coverlet.collector" Version="8.0.1" />
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="NSubstitute" Version="6.0.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LifeBalance.Dashboard.Application\LifeBalance.Dashboard.Application.csproj" />
     <ProjectReference Include="..\..\src\LifeBalance.Dashboard.Domain\LifeBalance.Dashboard.Domain.csproj" />
+    <ProjectReference Include="..\..\src\LifeBalance.Dashboard.Infrastructure\LifeBalance.Dashboard.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\LifeBalance.Dashboard.Shared\LifeBalance.Dashboard.Shared.csproj" />
   </ItemGroup>
 

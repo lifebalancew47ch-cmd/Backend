@@ -15,6 +15,7 @@ public class IndividualDashboardQueryHandlersTests
     private readonly IGamificationServiceClient _gamificationClient = Substitute.For<IGamificationServiceClient>();
     private readonly INotificationServiceClient _notificationClient = Substitute.For<INotificationServiceClient>();
     private readonly IMlPredictionServiceClient _mlClient = Substitute.For<IMlPredictionServiceClient>();
+    private readonly Microsoft.Extensions.Logging.ILogger<IndividualDashboardQueryHandlers> _logger = Substitute.For<Microsoft.Extensions.Logging.ILogger<IndividualDashboardQueryHandlers>>();
 
     private readonly IndividualDashboardQueryHandlers _handler;
 
@@ -26,7 +27,8 @@ public class IndividualDashboardQueryHandlersTests
             _sedentaryClient,
             _gamificationClient,
             _notificationClient,
-            _mlClient);
+            _mlClient,
+            _logger);
     }
 
     private static AuthUserResponseDto CreateProfile(string userId) =>

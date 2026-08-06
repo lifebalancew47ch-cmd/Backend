@@ -19,7 +19,7 @@ public class MlPredictionServiceClient : IMlPredictionServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<RecommendationDto>>($"/api/v1/ml/recommendations/{userId}", cancellationToken);
+            return await _httpClient.GetWrappedAsync<List<RecommendationDto>>($"/api/v1/ml/recommendations/{userId}", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -32,7 +32,7 @@ public class MlPredictionServiceClient : IMlPredictionServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<HealthRiskTrendDto>($"/api/v1/ml/risk-trend/{userId}", cancellationToken);
+            return await _httpClient.GetWrappedAsync<HealthRiskTrendDto>($"/api/v1/ml/risk-trend/{userId}", cancellationToken);
         }
         catch (Exception ex)
         {

@@ -19,7 +19,7 @@ public class GamificationServiceClient : IGamificationServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<UserRewardsResponseDto>($"/api/v1/gamification/user/{userId}/rewards", cancellationToken);
+            return await _httpClient.GetWrappedAsync<UserRewardsResponseDto>($"/api/v1/gamification/user/{userId}/rewards", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -32,7 +32,7 @@ public class GamificationServiceClient : IGamificationServiceClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<ChallengeProgressDto>>($"/api/v1/gamification/family/{familyId}/challenges", cancellationToken);
+            return await _httpClient.GetWrappedAsync<List<ChallengeProgressDto>>($"/api/v1/gamification/family/{familyId}/challenges", cancellationToken);
         }
         catch (Exception ex)
         {

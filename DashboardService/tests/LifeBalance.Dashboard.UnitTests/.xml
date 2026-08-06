@@ -15,5 +15,13 @@
             Replace or extend with real domain ValueObject tests.
             </summary>
         </member>
+        <member name="T:LifeBalance.Dashboard.UnitTests.Infrastructure.HttpClientContractTests">
+            <summary>
+            Contract tests that feed the exact JSON payloads returned by the deployed
+            upstream services into the real Dashboard HttpClients, proving the DTOs
+            deserialize correctly (envelope unwrapping, route and field-name mapping).
+            Payloads captured live on 2026-08-06 against the Render deployments.
+            </summary>
+        </member>
     </members>
 </doc>

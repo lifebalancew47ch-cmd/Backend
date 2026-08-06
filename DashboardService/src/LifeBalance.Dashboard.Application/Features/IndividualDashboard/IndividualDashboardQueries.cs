@@ -2,6 +2,7 @@ using MediatR;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using LifeBalance.Dashboard.Application.Exceptions;
 using LifeBalance.Dashboard.Shared.Results;
+using Microsoft.Extensions.Logging;
 
 namespace LifeBalance.Dashboard.Application.Features.IndividualDashboard;
 
@@ -38,6 +39,7 @@ public class IndividualDashboardQueryHandlers :
     private readonly IGamificationServiceClient _gamificationClient;
     private readonly INotificationServiceClient _notificationClient;
     private readonly IMlPredictionServiceClient _mlClient;
+    private readonly ILogger<IndividualDashboardQueryHandlers> _logger;
 
     public IndividualDashboardQueryHandlers(
         IAuthServiceClient authClient,
@@ -45,7 +47,8 @@ public class IndividualDashboardQueryHandlers :
         ISedentaryEngineServiceClient sedentaryClient,
         IGamificationServiceClient gamificationClient,
         INotificationServiceClient notificationClient,
-        IMlPredictionServiceClient mlClient)
+        IMlPredictionServiceClient mlClient,
+        ILogger<IndividualDashboardQueryHandlers> logger)
     {
         _authClient = authClient;
         _medicalClient = medicalClient;
@@ -53,6 +56,7 @@ public class IndividualDashboardQueryHandlers :
         _gamificationClient = gamificationClient;
         _notificationClient = notificationClient;
         _mlClient = mlClient;
+        _logger = logger;
     }
 
     public async Task<Result<IndividualDashboardResponse>> Handle(GetIndividualDashboardQuery request, CancellationToken cancellationToken)
@@ -68,14 +72,41 @@ public class IndividualDashboardQueryHandlers :
 
         var profile = await userTask
             ?? throw new UpstreamServiceUnavailableException($"User profile for user '{request.UserId}' is unavailable.");
-        var biometrics = await biometricsTask
-            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
-        var activity = await activityTask
-            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
-        var rewards = await rewardsTask
-            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
-        var notifications = await notificationsTask ?? new List<NotificationItemDto>();
-        var recommendations = await recommendationsTask ?? new List<RecommendationDto>();
+
+        var biometrics = await biometricsTask;
+        if (biometrics is null)
+        {
+            _logger.LogWarning("Medical biometrics unavailable for user {UserId}; returning zero-fill. Verify Medical Data Service contract.", request.UserId);
+            biometrics = new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        }
+
+        var activity = await activityTask;
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill. Verify Sedentary Engine contract.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
+
+        var rewards = await rewardsTask;
+        if (rewards is null)
+        {
+            _logger.LogWarning("Gamification rewards unavailable for user {UserId}; returning zero-fill. Verify Gamification Service contract.", request.UserId);
+            rewards = new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
+        }
+
+        var notifications = await notificationsTask;
+        if (notifications is null)
+        {
+            _logger.LogWarning("Notifications unavailable for user {UserId}; returning empty list.", request.UserId);
+            notifications = new List<NotificationItemDto>();
+        }
+
+        var recommendations = await recommendationsTask;
+        if (recommendations is null)
+        {
+            _logger.LogWarning("ML recommendations unavailable for user {UserId}; returning empty list.", request.UserId);
+            recommendations = new List<RecommendationDto>();
+        }
 
         return Result.Success(new IndividualDashboardResponse(
             profile,
@@ -91,10 +122,18 @@ public class IndividualDashboardQueryHandlers :
     {
         var profile = await _authClient.GetUserProfileAsync(request.UserId, cancellationToken)
             ?? throw new UpstreamServiceUnavailableException($"User profile for user '{request.UserId}' is unavailable.");
-        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
-        var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken)
-            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
+        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill summary.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
+        var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken);
+        if (rewards is null)
+        {
+            _logger.LogWarning("Gamification rewards unavailable for user {UserId}; returning zero-fill summary.", request.UserId);
+            rewards = new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
+        }
 
         return Result.Success(new IndividualSummaryResponse(
             request.UserId,
@@ -108,10 +147,18 @@ public class IndividualDashboardQueryHandlers :
 
     public async Task<Result<IndividualKpisResponse>> Handle(GetIndividualKpisQuery request, CancellationToken cancellationToken)
     {
-        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
-        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        if (biometrics is null)
+        {
+            _logger.LogWarning("Medical biometrics unavailable for user {UserId}; returning zero-fill KPIs.", request.UserId);
+            biometrics = new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        }
+        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill KPIs.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
 
         return Result.Success(new IndividualKpisResponse(
             request.UserId,
@@ -124,10 +171,18 @@ public class IndividualDashboardQueryHandlers :
 
     public async Task<Result<IndividualStatisticsResponse>> Handle(GetIndividualStatisticsQuery request, CancellationToken cancellationToken)
     {
-        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
-        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill statistics.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        if (biometrics is null)
+        {
+            _logger.LogWarning("Medical biometrics unavailable for user {UserId}; returning zero-fill statistics.", request.UserId);
+            biometrics = new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        }
 
         return Result.Success(new IndividualStatisticsResponse(
             request.UserId,
@@ -157,8 +212,12 @@ public class IndividualDashboardQueryHandlers :
 
     public async Task<Result<IndividualActivityResponse>> Handle(GetIndividualActivityQuery request, CancellationToken cancellationToken)
     {
-        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken)
-            ?? new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill activity.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
 
         return Result.Success(new IndividualActivityResponse(request.UserId, activity));
     }
@@ -166,13 +225,22 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualRecommendationsResponse>> Handle(GetIndividualRecommendationsQuery request, CancellationToken cancellationToken)
     {
         var recs = await _mlClient.GetRecommendationsAsync(request.UserId, cancellationToken);
-        return Result.Success(new IndividualRecommendationsResponse(request.UserId, recs ?? new List<RecommendationDto>()));
+        if (recs is null)
+        {
+            _logger.LogWarning("ML recommendations unavailable for user {UserId}; returning empty list.", request.UserId);
+            recs = new List<RecommendationDto>();
+        }
+        return Result.Success(new IndividualRecommendationsResponse(request.UserId, recs));
     }
 
     public async Task<Result<IndividualRewardsResponse>> Handle(GetIndividualRewardsQuery request, CancellationToken cancellationToken)
     {
-        var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken)
-            ?? new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
+        var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken);
+        if (rewards is null)
+        {
+            _logger.LogWarning("Gamification rewards unavailable for user {UserId}; returning zero-fill rewards.", request.UserId);
+            rewards = new UserRewardsResponseDto(request.UserId, 0, 0, 0, new List<string>());
+        }
 
         return Result.Success(new IndividualRewardsResponse(request.UserId, rewards));
     }
@@ -180,13 +248,22 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualNotificationsResponse>> Handle(GetIndividualNotificationsQuery request, CancellationToken cancellationToken)
     {
         var notes = await _notificationClient.GetUserNotificationsAsync(request.UserId, 10, cancellationToken);
-        return Result.Success(new IndividualNotificationsResponse(request.UserId, notes ?? new List<NotificationItemDto>()));
+        if (notes is null)
+        {
+            _logger.LogWarning("Notifications unavailable for user {UserId}; returning empty list.", request.UserId);
+            notes = new List<NotificationItemDto>();
+        }
+        return Result.Success(new IndividualNotificationsResponse(request.UserId, notes));
     }
 
     public async Task<Result<IndividualBiometricsResponse>> Handle(GetIndividualBiometricsQuery request, CancellationToken cancellationToken)
     {
-        var bio = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken)
-            ?? new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        var bio = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        if (bio is null)
+        {
+            _logger.LogWarning("Medical biometrics unavailable for user {UserId}; returning zero-fill biometrics.", request.UserId);
+            bio = new MedicalDataResponseDto(request.UserId, 0, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        }
 
         return Result.Success(new IndividualBiometricsResponse(request.UserId, bio));
     }
