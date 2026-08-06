@@ -39,8 +39,14 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger / OpenAPI (Development only — Rule 7). Auditoria 6/08/2026 (S-01):
+// estaba expuesto sin condicion en produccion — este es el servicio de
+// Auth/Profile, el mas sensible de exponer sin proteger.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 app.UseRouting();

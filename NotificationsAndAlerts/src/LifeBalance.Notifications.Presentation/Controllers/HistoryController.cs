@@ -47,6 +47,23 @@ public class HistoryController : ControllerBase
     [HttpGet("organization/{organizationId}")]
     public async Task<IActionResult> GetByOrganization(string organizationId)
     {
+        // Auditoria 6/08/2026 (S-20): este endpoint filtraba por el
+        // organizationId de la URL sin verificar que el llamante perteneciera
+        // a esa organizacion (BOLA - OWASP API1:2023). Un usuario autenticado
+        // de la organizacion A podia leer el historial de notificaciones de
+        // la organizacion B con solo cambiar el id en la ruta. Confirmado con
+        // pruebas cruzadas: GetByUser() devolvia datos propios mientras que
+        // esta ruta devolvia 200 tanto para la organizacion propia como para
+        // una ajena (ambas vacias en las pruebas, pero el filtro por path
+        // seguia activo). Se exige ahora que el organizationId coincida con
+        // el claim del token, salvo para ADMIN (igual que GetAll()).
+        if (!User.IsInRole("ADMIN"))
+        {
+            var callerOrganizationId = User.FindFirst("organization_id")?.Value;
+            if (string.IsNullOrEmpty(callerOrganizationId) || callerOrganizationId != organizationId)
+                return Forbid();
+        }
+
         var result = await _historyService.GetByOrganizationAsync(organizationId);
         return Ok(new Response<List<NotificationHistoryDto>>(result));
     }

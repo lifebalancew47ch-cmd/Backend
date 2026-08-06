@@ -206,12 +206,21 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Swagger / OpenAPI (Development only — Rule 7). Auditoria 6/08/2026 (S-01):
+// estaba expuesto sin condicion en produccion. Este es el servicio con el
+// mayor impacto de exposicion de contrato: la propia descripcion del API
+// dice "Acceso exclusivo para SUPERADMIN y SYSTEMADMINISTRATOR", y publicaba
+// sin autenticacion el listado completo de endpoints de mantenimiento,
+// feature flags, configuracion global y logs centralizados.
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Administration Service API v1");
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Administration Service API v1");
+        c.RoutePrefix = string.Empty;
+    });
+}
 
 app.UseResponseCompression();
 app.UseRouting();

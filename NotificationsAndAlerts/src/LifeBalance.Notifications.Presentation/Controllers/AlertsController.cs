@@ -29,6 +29,14 @@ public class AlertsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAlertDto dto)
     {
+        // Auditoria 6/08/2026: CreateAlertDto.UserId llegaba tal cual del
+        // cliente sin contrastarse contra el token (BOLA de escritura -
+        // cualquier usuario autenticado podia crear una alerta a nombre de
+        // otro). Salvo ADMIN, el UserId real siempre es el del llamante.
+        if (!User.IsInRole("ADMIN"))
+        {
+            dto.UserId = GetUserId();
+        }
         var result = await _alertService.CreateAsync(dto);
         return Ok(new Response<AlertDto>(result));
     }

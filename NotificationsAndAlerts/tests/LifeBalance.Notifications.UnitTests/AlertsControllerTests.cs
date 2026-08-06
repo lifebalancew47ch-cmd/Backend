@@ -25,9 +25,11 @@ public class AlertsControllerTests
         _alertService.Setup(s => s.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(BuildAlert());
     }
 
-    private static void SetUser(ControllerBase controller, string userId)
+    private static void SetUser(ControllerBase controller, string userId, string? role = null)
     {
-        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) });
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId) };
+        if (role is not null) claims.Add(new Claim("role", role));
+        var identity = new ClaimsIdentity(claims, "TestAuth", ClaimTypes.NameIdentifier, "role");
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
@@ -366,5 +368,58 @@ public class AlertsControllerTests
         var result = await _controller.GetById("alert-1");
 
         result.Should().BeOfType<ForbidResult>();
+    }
+
+    // --- Regresion: BOLA de escritura en Create (CreateAlertDto.UserId venia
+    // del cliente sin verificar contra el token) ---
+
+    [Fact]
+    public async Task Create_WhenDtoUserIdDiffersFromCaller_OverridesWithCallerUserId()
+    {
+        // Detectado en la auditoria del 6/08/2026: un usuario autenticado
+        // podia crear una alerta a nombre de otro pasando un UserId ajeno.
+        var dto = new CreateAlertDto
+        {
+            UserId = "victim-user",
+            Title = "Title",
+            Body = "Body",
+            Source = "source",
+            Priority = AlertPriority.Critical
+        };
+        CreateAlertDto? captured = null;
+        _alertService.Setup(s => s.CreateAsync(It.IsAny<CreateAlertDto>()))
+            .Callback<CreateAlertDto>(d => captured = d)
+            .ReturnsAsync(BuildAlert());
+
+        SetUser(_controller, "attacker-user");
+        await _controller.Create(dto);
+
+        captured.Should().NotBeNull();
+        captured!.UserId.Should().Be("attacker-user");
+    }
+
+    [Fact]
+    public async Task Create_AsAdmin_PreservesProvidedUserId()
+    {
+        // Un ADMIN si puede crear alertas a nombre de otro usuario (uso
+        // legitimo: alertas generadas por el backend/servicios internos).
+        var dto = new CreateAlertDto
+        {
+            UserId = "target-user",
+            Title = "Title",
+            Body = "Body",
+            Source = "source",
+            Priority = AlertPriority.Critical
+        };
+        CreateAlertDto? captured = null;
+        _alertService.Setup(s => s.CreateAsync(It.IsAny<CreateAlertDto>()))
+            .Callback<CreateAlertDto>(d => captured = d)
+            .ReturnsAsync(BuildAlert());
+
+        SetUser(_controller, "admin-1", role: "ADMIN");
+        await _controller.Create(dto);
+
+        captured.Should().NotBeNull();
+        captured!.UserId.Should().Be("target-user");
     }
 }

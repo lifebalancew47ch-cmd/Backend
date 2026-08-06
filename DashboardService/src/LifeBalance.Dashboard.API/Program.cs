@@ -216,8 +216,14 @@ try
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
 
-    // 5. Swagger (Development only — Rule 7)
-    app.UseDashboardSwagger();
+    // 5. Swagger (Development only — Rule 7). Auditoria 6/08/2026 (S-01):
+    // el comentario ya decia "Development only" pero UseDashboardSwagger()
+    // llamaba a UseSwagger/UseSwaggerUI sin condicion — quedaba expuesto en
+    // produccion pese a la intencion original del codigo.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDashboardSwagger();
+    }
 
     // 6. Response compression & caching
     app.UseResponseCompression();

@@ -92,7 +92,13 @@ var app = builder.Build();
 
 FirebaseInit(app.Configuration);
 
-app.UseNotificationsSwagger();
+// Swagger / OpenAPI (Development only — Rule 7). Auditoria 6/08/2026 (S-01):
+// estaba expuesto sin condicion en produccion, publicando el contrato
+// completo (incluyendo endpoints admin de otros servicios) sin autenticacion.
+if (app.Environment.IsDevelopment())
+{
+    app.UseNotificationsSwagger();
+}
 
 app.UseExceptionHandling();
 
