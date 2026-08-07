@@ -120,7 +120,8 @@ try
     // --------------------------------------------------------
     // CORS — origins from configuration (Cors:AllowedOrigins)
     // --------------------------------------------------------
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("ReportingCorsPolicy", policy =>
@@ -131,15 +132,13 @@ try
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             }
-            else if (builder.Environment.IsDevelopment())
-            {
-                policy.AllowAnyOrigin()
-                      .AllowAnyHeader()
-                      .AllowAnyMethod();
-            }
             else
             {
-                policy.WithOrigins(Array.Empty<string>())
+                policy.WithOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:5173",
+                        "https://lifebalance-adv3.onrender.com"
+                      )
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             }
@@ -230,14 +229,14 @@ try
     app.UseResponseCompression();
     app.UseResponseCaching();
 
-    // 7. CORS
+    // 7. Routing
+    app.UseRouting();
+
+    // 8. CORS
     app.UseCors("ReportingCorsPolicy");
 
-    // 8. Rate limiting
+    // 9. Rate limiting
     app.UseRateLimiter();
-
-    // 9. Routing
-    app.UseRouting();
 
     // 10. Authentication & Authorization
     app.UseAuthentication();
