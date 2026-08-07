@@ -19,9 +19,12 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     {
         var progressTask = _httpClient.GetWrappedAsync<SedentaryProgressDto>("/api/v1/sedentary/progress", cancellationToken);
         var scoreTask = _httpClient.GetWrappedAsync<SedentaryScoreDto>("/api/v1/sedentary/score", cancellationToken);
+        var historyTask = GetHistoryFallbackAsync(userId, cancellationToken);
 
-        SedentaryProgressDto? progress;
-        SedentaryScoreDto? score;
+        SedentaryProgressDto? progress = null;
+        SedentaryScoreDto? score = null;
+        List<SedentaryHistoryItemDto>? history = null;
+
         try
         {
             progress = await progressTask;
@@ -29,7 +32,6 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve sedentary progress for UserId: {UserId}", userId);
-            progress = null;
         }
 
         try
@@ -39,53 +41,47 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve sedentary score for UserId: {UserId}", userId);
-            score = null;
         }
 
-        // 1. Primary check: If progress returned non-zero step or active minute data, use it.
-        if (progress != null && (progress.DailySteps > 0 || progress.ActiveMinutes > 0))
+        try
         {
-            return new SedentaryActivityResponseDto(
-                userId,
-                progress.DailySteps,
-                progress.ActiveMinutes,
-                0,
-                0,
-                Enumerable.Repeat(0, 24).ToList());
+            history = await historyTask;
         }
-
-        // 2. Fallback check: If progress is null or returning zeroes for today, query history endpoints.
-        var history = await GetHistoryFallbackAsync(userId, cancellationToken);
-        if (history is { Count: > 0 })
+        catch (Exception ex)
         {
-            var latest = history.OrderByDescending(h => h.RecordedAtUtc ?? h.Date ?? DateTime.MinValue).First();
-            var steps = latest.DailySteps ?? latest.Steps ?? progress?.DailySteps ?? 0;
-            var activeMinutes = latest.ActiveMinutes ?? progress?.ActiveMinutes ?? 0;
-            var sedentaryHours = latest.SedentaryHours ?? 0;
-            var caloriesBurned = latest.CaloriesBurned ?? 0;
-            var heatmap = latest.HourlyHeatmap is { Count: 24 } ? latest.HourlyHeatmap : Enumerable.Repeat(0, 24).ToList();
-
-            return new SedentaryActivityResponseDto(
-                userId,
-                steps,
-                activeMinutes,
-                sedentaryHours,
-                caloriesBurned,
-                heatmap);
+            _logger.LogWarning(ex, "Failed to retrieve sedentary history for UserId: {UserId}", userId);
         }
 
-        if (progress is null && score is null)
+        if (progress is null && score is null && (history is null || history.Count == 0))
         {
             return null;
         }
 
+        var latest = history is { Count: > 0 }
+            ? history.OrderByDescending(h => h.RecordedAtUtc ?? h.Date ?? DateTime.MinValue).First()
+            : null;
+
+        var dailySteps = (progress != null && progress.DailySteps > 0)
+            ? progress.DailySteps
+            : (latest?.DailySteps ?? latest?.Steps ?? 0);
+
+        var activeMinutes = (progress != null && progress.ActiveMinutes > 0)
+            ? progress.ActiveMinutes
+            : (latest?.ActiveMinutes ?? 0);
+
+        var sedentaryHours = latest?.SedentaryHours ?? 0;
+        var caloriesBurned = latest?.CaloriesBurned ?? 0;
+        var heatmap = latest?.HourlyHeatmap is { Count: 24 }
+            ? latest.HourlyHeatmap
+            : Enumerable.Repeat(0, 24).ToList();
+
         return new SedentaryActivityResponseDto(
             userId,
-            progress?.DailySteps ?? 0,
-            progress?.ActiveMinutes ?? 0,
-            0,
-            0,
-            Enumerable.Repeat(0, 24).ToList());
+            dailySteps,
+            activeMinutes,
+            sedentaryHours,
+            caloriesBurned,
+            heatmap);
     }
 
     public async Task<CompanyAdherenceResponseDto?> GetCompanyAdherenceAsync(string companyId, CancellationToken cancellationToken = default)
