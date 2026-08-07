@@ -106,6 +106,29 @@ public class HttpClientContractTests
     }
 
     [Fact]
+    public async Task SedentaryEngineServiceClient_ZeroProgress_FallsBackToHistory()
+    {
+        var progressJson = "{\"success\":true,\"message\":\"ok\",\"data\":{\"dailySteps\":0,\"activeMinutes\":0},\"errors\":[]}";
+        var historyJson = "{\"success\":true,\"message\":\"ok\",\"data\":[{\"recordedAtUtc\":\"2026-08-06T10:00:00Z\",\"steps\":7500,\"activeMinutes\":40,\"sedentaryHours\":3.5,\"caloriesBurned\":450}],\"errors\":[]}";
+
+        var http = CreateClient(new Dictionary<string, string>
+        {
+            ["/api/v1/sedentary/progress"] = progressJson,
+            [$"/api/v1/sedentary/user/{UserId}/history"] = historyJson
+        }, out var handler);
+        var sut = new SedentaryEngineServiceClient(http, NullLogger<SedentaryEngineServiceClient>.Instance);
+
+        var result = await sut.GetUserActivityAsync(UserId);
+
+        handler.RequestedPaths.Should().Contain(p => p.Contains($"/api/v1/sedentary/user/{UserId}/history"));
+        result.Should().NotBeNull();
+        result!.DailySteps.Should().Be(7500);
+        result.ActiveMinutes.Should().Be(40);
+        result.SedentaryHours.Should().Be(3.5);
+        result.CaloriesBurned.Should().Be(450);
+    }
+
+    [Fact]
     public async Task GamificationServiceClient_UnwrapsEnvelope_ReturnsRewards()
     {
         var json = "{\"success\":true,\"message\":\"Operation completed successfully.\"," +
