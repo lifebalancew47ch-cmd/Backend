@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -18,9 +19,12 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
     {
         var progressTask = _httpClient.GetWrappedAsync<SedentaryProgressDto>("/api/v1/sedentary/progress", cancellationToken);
         var scoreTask = _httpClient.GetWrappedAsync<SedentaryScoreDto>("/api/v1/sedentary/score", cancellationToken);
+        var historyTask = GetHistoryFallbackAsync(userId, cancellationToken);
 
-        SedentaryProgressDto? progress;
-        SedentaryScoreDto? score;
+        SedentaryProgressDto? progress = null;
+        SedentaryScoreDto? score = null;
+        List<SedentaryHistoryItemDto>? history = null;
+
         try
         {
             progress = await progressTask;
@@ -28,7 +32,6 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve sedentary progress for UserId: {UserId}", userId);
-            progress = null;
         }
 
         try
@@ -38,21 +41,47 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve sedentary score for UserId: {UserId}", userId);
-            score = null;
         }
 
-        if (progress is null && score is null)
+        try
+        {
+            history = await historyTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sedentary history for UserId: {UserId}", userId);
+        }
+
+        if (progress is null && score is null && (history is null || history.Count == 0))
         {
             return null;
         }
 
+        var latest = history is { Count: > 0 }
+            ? history.OrderByDescending(h => h.RecordedAtUtc ?? h.Date ?? DateTime.MinValue).First()
+            : null;
+
+        var dailySteps = (progress != null && progress.DailySteps > 0)
+            ? progress.DailySteps
+            : (latest?.DailySteps ?? latest?.Steps ?? 0);
+
+        var activeMinutes = (progress != null && progress.ActiveMinutes > 0)
+            ? progress.ActiveMinutes
+            : (latest?.ActiveMinutes ?? 0);
+
+        var sedentaryHours = latest?.SedentaryHours ?? 0;
+        var caloriesBurned = latest?.CaloriesBurned ?? 0;
+        var heatmap = latest?.HourlyHeatmap is { Count: 24 }
+            ? latest.HourlyHeatmap
+            : Enumerable.Repeat(0, 24).ToList();
+
         return new SedentaryActivityResponseDto(
             userId,
-            progress?.DailySteps ?? 0,
-            progress?.ActiveMinutes ?? 0,
-            0,
-            0,
-            Enumerable.Repeat(0, 24).ToList(),
+            dailySteps,
+            activeMinutes,
+            sedentaryHours,
+            caloriesBurned,
+            heatmap,
             score?.Score ?? 0,
             score?.RiskLevel,
             progress?.DailyStepsTarget ?? 0,
@@ -74,6 +103,47 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         }
     }
 
+    private async Task<List<SedentaryHistoryItemDto>?> GetHistoryFallbackAsync(string userId, CancellationToken cancellationToken)
+    {
+        var endpoints = new[]
+        {
+            $"/api/v1/sedentary/user/{userId}/history",
+            $"/api/v1/sedentary/users/{userId}/history",
+            "/api/v1/sedentary/history"
+        };
+
+        foreach (var endpoint in endpoints)
+        {
+            try
+            {
+                var history = await _httpClient.GetWrappedAsync<List<SedentaryHistoryItemDto>>(endpoint, cancellationToken);
+                if (history is { Count: > 0 })
+                {
+                    return history;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve sedentary history from {Endpoint} via GetWrappedAsync for UserId: {UserId}", endpoint, userId);
+            }
+
+            try
+            {
+                var history = await _httpClient.GetFromJsonAsync<List<SedentaryHistoryItemDto>>(endpoint, cancellationToken);
+                if (history is { Count: > 0 })
+                {
+                    return history;
+                }
+            }
+            catch
+            {
+                // Ignore raw endpoint fallback exception
+            }
+        }
+
+        return null;
+    }
+
     private sealed class SedentaryProgressDto
     {
         public int DailySteps { get; set; }
@@ -90,5 +160,20 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
         public double Score { get; set; }
         public string? RiskLevel { get; set; }
         public DateTime? RecordedAtUtc { get; set; }
+    }
+
+    private sealed class SedentaryHistoryItemDto
+    {
+        public DateTime? Date { get; set; }
+        public DateTime? RecordedAtUtc { get; set; }
+        public double? SedentaryScore { get; set; }
+        public double? Score { get; set; }
+        public double? SedentaryHours { get; set; }
+        public double? ActiveMinutes { get; set; }
+        public int? Steps { get; set; }
+        public int? DailySteps { get; set; }
+        public int? BreakCount { get; set; }
+        public double? CaloriesBurned { get; set; }
+        public List<int>? HourlyHeatmap { get; set; }
     }
 }
