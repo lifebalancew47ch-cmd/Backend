@@ -180,4 +180,16 @@ public class IndividualDashboardController : ApiControllerBase
 
         return HandleResult(await Mediator.Send(new GetIndividualBiometricsQuery(userId), cancellationToken));
     }
+
+    [HttpGet("sync")]
+    public async Task<IActionResult> GetSync(CancellationToken cancellationToken)
+    {
+        var authResult = ResolveUserId(out var userId);
+        if (authResult is not null)
+        {
+            return authResult;
+        }
+
+        return HandleResult(await Mediator.Send(new GetIndividualSyncQuery(userId), cancellationToken));
+    }
 }

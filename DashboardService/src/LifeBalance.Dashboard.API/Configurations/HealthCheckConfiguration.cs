@@ -17,6 +17,7 @@ public static class HealthCheckConfiguration
                 name: "mongodb",
                 tags: new[] { "ready", "db" })
             .AddUrlGroup(new Uri($"{serviceUrls.AuthServiceUrl}/health"), name: "AuthService", tags: new[] { "ready", "upstream" })
+            .AddUrlGroup(new Uri($"{serviceUrls.IngestionServiceUrl}/health"), name: "IngestionService", tags: new[] { "ready", "upstream" })
             .AddUrlGroup(new Uri($"{serviceUrls.MedicalDataServiceUrl}/health"), name: "MedicalDataService", tags: new[] { "ready", "upstream" })
             .AddUrlGroup(new Uri($"{serviceUrls.SedentaryEngineServiceUrl}/health"), name: "SedentaryEngineService", tags: new[] { "ready", "upstream" })
             .AddUrlGroup(new Uri($"{serviceUrls.GamificationServiceUrl}/health"), name: "GamificationService", tags: new[] { "ready", "upstream" })

@@ -22,3 +22,4 @@ public record IndividualRecommendationsResponse(string UserId, List<Recommendati
 public record IndividualRewardsResponse(string UserId, UserRewardsResponseDto Rewards);
 public record IndividualNotificationsResponse(string UserId, List<NotificationItemDto> Notifications);
 public record IndividualBiometricsResponse(string UserId, MedicalDataResponseDto Biometrics);
+public record IndividualSyncResponse(string UserId, List<IngestionHistoryItemDto> Items);

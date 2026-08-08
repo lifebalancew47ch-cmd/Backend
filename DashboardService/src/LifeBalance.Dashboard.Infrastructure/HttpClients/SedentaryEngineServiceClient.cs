@@ -52,7 +52,13 @@ public class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
             progress?.ActiveMinutes ?? 0,
             0,
             0,
-            Enumerable.Repeat(0, 24).ToList());
+            Enumerable.Repeat(0, 24).ToList(),
+            score?.Score ?? 0,
+            score?.RiskLevel,
+            progress?.DailyStepsTarget ?? 0,
+            progress?.ActiveMinutesTarget ?? 0,
+            progress?.StepsProgress ?? 0,
+            progress?.ActiveProgress ?? 0);
     }
 
     public async Task<CompanyAdherenceResponseDto?> GetCompanyAdherenceAsync(string companyId, CancellationToken cancellationToken = default)

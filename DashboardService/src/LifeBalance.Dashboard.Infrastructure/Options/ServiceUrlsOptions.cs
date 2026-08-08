@@ -5,6 +5,7 @@ public class ServiceUrlsOptions
     public const string SectionName = "ServiceUrls";
 
     public string AuthServiceUrl { get; set; } = "http://localhost:5001";
+    public string IngestionServiceUrl { get; set; } = "http://localhost:5009";
     public string MedicalDataServiceUrl { get; set; } = "http://localhost:5002";
     public string SedentaryEngineServiceUrl { get; set; } = "http://localhost:5003";
     public string GamificationServiceUrl { get; set; } = "http://localhost:5004";

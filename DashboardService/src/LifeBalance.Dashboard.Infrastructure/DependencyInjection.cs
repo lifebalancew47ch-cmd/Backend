@@ -99,6 +99,7 @@ public static class DependencyInjection
         var serviceUrls = configuration.GetSection(ServiceUrlsOptions.SectionName).Get<ServiceUrlsOptions>() ?? new ServiceUrlsOptions();
 
         RegisterTypedClient<IAuthServiceClient, AuthServiceClient>(services, serviceUrls.AuthServiceUrl, environment);
+        RegisterTypedClient<IIngestionServiceClient, IngestionServiceClient>(services, serviceUrls.IngestionServiceUrl, environment);
         RegisterTypedClient<IMedicalDataServiceClient, MedicalDataServiceClient>(services, serviceUrls.MedicalDataServiceUrl, environment);
         RegisterTypedClient<ISedentaryEngineServiceClient, SedentaryEngineServiceClient>(services, serviceUrls.SedentaryEngineServiceUrl, environment);
         RegisterTypedClient<IGamificationServiceClient, GamificationServiceClient>(services, serviceUrls.GamificationServiceUrl, environment);

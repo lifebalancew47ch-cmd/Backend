@@ -15,6 +15,7 @@ public class IndividualDashboardQueryHandlersTests
     private readonly IGamificationServiceClient _gamificationClient = Substitute.For<IGamificationServiceClient>();
     private readonly INotificationServiceClient _notificationClient = Substitute.For<INotificationServiceClient>();
     private readonly IMlPredictionServiceClient _mlClient = Substitute.For<IMlPredictionServiceClient>();
+    private readonly IIngestionServiceClient _ingestionClient = Substitute.For<IIngestionServiceClient>();
     private readonly Microsoft.Extensions.Logging.ILogger<IndividualDashboardQueryHandlers> _logger = Substitute.For<Microsoft.Extensions.Logging.ILogger<IndividualDashboardQueryHandlers>>();
 
     private readonly IndividualDashboardQueryHandlers _handler;
@@ -28,6 +29,7 @@ public class IndividualDashboardQueryHandlersTests
             _gamificationClient,
             _notificationClient,
             _mlClient,
+            _ingestionClient,
             _logger);
     }
 
@@ -425,20 +427,64 @@ public class IndividualDashboardQueryHandlersTests
     // ── GET /api/v1/dashboard/individual/progress ──
 
     [Fact]
-    public async Task Handle_GetIndividualProgressQuery_ThrowsWhenNoProgressSource()
+    public async Task Handle_GetIndividualProgressQuery_NoUpstreamData_ReturnsZeroFill()
     {
-        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
+        var result = await _handler.Handle(new GetIndividualProgressQuery("usr_ghost"), CancellationToken.None);
         result.IsSuccess.Should().BeTrue();
         result.Value.WeeklyGoalCompletionPercentage.Should().Be(0.0);
+        result.Value.DaysActive.Should().Be(0);
     }
 
     [Fact]
-    public async Task Handle_GetIndividualProgressQuery_DoesNotCallDownstream()
+    public async Task Handle_GetIndividualProgressQuery_CallsSedentaryClient()
     {
-        await _handler.Handle(new GetIndividualProgressQuery("usr_test_123"), CancellationToken.None);
+        var userId = "usr_test_123";
+        StubIndividualSources(userId);
 
-        await _authClient.DidNotReceiveWithAnyArgs().GetUserProfileAsync(default, default);
-        await _sedentaryClient.DidNotReceiveWithAnyArgs().GetUserActivityAsync(default, default);
+        await _handler.Handle(new GetIndividualProgressQuery(userId), CancellationToken.None);
+
+        await _sedentaryClient.Received(1).GetUserActivityAsync(userId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_GetIndividualProgressQuery_ComputesGoalCompletionFromStepsAndActiveMinutes()
+    {
+        var userId = "usr_test_123";
+        var activity = new SedentaryActivityResponseDto(
+            userId,
+            DailySteps: 8000,
+            ActiveMinutes: 30,
+            SedentaryHours: 4.0,
+            CaloriesBurned: 420,
+            HourlyHeatmap: new List<int>(),
+            DailyStepsTarget: 8000,
+            ActiveMinutesTarget: 30);
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(activity);
+
+        var result = await _handler.Handle(new GetIndividualProgressQuery(userId), CancellationToken.None);
+
+        result.Value.WeeklyGoalCompletionPercentage.Should().Be(100.0);
+        result.Value.DaysActive.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_GetIndividualProgressQuery_ClampsCompletionAtOneHundred()
+    {
+        var userId = "usr_test_123";
+        var activity = new SedentaryActivityResponseDto(
+            userId,
+            DailySteps: 20000,
+            DailyStepsTarget: 8000,
+            ActiveMinutes: 120,
+            ActiveMinutesTarget: 30,
+            SedentaryHours: 2.0,
+            CaloriesBurned: 900,
+            HourlyHeatmap: new List<int>());
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>()).Returns(activity);
+
+        var result = await _handler.Handle(new GetIndividualProgressQuery(userId), CancellationToken.None);
+
+        result.Value.WeeklyGoalCompletionPercentage.Should().Be(100.0);
     }
 
     // ── GET /api/v1/dashboard/individual/activity ──
@@ -693,5 +739,43 @@ public class IndividualDashboardQueryHandlersTests
         var result = await _handler.Handle(new GetIndividualBiometricsQuery(userId), CancellationToken.None);
 
         result.Value.UserId.Should().Be("usr_bio");
+    }
+
+    // ── GET /api/v1/dashboard/individual/sync ──
+
+    [Fact]
+    public async Task Handle_GetIndividualSyncQuery_ReturnsItems()
+    {
+        var userId = "usr_test_123";
+        var items = new List<IngestionHistoryItemDto>
+        {
+            new("evt-1", "ActivitySession", DateTime.UtcNow, "Processed")
+        };
+        _ingestionClient.GetHistoryAsync(null, 1, 50, Arg.Any<CancellationToken>()).Returns(items);
+
+        var result = await _handler.Handle(new GetIndividualSyncQuery(userId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.UserId.Should().Be(userId);
+        result.Value.Items.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Handle_GetIndividualSyncQuery_NullHistory_ReturnsEmptyList()
+    {
+        var result = await _handler.Handle(new GetIndividualSyncQuery("usr_ghost"), CancellationToken.None);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_GetIndividualSyncQuery_CallsIngestionClient()
+    {
+        var userId = "usr_test_123";
+        StubIndividualSources(userId);
+
+        await _handler.Handle(new GetIndividualSyncQuery(userId), CancellationToken.None);
+
+        await _ingestionClient.Received(1).GetHistoryAsync(null, 1, 50, Arg.Any<CancellationToken>());
     }
 }

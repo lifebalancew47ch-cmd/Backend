@@ -18,6 +18,7 @@ public record GetIndividualRecommendationsQuery(string UserId) : IRequest<Result
 public record GetIndividualRewardsQuery(string UserId) : IRequest<Result<IndividualRewardsResponse>>;
 public record GetIndividualNotificationsQuery(string UserId) : IRequest<Result<IndividualNotificationsResponse>>;
 public record GetIndividualBiometricsQuery(string UserId) : IRequest<Result<IndividualBiometricsResponse>>;
+public record GetIndividualSyncQuery(string UserId) : IRequest<Result<IndividualSyncResponse>>;
 
 public class IndividualDashboardQueryHandlers :
     IRequestHandler<GetIndividualDashboardQuery, Result<IndividualDashboardResponse>>,
@@ -31,7 +32,8 @@ public class IndividualDashboardQueryHandlers :
     IRequestHandler<GetIndividualRecommendationsQuery, Result<IndividualRecommendationsResponse>>,
     IRequestHandler<GetIndividualRewardsQuery, Result<IndividualRewardsResponse>>,
     IRequestHandler<GetIndividualNotificationsQuery, Result<IndividualNotificationsResponse>>,
-    IRequestHandler<GetIndividualBiometricsQuery, Result<IndividualBiometricsResponse>>
+    IRequestHandler<GetIndividualBiometricsQuery, Result<IndividualBiometricsResponse>>,
+    IRequestHandler<GetIndividualSyncQuery, Result<IndividualSyncResponse>>
 {
     private readonly IAuthServiceClient _authClient;
     private readonly IMedicalDataServiceClient _medicalClient;
@@ -39,6 +41,7 @@ public class IndividualDashboardQueryHandlers :
     private readonly IGamificationServiceClient _gamificationClient;
     private readonly INotificationServiceClient _notificationClient;
     private readonly IMlPredictionServiceClient _mlClient;
+    private readonly IIngestionServiceClient _ingestionClient;
     private readonly ILogger<IndividualDashboardQueryHandlers> _logger;
 
     public IndividualDashboardQueryHandlers(
@@ -48,6 +51,7 @@ public class IndividualDashboardQueryHandlers :
         IGamificationServiceClient gamificationClient,
         INotificationServiceClient notificationClient,
         IMlPredictionServiceClient mlClient,
+        IIngestionServiceClient ingestionClient,
         ILogger<IndividualDashboardQueryHandlers> logger)
     {
         _authClient = authClient;
@@ -56,6 +60,7 @@ public class IndividualDashboardQueryHandlers :
         _gamificationClient = gamificationClient;
         _notificationClient = notificationClient;
         _mlClient = mlClient;
+        _ingestionClient = ingestionClient;
         _logger = logger;
     }
 
@@ -207,7 +212,18 @@ public class IndividualDashboardQueryHandlers :
 
     public async Task<Result<IndividualProgressResponse>> Handle(GetIndividualProgressQuery request, CancellationToken cancellationToken)
     {
-        return Result.Success(new IndividualProgressResponse(request.UserId, 0.0, 0));
+        var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill progress.", request.UserId);
+            return Result.Success(new IndividualProgressResponse(request.UserId, 0.0, 0));
+        }
+
+        var stepsProgress = Math.Clamp(activity.DailyStepsTarget > 0 ? activity.DailySteps * 100.0 / activity.DailyStepsTarget : 0, 0, 100);
+        var activeProgress = Math.Clamp(activity.ActiveMinutesTarget > 0 ? activity.ActiveMinutes * 100.0 / activity.ActiveMinutesTarget : 0, 0, 100);
+        var weeklyGoalCompletion = (stepsProgress + activeProgress) / 2.0;
+
+        return Result.Success(new IndividualProgressResponse(request.UserId, weeklyGoalCompletion, 0));
     }
 
     public async Task<Result<IndividualActivityResponse>> Handle(GetIndividualActivityQuery request, CancellationToken cancellationToken)
@@ -266,5 +282,17 @@ public class IndividualDashboardQueryHandlers :
         }
 
         return Result.Success(new IndividualBiometricsResponse(request.UserId, bio));
+    }
+
+    public async Task<Result<IndividualSyncResponse>> Handle(GetIndividualSyncQuery request, CancellationToken cancellationToken)
+    {
+        var items = await _ingestionClient.GetHistoryAsync(type: null, page: 1, pageSize: 50, cancellationToken);
+        if (items is null)
+        {
+            _logger.LogWarning("Ingestion history unavailable for user {UserId}; returning empty list.", request.UserId);
+            return Result.Success(new IndividualSyncResponse(request.UserId, new List<IngestionHistoryItemDto>()));
+        }
+
+        return Result.Success(new IndividualSyncResponse(request.UserId, items));
     }
 }

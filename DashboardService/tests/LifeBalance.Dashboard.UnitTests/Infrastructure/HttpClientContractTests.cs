@@ -86,6 +86,12 @@ public class HttpClientContractTests
         result.Should().NotBeNull();
         result!.DailySteps.Should().Be(5230);
         result.ActiveMinutes.Should().Be(45);
+        result.SedentaryScore.Should().Be(79.75);
+        result.RiskLevel.Should().Be("Low");
+        result.DailyStepsTarget.Should().Be(8000);
+        result.ActiveMinutesTarget.Should().Be(30);
+        result.StepsProgress.Should().Be(65.375);
+        result.ActiveProgress.Should().Be(100);
         result.HourlyHeatmap.Should().HaveCount(24);
     }
 
@@ -168,5 +174,53 @@ public class HttpClientContractTests
         await sut.GetUserNotificationsAsync(UserId, limit: 500);
 
         handler.RequestedPaths.Should().Contain("/api/v1/notifications/user?limit=100");
+    }
+
+    [Fact]
+    public async Task IngestionServiceClient_UnwrapsEnvelope_ReturnsHistory()
+    {
+        var json = "{\"success\":true,\"message\":\"Operation completed successfully.\"," +
+                   "\"data\":[{\"id\":\"evt-1\",\"eventType\":\"ActivitySession\",\"occurredAtUtc\":\"2026-08-06T01:00:00Z\",\"status\":\"Processed\"}],\"errors\":[]}";
+
+        var http = CreateClient(new Dictionary<string, string> { ["/api/v1/ingestion/history"] = json }, out var handler);
+        var sut = new IngestionServiceClient(http, NullLogger<IngestionServiceClient>.Instance);
+
+        var result = await sut.GetHistoryAsync(type: null, page: 1, pageSize: 50);
+
+        handler.RequestedPaths.Should().Contain("/api/v1/ingestion/history?page=1&pageSize=50");
+        result.Should().NotBeNull();
+        result!.Should().HaveCount(1);
+        result[0].Id.Should().Be("evt-1");
+        result[0].EventType.Should().Be("ActivitySession");
+        result[0].Status.Should().Be("Processed");
+    }
+
+    [Fact]
+    public async Task IngestionServiceClient_ClampsPageSize_AndAddsTypeFilter()
+    {
+        var json = "{\"success\":true,\"message\":\"ok\",\"data\":[],\"errors\":[]}";
+        var http = CreateClient(new Dictionary<string, string> { ["/api/v1/ingestion/history"] = json }, out var handler);
+        var sut = new IngestionServiceClient(http, NullLogger<IngestionServiceClient>.Instance);
+
+        await sut.GetHistoryAsync(type: "VitalSigns", page: 1, pageSize: 500);
+
+        handler.RequestedPaths.Should().Contain("/api/v1/ingestion/history?page=1&pageSize=100&type=VitalSigns");
+    }
+
+    [Fact]
+    public async Task IngestionServiceClient_UnwrapsEnvelope_ReturnsSyncBatchStatus()
+    {
+        var json = "{\"success\":true,\"message\":\"ok\"," +
+                   "\"data\":{\"clientBatchId\":\"batch-42\",\"status\":\"Completed\",\"receivedAtUtc\":\"2026-08-06T01:00:00Z\",\"itemCount\":120},\"errors\":[]}";
+
+        var http = CreateClient(new Dictionary<string, string> { ["/api/v1/ingestion/sync/batch-42"] = json }, out var handler);
+        var sut = new IngestionServiceClient(http, NullLogger<IngestionServiceClient>.Instance);
+
+        var result = await sut.GetSyncBatchAsync("batch-42");
+
+        handler.RequestedPaths.Should().Contain("/api/v1/ingestion/sync/batch-42");
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("Completed");
+        result.ItemCount.Should().Be(120);
     }
 }
