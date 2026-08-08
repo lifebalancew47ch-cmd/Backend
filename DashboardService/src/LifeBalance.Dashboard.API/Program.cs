@@ -7,6 +7,7 @@ using LifeBalance.Dashboard.Application;
 using LifeBalance.Dashboard.Application.Common.Interfaces;
 using LifeBalance.Dashboard.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Text.Json.Serialization;
@@ -48,6 +49,22 @@ try
     // --------------------------------------------------------
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+    // --------------------------------------------------------
+    // Forwarded Headers — behind the Render edge proxy the connection
+    // RemoteIpAddress is the proxy, not the client. ForwardedHeaders restores
+    // the real client IP (for the IP rate limiter) and the request scheme
+    // (so UseHttpsRedirection/HSTS behave correctly behind TLS termination).
+    // Security (DevSecOps): Render's edge sets/overwrites X-Forwarded-For,
+    // so trusting it here is not attacker-controllable; no known proxy list is
+    // pinned because Render routes use dynamic edge IPs.
+    // --------------------------------------------------------
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 
     // --------------------------------------------------------
     // Controllers & JSON
@@ -106,12 +123,7 @@ try
     // --------------------------------------------------------
     // Health Checks
     // --------------------------------------------------------
-    builder.Services
-        .AddHealthChecks()
-        .AddMongoDb(
-            sp => sp.GetRequiredService<MongoDB.Driver.IMongoClient>(),
-            name:  "mongodb",
-            tags:  new[] { "ready", "db" });
+    builder.Services.AddDashboardHealthChecks(builder.Configuration);
 
     // --------------------------------------------------------
     // CORS — origins from configuration (Cors:AllowedOrigins)
@@ -198,6 +210,10 @@ try
 
     // 2. Correlation ID propagation
     app.UseMiddleware<CorrelationIdMiddleware>();
+
+    // 2b. Restore client IP + scheme behind the Render edge proxy. Must run
+    // before UseHttpsRedirection and the IP rate limiter.
+    app.UseForwardedHeaders();
 
     // 3. OWASP Security Headers
     app.UseMiddleware<SecurityHeadersMiddleware>();
