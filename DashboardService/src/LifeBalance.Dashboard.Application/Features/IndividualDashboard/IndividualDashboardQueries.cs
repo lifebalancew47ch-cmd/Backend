@@ -262,15 +262,40 @@ public class IndividualDashboardQueryHandlers :
             calories = Math.Round(finalSteps * 0.04, 1);
         }
 
+        var activeMinutes = activity.ActiveMinutes;
+        if (activeMinutes <= 0 && finalSteps > 0)
+        {
+            activeMinutes = Math.Round(finalSteps / 100.0, 1);
+        }
+
+        var heatmap = activity.HourlyHeatmap is { Count: 24 } ? new List<int>(activity.HourlyHeatmap) : activity.HourlyHeatmap;
+        if (heatmap is { Count: 24 } && finalSteps > 0 && heatmap.All(h => h == 0))
+        {
+            var currentHour = biometrics != null && biometrics.RecordedAt != default
+                ? biometrics.RecordedAt.Hour
+                : DateTime.UtcNow.Hour;
+            if (currentHour >= 0 && currentHour < 24)
+            {
+                heatmap[currentHour] = finalSteps;
+            }
+        }
+
         var stepsProgress = activity.DailyStepsTarget > 0
             ? Math.Clamp(finalSteps * 100.0 / activity.DailyStepsTarget, 0, 100)
             : activity.StepsProgress;
 
+        var activeProgress = activity.ActiveMinutesTarget > 0
+            ? Math.Clamp(activeMinutes * 100.0 / activity.ActiveMinutesTarget, 0, 100)
+            : activity.ActiveProgress;
+
         return activity with
         {
             DailySteps = finalSteps,
+            ActiveMinutes = activeMinutes,
             CaloriesBurned = calories,
-            StepsProgress = stepsProgress
+            HourlyHeatmap = heatmap,
+            StepsProgress = stepsProgress,
+            ActiveProgress = activeProgress
         };
     }
 
