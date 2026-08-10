@@ -205,7 +205,14 @@ public class IndividualDashboardQueryHandlers :
     public async Task<Result<IndividualHeatmapResponse>> Handle(GetIndividualHeatmapQuery request, CancellationToken cancellationToken)
     {
         var activity = await _sedentaryClient.GetUserActivityAsync(request.UserId, cancellationToken);
-        var heatmap = activity?.HourlyHeatmap ?? Enumerable.Repeat(0, 24).ToList();
+        if (activity is null)
+        {
+            _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill heatmap.", request.UserId);
+            activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
+        }
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        activity = MergeMedicalSteps(activity, biometrics);
+        var heatmap = activity.HourlyHeatmap is { Count: 24 } ? activity.HourlyHeatmap : Enumerable.Repeat(0, 24).ToList();
 
         return Result.Success(new IndividualHeatmapResponse(request.UserId, heatmap));
     }
