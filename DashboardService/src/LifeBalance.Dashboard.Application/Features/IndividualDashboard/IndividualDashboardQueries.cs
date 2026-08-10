@@ -250,13 +250,28 @@ public class IndividualDashboardQueryHandlers :
 
     private static SedentaryActivityResponseDto MergeMedicalSteps(SedentaryActivityResponseDto activity, MedicalDataResponseDto? biometrics)
     {
-        if (biometrics != null && biometrics.Steps > activity.DailySteps)
+        var finalSteps = activity.DailySteps;
+        if (biometrics != null && biometrics.Steps > finalSteps)
         {
-            var newSteps = biometrics.Steps;
-            var stepsProgress = activity.DailyStepsTarget > 0 ? Math.Clamp(newSteps * 100.0 / activity.DailyStepsTarget, 0, 100) : activity.StepsProgress;
-            return activity with { DailySteps = newSteps, StepsProgress = stepsProgress };
+            finalSteps = biometrics.Steps;
         }
-        return activity;
+
+        var calories = activity.CaloriesBurned;
+        if (calories <= 0 && finalSteps > 0)
+        {
+            calories = Math.Round(finalSteps * 0.04, 1);
+        }
+
+        var stepsProgress = activity.DailyStepsTarget > 0
+            ? Math.Clamp(finalSteps * 100.0 / activity.DailyStepsTarget, 0, 100)
+            : activity.StepsProgress;
+
+        return activity with
+        {
+            DailySteps = finalSteps,
+            CaloriesBurned = calories,
+            StepsProgress = stepsProgress
+        };
     }
 
     public async Task<Result<IndividualRecommendationsResponse>> Handle(GetIndividualRecommendationsQuery request, CancellationToken cancellationToken)
