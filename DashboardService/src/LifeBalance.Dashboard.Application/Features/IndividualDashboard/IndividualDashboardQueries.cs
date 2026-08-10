@@ -91,6 +91,7 @@ public class IndividualDashboardQueryHandlers :
             _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill. Verify Sedentary Engine contract.", request.UserId);
             activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         }
+        activity = MergeMedicalSteps(activity, biometrics);
 
         var rewards = await rewardsTask;
         if (rewards is null)
@@ -133,6 +134,9 @@ public class IndividualDashboardQueryHandlers :
             _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill summary.", request.UserId);
             activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         }
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        activity = MergeMedicalSteps(activity, biometrics);
+
         var rewards = await _gamificationClient.GetUserRewardsAsync(request.UserId, cancellationToken);
         if (rewards is null)
         {
@@ -164,6 +168,7 @@ public class IndividualDashboardQueryHandlers :
             _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill KPIs.", request.UserId);
             activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         }
+        activity = MergeMedicalSteps(activity, biometrics);
 
         return Result.Success(new IndividualKpisResponse(
             request.UserId,
@@ -219,6 +224,9 @@ public class IndividualDashboardQueryHandlers :
             return Result.Success(new IndividualProgressResponse(request.UserId, 0.0, 0));
         }
 
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        activity = MergeMedicalSteps(activity, biometrics);
+
         var stepsProgress = Math.Clamp(activity.DailyStepsTarget > 0 ? activity.DailySteps * 100.0 / activity.DailyStepsTarget : 0, 0, 100);
         var activeProgress = Math.Clamp(activity.ActiveMinutesTarget > 0 ? activity.ActiveMinutes * 100.0 / activity.ActiveMinutesTarget : 0, 0, 100);
         var weeklyGoalCompletion = (stepsProgress + activeProgress) / 2.0;
@@ -234,8 +242,21 @@ public class IndividualDashboardQueryHandlers :
             _logger.LogWarning("Sedentary activity unavailable for user {UserId}; returning zero-fill activity.", request.UserId);
             activity = new SedentaryActivityResponseDto(request.UserId, 0, 0, 0, 0, Enumerable.Repeat(0, 24).ToList());
         }
+        var biometrics = await _medicalClient.GetUserBiometricsAsync(request.UserId, cancellationToken);
+        activity = MergeMedicalSteps(activity, biometrics);
 
         return Result.Success(new IndividualActivityResponse(request.UserId, activity));
+    }
+
+    private static SedentaryActivityResponseDto MergeMedicalSteps(SedentaryActivityResponseDto activity, MedicalDataResponseDto? biometrics)
+    {
+        if (biometrics != null && biometrics.Steps > activity.DailySteps)
+        {
+            var newSteps = biometrics.Steps;
+            var stepsProgress = activity.DailyStepsTarget > 0 ? Math.Clamp(newSteps * 100.0 / activity.DailyStepsTarget, 0, 100) : activity.StepsProgress;
+            return activity with { DailySteps = newSteps, StepsProgress = stepsProgress };
+        }
+        return activity;
     }
 
     public async Task<Result<IndividualRecommendationsResponse>> Handle(GetIndividualRecommendationsQuery request, CancellationToken cancellationToken)

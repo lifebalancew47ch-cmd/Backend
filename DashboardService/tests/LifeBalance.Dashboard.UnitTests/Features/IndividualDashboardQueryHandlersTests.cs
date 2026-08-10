@@ -533,6 +533,21 @@ public class IndividualDashboardQueryHandlersTests
         await _sedentaryClient.Received(1).GetUserActivityAsync(userId, Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task Handle_GetIndividualActivityQuery_WhenMedicalStepsAreHigher_UsesMedicalSteps()
+    {
+        var userId = "usr_medical_steps";
+        _sedentaryClient.GetUserActivityAsync(userId, Arg.Any<CancellationToken>())
+            .Returns(new SedentaryActivityResponseDto(userId, 0, 0, 0, 0, new List<int>()));
+        _medicalClient.GetUserBiometricsAsync(userId, Arg.Any<CancellationToken>())
+            .Returns(new MedicalDataResponseDto(userId, 70, 120, 80, 70, 1.75, 22.8, DateTime.UtcNow, Steps: 5200));
+
+        var result = await _handler.Handle(new GetIndividualActivityQuery(userId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Activity.DailySteps.Should().Be(5200);
+    }
+
     // ── GET /api/v1/dashboard/individual/recommendations ──
 
     [Fact]

@@ -1,6 +1,6 @@
 namespace LifeBalance.Dashboard.Application.Common.Interfaces;
 
-public record MedicalDataResponseDto(string UserId, double HeartRate, double SystolicBp, double DiastolicBp, double Weight, double Height, double Bmi, DateTime RecordedAt);
+public record MedicalDataResponseDto(string UserId, double HeartRate, double SystolicBp, double DiastolicBp, double Weight, double Height, double Bmi, DateTime RecordedAt, int Steps = 0);
 
 public interface IMedicalDataServiceClient
 {
