@@ -27,6 +27,9 @@
 .env.local
 appsettings.Local.json
 
+# Local dev secrets (MongoDB Atlas URI, JWT signing keys) must NOT be committed.
+**/appsettings.Development.json
+
 # OS files
 Thumbs.db
 .DS_Store

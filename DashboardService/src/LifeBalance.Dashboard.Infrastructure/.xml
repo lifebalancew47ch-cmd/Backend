@@ -64,6 +64,12 @@
             </summary>
             <param name="options">The MongoDB configuration options.</param>
         </member>
+        <member name="P:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext.Client">
+            <summary>
+            Gets the underlying <see cref="T:MongoDB.Driver.IMongoClient"/> so health checks can probe
+            connectivity without creating a second connection pool.
+            </summary>
+        </member>
         <member name="M:LifeBalance.Dashboard.Infrastructure.Persistence.Mongo.MongoDbContext.GetCollection``1(System.String)">
             <summary>
             Gets a strongly-typed collection from the database.

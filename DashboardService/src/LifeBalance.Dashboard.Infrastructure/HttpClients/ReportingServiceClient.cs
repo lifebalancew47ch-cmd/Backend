@@ -25,7 +25,10 @@ public class ReportingServiceClient : IReportingServiceClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve global system metrics");
-            return new GeneralSystemMetricsDto(10000, 3200, 99.9, "v1.0.0");
+            // DevSecOps Rule 5 (fail-closed): never fabricate metrics. Returning null makes
+            // GeneralDashboardQueryHandlers throw UpstreamServiceUnavailableException (503)
+            // instead of masking a Reporting outage with a fake 99.9% "Healthy".
+            return null;
         }
     }
 

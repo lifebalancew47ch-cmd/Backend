@@ -41,7 +41,7 @@ public static class MongoDbInitializer
 
         var refreshTokenExpiresIndex = new CreateIndexModel<RefreshToken>(
             Builders<RefreshToken>.IndexKeys.Ascending(rt => rt.ExpiresAt),
-            new CreateIndexOptions { Name = "IX_refresh_tokens_expiresAt" });
+            new CreateIndexOptions { Name = "IX_refresh_tokens_expiresAt", ExpireAfter = TimeSpan.Zero });
 
         var refreshTokenCreatedAtIndex = new CreateIndexModel<RefreshToken>(
             Builders<RefreshToken>.IndexKeys.Ascending(rt => rt.CreatedAt),

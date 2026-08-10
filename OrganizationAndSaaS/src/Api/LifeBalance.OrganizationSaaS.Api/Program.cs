@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -74,6 +75,15 @@ if (Encoding.UTF8.GetByteCount(secret) < 32)
     throw new InvalidOperationException($"JwtSettings:Secret must be at least 32 bytes long (current length: {Encoding.UTF8.GetByteCount(secret)} bytes).");
 }
 
+// DevSecOps fail-fast: never start in Production with a missing or placeholder internal
+// provisioning key (guards the cross-service /internal/memberships endpoint).
+var provisioningKey = builder.Configuration["Internal:ProvisioningKey"];
+if (string.IsNullOrWhiteSpace(provisioningKey) ||
+    provisioningKey == "CHANGE_THIS_TO_A_LONG_INTERNAL_PROVISIONING_KEY!!")
+{
+    throw new InvalidOperationException("Internal:ProvisioningKey is not configured or still uses the placeholder value. Set Internal:ProvisioningKey before starting the service.");
+}
+
 var issuer = string.IsNullOrWhiteSpace(jwtSettings["Issuer"]) ? "LifeBalance" : jwtSettings["Issuer"];
 var audience = string.IsNullOrWhiteSpace(jwtSettings["Audience"]) ? "LifeBalance" : jwtSettings["Audience"];
 var key = Encoding.UTF8.GetBytes(secret);
@@ -96,7 +106,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = audience,
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1)
+        ClockSkew = TimeSpan.FromMinutes(1),
+        ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 }
     };
 });
 
@@ -108,12 +119,16 @@ builder.Services.AddAuthorization(options =>
 });
 
 // 5. Rate Limiting Setup (partitioned per remote IP)
+// DevSecOps: behind the Render edge proxy RemoteIpAddress is the proxy IP, so the
+// partition key falls back to X-Forwarded-For (overwritten by the edge; see ForwardedHeaders).
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "global",
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "global",
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
@@ -161,11 +176,30 @@ builder.Services.AddCors(options =>
     });
 });
 
+// DevSecOps: trust the Render edge proxy for the client IP and the request scheme
+// (X-Forwarded-For/X-Forwarded-Proto are overwritten by Render, never by the client),
+// so the IP rate limiter and UseHttpsRedirection behave correctly behind the edge.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 // Configure Middleware Pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
+
+// Restore the real client IP/scheme before HSTS/HTTPS redirect and the rate limiter.
+app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
 
 if (app.Environment.IsDevelopment())
 {

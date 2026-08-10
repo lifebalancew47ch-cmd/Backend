@@ -8,6 +8,7 @@ using Auth.Domain.Enums;
 using Auth.Shared.Configurations;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -45,7 +46,7 @@ public class RegisterHandlerTests
         _emailTokenRepositoryMock.Object,
         _emailServiceMock.Object,
         _organizationServiceMock.Object,
-        new AutoMapper.MapperConfiguration(cfg => { }).CreateMapper(),
+        new AutoMapper.MapperConfiguration(cfg => { }, NullLoggerFactory.Instance).CreateMapper(),
         _loggerMock.Object,
         _securitySettings
     );

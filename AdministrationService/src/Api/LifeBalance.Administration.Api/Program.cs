@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -118,7 +119,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = audience,
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1)
+        ClockSkew = TimeSpan.FromMinutes(1),
+        ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 }
     };
 });
 
@@ -136,12 +138,16 @@ builder.Services.AddAuthorization(options =>
 });
 
 // 6. Rate limiting partitioned per remote IP
+// DevSecOps: behind the Render edge proxy RemoteIpAddress is the proxy IP, so the
+// partition key falls back to X-Forwarded-For (overwritten by the edge; see ForwardedHeaders).
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "global",
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "global",
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
@@ -200,11 +206,30 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddConsoleExporter());
 
+// DevSecOps: trust the Render edge proxy for the client IP and the request scheme
+// (X-Forwarded-For/X-Forwarded-Proto are overwritten by Render, never by the client),
+// so the IP rate limiter and UseHttpsRedirection behave correctly behind the edge.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 // Middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersAndCorrelationMiddleware>();
+
+// Restore the real client IP/scheme before HSTS/HTTPS redirect and the rate limiter.
+app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
 
 // Swagger / OpenAPI (Development only — Rule 7). Auditoria 6/08/2026 (S-01):
 // estaba expuesto sin condicion en produccion. Este es el servicio con el

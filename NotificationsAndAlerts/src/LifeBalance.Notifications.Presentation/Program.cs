@@ -4,6 +4,7 @@ using LifeBalance.Notifications.Presentation.Configurations;
 using LifeBalance.Notifications.Presentation.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -51,7 +52,9 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("fixed", context =>
         RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            context.Connection.RemoteIpAddress?.ToString()
+                ?? context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 100,
@@ -60,7 +63,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>();
@@ -88,6 +91,16 @@ builder.Services.AddCors(options =>
     });
 });
 
+// DevSecOps: trust the Render edge proxy for the client IP and the request scheme
+// (X-Forwarded-For/X-Forwarded-Proto are overwritten by Render, never by the client),
+// so the IP rate limiter and UseHttpsRedirection behave correctly behind the edge.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 FirebaseInit(app.Configuration);
@@ -101,6 +114,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandling();
+
+app.UseSecurityHeaders();
+
+// Restore the real client IP/scheme before HSTS/HTTPS redirect and the rate limiter.
+app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseRouting();
 

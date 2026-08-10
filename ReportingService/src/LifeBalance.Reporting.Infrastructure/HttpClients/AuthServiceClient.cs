@@ -34,15 +34,9 @@ public sealed class AuthServiceClient : IAuthServiceClient
             _logger.LogWarning(ex, "Failed to retrieve profile for UserId: {UserId}", userId);
         }
 
-        // Return a default fallback profile so reports don't fail when profile endpoint is unreachable
-        return new AuthUserProfileDto(
-            userId,
-            "user@lifebalance.io",
-            "User",
-            "Member",
-            new[] { "USER" },
-            null,
-            null);
+        // DevSecOps Rule 5 (fail-closed): never simulate upstream data. Return null so
+        // callers surface UpstreamServiceUnavailableException (503) instead of a fake profile.
+        return null;
     }
 
     /// <inheritdoc/>
@@ -59,6 +53,8 @@ public sealed class AuthServiceClient : IAuthServiceClient
             _logger.LogWarning(ex, "Failed to retrieve family members for FamilyId: {FamilyId}", familyId);
         }
 
-        return new List<AuthUserProfileDto>();
+        // DevSecOps Rule 5 (fail-closed): return null (not an empty list) so upstream
+        // unavailability is visible (503) instead of being silently masked as "no members".
+        return null;
     }
 }

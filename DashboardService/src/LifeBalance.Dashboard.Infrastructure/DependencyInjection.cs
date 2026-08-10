@@ -40,6 +40,11 @@ public static class DependencyInjection
 
         // ------ MongoDB Context & Repositories ------
         services.AddSingleton<MongoDbContext>();
+        // DevSecOps: expose the Mongo client so the /health/ready check (AddMongoDb) can
+        // probe connectivity without creating a second connection pool. Same singleton client
+        // instance as MongoDbContext, so the pool is shared.
+        services.AddSingleton<MongoDB.Driver.IMongoClient>(sp =>
+            sp.GetRequiredService<MongoDbContext>().Client);
         services.AddScoped<IDashboardCacheRepository, DashboardCacheRepository>();
         services.AddScoped<IAggregationLogRepository, AggregationLogRepository>();
 
@@ -85,6 +90,8 @@ public static class DependencyInjection
                     IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
                     ClockSkew = TimeSpan.FromMinutes(1),
+                    // Restringe el algoritmo de firma a HS256 (evita algorithm-confusion).
+                    ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
                     // Contrato de claims explícito: el token JWT de Auth emite
                     // sub/email/name/role (nombres cortos estándar); se remapean a
                     // ClaimTypes.NameIdentifier/Email/Name/Role para RequireRole y

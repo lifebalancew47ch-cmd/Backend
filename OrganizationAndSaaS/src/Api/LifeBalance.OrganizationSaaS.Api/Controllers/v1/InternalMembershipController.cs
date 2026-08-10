@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeBalance.OrganizationSaaS.Application.Common.Models;
@@ -47,9 +49,16 @@ public class InternalMembershipController : ControllerBase
         var expectedKey = _configuration["Internal:ProvisioningKey"];
         var providedKey = Request.Headers["X-Internal-Key"].ToString();
 
-        if (string.IsNullOrWhiteSpace(expectedKey)
-            || string.IsNullOrWhiteSpace(providedKey)
-            || !string.Equals(expectedKey, providedKey, StringComparison.Ordinal))
+        // DevSecOps: constant-time comparison (CryptographicOperations.FixedTimeEquals) to
+        // prevent timing attacks that could infer the internal provisioning key via HTTP latency.
+        var keyValid = !string.IsNullOrWhiteSpace(expectedKey)
+            && !string.IsNullOrWhiteSpace(providedKey)
+            && expectedKey.Length == providedKey.Length
+            && CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(expectedKey),
+                Encoding.UTF8.GetBytes(providedKey));
+
+        if (!keyValid)
         {
             _logger.LogWarning("Rejected internal provisioning request: invalid/missing X-Internal-Key.");
             return Unauthorized(ApiResponse<ProvisionMembershipResponse>.Fail("Invalid internal provisioning key."));

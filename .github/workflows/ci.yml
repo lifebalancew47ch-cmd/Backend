@@ -12,6 +12,25 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────
+  # JOB 0: Secret scanning (gitleaks)
+  # DevSecOps: detección de secretos en el código. Se marca como informativo
+  # (continue-on-error) porque el historial arrastra secretos históricos conocidos
+  # (AGENTS.md); una vez purgado el historial debe volver a ser bloqueante.
+  # ─────────────────────────────────────────
+  git-secrets:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────
   # JOB 1: Auth & Profile Service
   # ─────────────────────────────────────────
   auth-profile:
@@ -51,6 +70,10 @@ jobs:
         with:
           name: auth-unit-test-results
           path: Auth_Profile/TestResults/
+
+      - name: Dependency vulnerability audit
+        run: dotnet list Auth_Profile.sln package --vulnerable --include-transitive
+        continue-on-error: true
 
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-auth:ci .
@@ -108,6 +131,10 @@ jobs:
           name: dashboard-unit-test-results
           path: DashboardService/TestResults/
 
+      - name: Dependency vulnerability audit
+        run: dotnet list LifeBalance.DashboardService.sln package --vulnerable --include-transitive
+        continue-on-error: true
+
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-dashboard:ci .
 
@@ -151,6 +178,10 @@ jobs:
         with:
           name: notifications-unit-test-results
           path: "NotificationsAndAlerts/TestResults/"
+
+      - name: Dependency vulnerability audit
+        run: dotnet list LifeBalance.Notifications.sln package --vulnerable --include-transitive
+        continue-on-error: true
 
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-notifications:ci .
@@ -196,6 +227,10 @@ jobs:
           name: organization-saas-unit-test-results
           path: OrganizationAndSaaS/TestResults/
 
+      - name: Dependency vulnerability audit
+        run: dotnet list LifeBalance.OrganizationSaaS.sln package --vulnerable --include-transitive
+        continue-on-error: true
+
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-organization-saas:ci .
 
@@ -240,6 +275,10 @@ jobs:
           name: administration-unit-test-results
           path: AdministrationService/TestResults/
 
+      - name: Dependency vulnerability audit
+        run: dotnet list LifeBalance.Administration.sln package --vulnerable --include-transitive
+        continue-on-error: true
+
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-administration:ci .
 
@@ -283,6 +322,10 @@ jobs:
         with:
           name: reporting-unit-test-results
           path: ReportingService/TestResults/
+
+      - name: Dependency vulnerability audit
+        run: dotnet list LifeBalance.Reporting.sln package --vulnerable --include-transitive
+        continue-on-error: true
 
       - name: Build Docker image (dry run)
         run: docker build -t lifebalance-reporting:ci .

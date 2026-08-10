@@ -7,6 +7,7 @@ using LifeBalance.Reporting.Application;
 using LifeBalance.Reporting.Application.Common.Interfaces;
 using LifeBalance.Reporting.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Text.Json.Serialization;
@@ -182,6 +183,20 @@ try
     });
 
     // --------------------------------------------------------
+    // Forwarded Headers — trust the Render edge proxy for the
+    // real client IP and request scheme (X-Forwarded-For/Proto
+    // are overwritten by Render, never by the client), so the
+    // IP rate limiter and UseHttpsRedirection behave correctly
+    // behind the edge.
+    // --------------------------------------------------------
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
+    // --------------------------------------------------------
     // Problem Details
     // --------------------------------------------------------
     builder.Services.AddProblemDetails();
@@ -197,6 +212,9 @@ try
 
     // 1. Exception handling — must be first
     app.UseMiddleware<GlobalExceptionMiddleware>();
+
+    // 1b. Forwarded headers — trust the Render edge proxy for real client IP/scheme
+    app.UseForwardedHeaders();
 
     // 2. Correlation ID propagation
     app.UseMiddleware<CorrelationIdMiddleware>();

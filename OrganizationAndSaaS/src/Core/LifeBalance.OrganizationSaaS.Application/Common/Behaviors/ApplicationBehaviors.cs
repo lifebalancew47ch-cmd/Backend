@@ -48,8 +48,8 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
-        _logger.LogInformation("Processing Request: {Name} | TenantId: {TenantId} | UserId: {UserId}",
-            requestName, _tenantContext.TenantId, _tenantContext.UserId);
+        _logger.LogInformation("Processing Request: {Name} | TenantId: {TenantId}",
+            requestName, _tenantContext.TenantId);
 
         var response = await next();
 

@@ -27,4 +27,7 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 RUN chown -R appuser:appgroup /app
 USER appuser
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
+
 ENTRYPOINT ["dotnet", "LifeBalance.Notifications.Presentation.dll"]

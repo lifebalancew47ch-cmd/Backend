@@ -15,10 +15,11 @@ public class AdminServiceClient : IAdminServiceClient
 
     public async Task<List<GlobalTemplate>> GetGlobalTemplatesAsync()
     {
-        // var response = await _httpClient.GetAsync("/api/v1/templates/global");
-        // response.EnsureSuccessStatusCode();
-        // return await response.Content.ReadFromJsonAsync<List<GlobalTemplate>>() ?? new();
-        return new List<GlobalTemplate>();
+        // DevSecOps Rule 5 (fail-closed): the real upstream call must not be replaced with a
+        // mocked empty list. Restored so upstream failures surface instead of being masked.
+        var response = await _httpClient.GetAsync("/api/v1/templates/global");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<GlobalTemplate>>() ?? [];
     }
 
     public async Task<AdminConfiguration?> GetConfigurationAsync()

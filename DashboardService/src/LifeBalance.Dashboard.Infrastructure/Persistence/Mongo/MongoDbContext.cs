@@ -9,6 +9,7 @@ namespace LifeBalance.Dashboard.Infrastructure.Persistence.Mongo;
 /// </summary>
 public sealed class MongoDbContext
 {
+    private readonly IMongoClient _client;
     private readonly IMongoDatabase _database;
 
     /// <summary>
@@ -20,9 +21,15 @@ public sealed class MongoDbContext
         var settings = MongoClientSettings.FromConnectionString(options.Value.ConnectionString);
         settings.ServerApi = new ServerApi(ServerApiVersion.V1);
 
-        var client = new MongoClient(settings);
-        _database = client.GetDatabase(options.Value.DatabaseName);
+        _client = new MongoClient(settings);
+        _database = _client.GetDatabase(options.Value.DatabaseName);
     }
+
+    /// <summary>
+    /// Gets the underlying <see cref="IMongoClient"/> so health checks can probe
+    /// connectivity without creating a second connection pool.
+    /// </summary>
+    public IMongoClient Client => _client;
 
     /// <summary>
     /// Gets a strongly-typed collection from the database.

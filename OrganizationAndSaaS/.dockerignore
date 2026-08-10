@@ -8,3 +8,4 @@ publish/
 *.suo
 *.sln.docstates
 docker/
+**/appsettings.Development.json

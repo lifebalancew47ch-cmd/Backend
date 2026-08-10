@@ -3,7 +3,7 @@ services:
     image: mongo:latest
     container_name: auth_profile_db
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
 
@@ -27,6 +27,8 @@ services:
       - Security__LockoutDurationMinutes=15
       - Security__PasswordResetTokenExpirationMinutes=60
       - Security__EmailConfirmationTokenExpirationHours=24
+      - App__FrontendBaseUrl=http://localhost:3000
+      - Internal__ProvisioningKey=DevOnly_Internal_Provisioning_Key_2026
       - Smtp__Host=smtp.gmail.com
       - Smtp__Port=587
       - Smtp__Username=

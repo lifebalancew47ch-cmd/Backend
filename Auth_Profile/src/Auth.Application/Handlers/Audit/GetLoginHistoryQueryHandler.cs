@@ -27,9 +27,13 @@ public class GetLoginHistoryQueryHandler : IRequestHandler<GetLoginHistoryQuery,
 
     public async Task<ApiResponse<PagedResult<LoginHistoryDto>>> Handle(GetLoginHistoryQuery request, CancellationToken cancellationToken)
     {
+        // DevSecOps: clamp pagination (1..100) to prevent unbounded result sets / DoS via pageSize.
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
         IEnumerable<LoginHistory> items = string.IsNullOrEmpty(request.UserId)
-            ? await _loginHistoryRepository.GetAllAsync(request.Page, request.PageSize, cancellationToken)
-            : await _loginHistoryRepository.GetByUserIdAsync(request.UserId, request.Page, request.PageSize, cancellationToken);
+            ? await _loginHistoryRepository.GetAllAsync(page, pageSize, cancellationToken)
+            : await _loginHistoryRepository.GetByUserIdAsync(request.UserId, page, pageSize, cancellationToken);
 
         var totalCount = await _loginHistoryRepository.CountAsync(cancellationToken);
 
@@ -38,8 +42,8 @@ public class GetLoginHistoryQueryHandler : IRequestHandler<GetLoginHistoryQuery,
         var paged = new PagedResult<LoginHistoryDto>
         {
             Items = dtoItems,
-            Page = request.Page,
-            PageSize = request.PageSize,
+            Page = page,
+            PageSize = pageSize,
             TotalCount = totalCount
         };
 

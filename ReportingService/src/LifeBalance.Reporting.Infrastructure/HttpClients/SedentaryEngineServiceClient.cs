@@ -181,12 +181,15 @@ public sealed class SedentaryEngineServiceClient : ISedentaryEngineServiceClient
                 }
             }
 
-            return [];
+            // DevSecOps Rule 5 (fail-closed): no endpoint succeeded → return null so the
+            // caller treats the upstream as unavailable instead of silently showing "no goals".
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve goals for UserId: {UserId}", userId);
-            return [];
+            // DevSecOps Rule 5 (fail-closed): never simulate upstream data with an empty list.
+            return null;
         }
     }
 

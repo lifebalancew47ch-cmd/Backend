@@ -26,8 +26,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, ApiResponse<P
 
     public async Task<ApiResponse<PagedResult<UserProfileDto>>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
+        // DevSecOps: clamp pagination (1..100) to prevent unbounded result sets / DoS via pageSize.
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
         var totalCount = await _userRepository.CountAsync(cancellationToken);
-        var users = await _userRepository.GetAllAsync(request.Page, request.PageSize, cancellationToken);
+        var users = await _userRepository.GetAllAsync(page, pageSize, cancellationToken);
         
         var userDtos = _mapper.Map<IEnumerable<UserProfileDto>>(users).ToList();
 
@@ -35,8 +39,8 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, ApiResponse<P
         {
             Items = userDtos,
             TotalCount = totalCount,
-            Page = request.Page,
-            PageSize = request.PageSize
+            Page = page,
+            PageSize = pageSize
         };
         return ApiResponse<PagedResult<UserProfileDto>>.SuccessResponse(pagedResult);
     }

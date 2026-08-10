@@ -90,6 +90,7 @@ public static class DependencyInjection
                     ValidAudience = jwtOptions.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
                     ClockSkew = TimeSpan.FromMinutes(1),
+                    ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
                     RoleClaimType = ClaimTypes.Role,
                     NameClaimType = ClaimTypes.Name
                 };

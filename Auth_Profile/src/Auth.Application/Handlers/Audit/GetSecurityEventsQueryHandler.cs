@@ -27,7 +27,11 @@ public class GetSecurityEventsQueryHandler : IRequestHandler<GetSecurityEventsQu
 
     public async Task<ApiResponse<PagedResult<AuditLogDto>>> Handle(GetSecurityEventsQuery request, CancellationToken cancellationToken)
     {
-        var logs = await _auditLogRepository.GetAllAsync(request.Page, request.PageSize, cancellationToken);
+        // DevSecOps: clamp pagination (1..100) to prevent unbounded result sets / DoS via pageSize.
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
+        var logs = await _auditLogRepository.GetAllAsync(page, pageSize, cancellationToken);
         var totalCount = await _auditLogRepository.CountAsync(cancellationToken);
 
         var dtoItems = logs.Select(log => _mapper.Map<AuditLogDto>(log)).ToList();
@@ -35,8 +39,8 @@ public class GetSecurityEventsQueryHandler : IRequestHandler<GetSecurityEventsQu
         var paged = new PagedResult<AuditLogDto>
         {
             Items = dtoItems,
-            Page = request.Page,
-            PageSize = request.PageSize,
+            Page = page,
+            PageSize = pageSize,
             TotalCount = totalCount
         };
 

@@ -30,6 +30,12 @@ public static class ServiceCollectionExtensions
         services.AddMemoryCache();
         services.Configure<IpRateLimitOptions>(options =>
         {
+            // DevSecOps: behind the Render edge proxy RemoteIpAddress is the proxy IP.
+            // AspNetCoreRateLimit reads the real client IP from X-Forwarded-For (set by Render).
+            options.RealIpHeader = "X-Forwarded-For";
+            // DevSecOps: enable endpoint-specific rules below (login/register/forgot-password)
+            // so brute-force protection applies per endpoint instead of only the global rule.
+            options.EnableEndpointRateLimiting = true;
             options.GeneralRules = new List<RateLimitRule>
             {
                 new()

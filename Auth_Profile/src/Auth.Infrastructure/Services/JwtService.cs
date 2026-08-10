@@ -78,6 +78,9 @@ public class JwtService : IJwtService
             ValidAudience = string.IsNullOrWhiteSpace(_jwtSettings.Audience) ? "LifeBalance" : _jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey)),
+            // DevSecOps: lock the accepted algorithm to HS256 on refresh too, so an attacker
+            // cannot downgrade to a weaker algorithm to forge refresh tokens.
+            ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             ValidateLifetime = false
         };
 

@@ -32,4 +32,7 @@ USER appuser
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
+
 ENTRYPOINT ["dotnet", "Auth.Api.dll"]

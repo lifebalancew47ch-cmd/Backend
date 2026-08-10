@@ -57,7 +57,8 @@ public static class DependencyInjection
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromMinutes(1)
+                ClockSkew = TimeSpan.FromMinutes(1),
+                ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 }
             };
 
             options.Events = new JwtBearerEvents
